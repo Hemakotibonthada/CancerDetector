@@ -12,10 +12,6 @@ frontend/.cache/
 dist/
 *.egg-info/
 
-# Database
-*.db
-*.sqlite3
-
 # IDE
 .vscode/
 .idea/
