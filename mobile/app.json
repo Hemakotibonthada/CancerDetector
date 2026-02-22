@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "CancerGuard AI",
+    "slug": "cancerguard-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a1a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cancerguard.ai",
+      "buildNumber": "1.0.0",
+      "infoPlist": {
+        "NSCameraUsageDescription": "CancerGuard needs camera access to scan medical documents and take photos.",
+        "NSPhotoLibraryUsageDescription": "CancerGuard needs photo library access to upload medical images.",
+        "NSLocationWhenInUseUsageDescription": "CancerGuard needs location to find nearby hospitals."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a1a"
+      },
+      "package": "com.cancerguard.ai",
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        { "cameraPermission": "Allow CancerGuard to access your camera." }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4fc3f7"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "cancerguard-ai"
+      }
+    }
+  }
+}
