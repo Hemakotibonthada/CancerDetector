@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, AppBar, Toolbar, Typography, IconButton, Avatar, Badge, Stack, Chip,
@@ -51,9 +51,9 @@ const portalNames = {
   admin: 'Admin Panel',
 };
 
-const DRAWER_WIDTH = 280;
+const DRAWER_WIDTH = 260;
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, title, navItems, portalType, subtitle }) => {
+const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -64,21 +64,27 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, title, navItems, portal
   const [notifMenuAnchor, setNotifMenuAnchor] = useState<null | HTMLElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const colors = portalColors[portalType];
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const groupedNavItems = navItems.reduce<Record<string, NavItem[]>>((acc, item) => {
+  const groupedNavItems = useMemo(() => navItems.reduce<Record<string, NavItem[]>>((acc, item) => {
     const section = item.section || 'Main';
     if (!acc[section]) acc[section] = [];
     acc[section].push(item);
     return acc;
-  }, {});
+  }, {}), [navItems]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => {
+    // Match exact path or path with /patient prefix
+    if (location.pathname === path) return true;
+    if (portalType === 'patient' && location.pathname === `/patient${path}`) return true;
+    if (portalType === 'patient' && path === '/dashboard' && location.pathname === '/patient') return true;
+    return false;
+  };
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f0f4f8' }}>
@@ -96,100 +102,183 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, title, navItems, portal
             color: 'white',
             border: 'none',
             transition: 'width 0.3s ease',
+            overflowX: 'hidden',
           },
         }}
       >
-        <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {/* Logo */}
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3, px: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Logo - compact */}
+          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ px: 2, py: 1.5, flexShrink: 0 }}>
             <Box sx={{
-              width: 38, height: 38, borderRadius: 2,
+              width: 34, height: 34, borderRadius: 1.5,
               background: `linear-gradient(135deg, ${colors.accent}, ${colors.accent}88)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
             }}>
-              {React.cloneElement(portalIcons[portalType] as React.ReactElement, { sx: { fontSize: 22, color: 'white' } })}
+              {React.cloneElement(portalIcons[portalType] as React.ReactElement, { sx: { fontSize: 20, color: 'white' } })}
             </Box>
-            <Box>
-              <Typography sx={{ fontWeight: 800, fontSize: 15, lineHeight: 1.2 }}>{portalNames[portalType]}</Typography>
-              <Typography sx={{ fontSize: 10, opacity: 0.6, letterSpacing: 1, textTransform: 'uppercase' }}>Healthcare Platform</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: 14, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{portalNames[portalType]}</Typography>
+              <Typography sx={{ fontSize: 9, opacity: 0.5, letterSpacing: 1.2, textTransform: 'uppercase' }}>Healthcare Platform</Typography>
             </Box>
           </Stack>
 
-          {/* User Card */}
+          {/* User Card - compact */}
           <Box sx={{
-            p: 2, mb: 2, borderRadius: 3,
+            mx: 1.5, mb: 1, px: 1.5, py: 1, borderRadius: 2,
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(255,255,255,0.08)',
+            flexShrink: 0,
           }}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Avatar sx={{ width: 40, height: 40, bgcolor: colors.accent, fontSize: 15, fontWeight: 700 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Avatar sx={{ width: 32, height: 32, bgcolor: colors.accent, fontSize: 13, fontWeight: 700 }}>
                 {user?.first_name?.[0]}{user?.last_name?.[0]}
               </Avatar>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {user?.first_name} {user?.last_name}
                 </Typography>
-                <Typography sx={{ fontSize: 11, opacity: 0.6 }}>
+                <Typography sx={{ fontSize: 10, opacity: 0.5, textTransform: 'capitalize' }}>
                   {user?.role?.replace(/_/g, ' ')}
                 </Typography>
               </Box>
             </Stack>
           </Box>
 
-          {/* Navigation */}
-          <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', mx: -1, px: 1, '&::-webkit-scrollbar': { width: 4 }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.2)', borderRadius: 2 } }}>
-            {Object.entries(groupedNavItems).map(([section, items]) => (
-              <Box key={section} sx={{ mb: 1 }}>
-                {section !== 'Main' && (
-                  <Typography sx={{ px: 2, py: 1, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', opacity: 0.4, mt: 1 }}>
-                    {section}
-                  </Typography>
-                )}
-                <List disablePadding>
-                  {items.map((item, index) => (
+          {/* Navigation - scrollable area */}
+          <Box sx={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            px: 1,
+            pb: 1,
+            '&::-webkit-scrollbar': { width: 3 },
+            '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+            '&::-webkit-scrollbar-thumb': {
+              bgcolor: 'rgba(255,255,255,0.15)',
+              borderRadius: 4,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            },
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.15) transparent',
+          }}>
+            {Object.entries(groupedNavItems).map(([section, items]) => {
+              const isCollapsed = collapsedSections[section] ?? false;
+              return (
+                <Box key={section} sx={{ mb: 0.25 }}>
+                  {section !== 'Main' ? (
                     <ListItemButton
-                      key={index}
-                      onClick={() => { navigate(item.path); if (isMobile) setDrawerOpen(false); }}
+                      onClick={() => toggleSection(section)}
+                      dense
                       sx={{
-                        borderRadius: 2,
-                        mb: 0.3,
-                        py: 1,
-                        px: 2,
-                        bgcolor: isActive(item.path) ? 'rgba(255,255,255,0.12)' : 'transparent',
-                        borderLeft: isActive(item.path) ? `3px solid ${colors.accent}` : '3px solid transparent',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
-                        transition: 'all 0.2s',
+                        borderRadius: 1.5,
+                        py: 0.25,
+                        px: 1.5,
+                        mt: 0.5,
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
                       }}
                     >
-                      <ListItemIcon sx={{
-                        color: isActive(item.path) ? colors.accent : 'rgba(255,255,255,0.5)',
-                        minWidth: 36, fontSize: 20,
+                      <Typography sx={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: 1.2,
+                        textTransform: 'uppercase',
+                        opacity: 0.4,
+                        flex: 1,
                       }}>
-                        {item.icon}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={item.label}
-                        sx={{ '& .MuiTypography-root': { fontSize: 13, fontWeight: isActive(item.path) ? 600 : 400 } }}
-                      />
-                      {item.badge && item.badge > 0 && (
-                        <Chip label={item.badge} size="small" sx={{ height: 20, fontSize: 11, bgcolor: colors.accent, color: 'white', fontWeight: 700 }} />
+                        {section}
+                      </Typography>
+                      {isCollapsed ? (
+                        <ExpandMore sx={{ fontSize: 14, opacity: 0.3 }} />
+                      ) : (
+                        <ExpandLess sx={{ fontSize: 14, opacity: 0.3 }} />
                       )}
                     </ListItemButton>
-                  ))}
-                </List>
-              </Box>
-            ))}
+                  ) : null}
+                  <Collapse in={section === 'Main' || !isCollapsed} timeout={200}>
+                    <List disablePadding>
+                      {items.map((item, index) => {
+                        const active = isActive(item.path);
+                        return (
+                          <ListItemButton
+                            key={index}
+                            onClick={() => { navigate(item.path); if (isMobile) setDrawerOpen(false); }}
+                            dense
+                            sx={{
+                              borderRadius: 1.5,
+                              mb: 0.15,
+                              py: 0.5,
+                              px: 1.5,
+                              minHeight: 36,
+                              bgcolor: active ? `${colors.accent}22` : 'transparent',
+                              borderLeft: active ? `3px solid ${colors.accent}` : '3px solid transparent',
+                              '&:hover': { bgcolor: active ? `${colors.accent}30` : 'rgba(255,255,255,0.06)' },
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <ListItemIcon sx={{
+                              color: active ? colors.accent : 'rgba(255,255,255,0.45)',
+                              minWidth: 30,
+                              '& .MuiSvgIcon-root': { fontSize: 18 },
+                            }}>
+                              {item.icon}
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={item.label}
+                              sx={{
+                                '& .MuiTypography-root': {
+                                  fontSize: 12.5,
+                                  fontWeight: active ? 600 : 400,
+                                  color: active ? 'white' : 'rgba(255,255,255,0.7)',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                },
+                              }}
+                            />
+                            {item.badge && item.badge > 0 && (
+                              <Chip
+                                label={item.badge}
+                                size="small"
+                                sx={{
+                                  height: 18, fontSize: 10, minWidth: 18,
+                                  bgcolor: colors.accent, color: 'white', fontWeight: 700,
+                                  '& .MuiChip-label': { px: 0.5 },
+                                }}
+                              />
+                            )}
+                          </ListItemButton>
+                        );
+                      })}
+                    </List>
+                  </Collapse>
+                </Box>
+              );
+            })}
           </Box>
 
-          {/* Bottom */}
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', my: 1 }} />
-          <ListItemButton
-            onClick={logout}
-            sx={{ borderRadius: 2, py: 1, '&:hover': { bgcolor: 'rgba(255,70,70,0.15)' } }}
-          >
-            <ListItemIcon sx={{ color: 'rgba(255,255,255,0.5)', minWidth: 36 }}><LogoutIcon sx={{ fontSize: 20 }} /></ListItemIcon>
-            <ListItemText primary="Sign Out" sx={{ '& .MuiTypography-root': { fontSize: 13 } }} />
-          </ListItemButton>
+          {/* Bottom - Sign Out */}
+          <Box sx={{ flexShrink: 0, px: 1, pb: 1.5, pt: 0.5 }}>
+            <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)', mb: 0.5 }} />
+            <ListItemButton
+              onClick={logout}
+              dense
+              sx={{
+                borderRadius: 1.5,
+                py: 0.6,
+                px: 1.5,
+                '&:hover': { bgcolor: 'rgba(255,70,70,0.12)' },
+              }}
+            >
+              <ListItemIcon sx={{ color: '#ef5350', minWidth: 30 }}>
+                <LogoutIcon sx={{ fontSize: 18 }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Sign Out"
+                sx={{ '& .MuiTypography-root': { fontSize: 12.5, fontWeight: 500, color: '#ef9a9a' } }}
+              />
+            </ListItemButton>
+          </Box>
         </Box>
       </Drawer>
 

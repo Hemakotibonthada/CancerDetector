@@ -36,6 +36,12 @@ export const adminNavItems: NavItem[] = [
   { icon: <Payment />, label: 'Billing', path: '/admin/billing', section: 'Business' },
   { icon: <Hub />, label: 'Integrations', path: '/admin/integrations', section: 'System' },
   { icon: <School />, label: 'Training Center', path: '/admin/training', section: 'Business' },
+  { icon: <Assessment />, label: 'Research Portal', path: '/admin/research', section: 'Advanced' },
+  { icon: <People />, label: 'Workforce', path: '/admin/workforce', section: 'Advanced' },
+  { icon: <Analytics />, label: 'Population Health', path: '/admin/population-health', section: 'Advanced' },
+  { icon: <Shield />, label: 'Quality Dashboard', path: '/admin/quality-dashboard', section: 'Advanced' },
+  { icon: <School />, label: 'Education Mgmt', path: '/admin/education', section: 'Advanced' },
+  { icon: <Hub />, label: 'Social Determinants', path: '/admin/social-determinants', section: 'Advanced' },
 ];
 
 const AdminDashboard: React.FC = () => {

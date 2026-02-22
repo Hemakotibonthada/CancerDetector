@@ -106,7 +106,14 @@ def create_application() -> FastAPI:
         health_records_router, blood_samples_router, smartwatch_router,
         cancer_detection_router, admin_router, appointments_router,
         notifications_router, reports_router, analytics_router,
-        blood_donor_router,
+        blood_donor_router, clinical_decision_router, genomics_router,
+        research_router, population_health_router, patient_engagement_router,
+        communication_router, billing_enhanced_router, quality_safety_router,
+        supply_chain_router, telehealth_router, pathology_router,
+        rehabilitation_router, nutrition_enhanced_router, mental_health_enhanced_router,
+        clinical_trials_v2_router, radiology_enhanced_router, pharmacy_enhanced_router,
+        education_router, social_determinants_router, wearable_enhanced_router,
+        emergency_router, workforce_router,
     )
     
     api_prefix = settings.api_prefix
@@ -125,6 +132,28 @@ def create_application() -> FastAPI:
     app.include_router(reports_router, prefix=api_prefix)
     app.include_router(analytics_router, prefix=api_prefix)
     app.include_router(blood_donor_router, prefix=api_prefix)
+    app.include_router(clinical_decision_router, prefix=api_prefix)
+    app.include_router(genomics_router, prefix=api_prefix)
+    app.include_router(research_router, prefix=api_prefix)
+    app.include_router(population_health_router, prefix=api_prefix)
+    app.include_router(patient_engagement_router, prefix=api_prefix)
+    app.include_router(communication_router, prefix=api_prefix)
+    app.include_router(billing_enhanced_router, prefix=api_prefix)
+    app.include_router(quality_safety_router, prefix=api_prefix)
+    app.include_router(supply_chain_router, prefix=api_prefix)
+    app.include_router(telehealth_router, prefix=api_prefix)
+    app.include_router(pathology_router, prefix=api_prefix)
+    app.include_router(rehabilitation_router, prefix=api_prefix)
+    app.include_router(nutrition_enhanced_router, prefix=api_prefix)
+    app.include_router(mental_health_enhanced_router, prefix=api_prefix)
+    app.include_router(clinical_trials_v2_router, prefix=api_prefix)
+    app.include_router(radiology_enhanced_router, prefix=api_prefix)
+    app.include_router(pharmacy_enhanced_router, prefix=api_prefix)
+    app.include_router(education_router, prefix=api_prefix)
+    app.include_router(social_determinants_router, prefix=api_prefix)
+    app.include_router(wearable_enhanced_router, prefix=api_prefix)
+    app.include_router(emergency_router, prefix=api_prefix)
+    app.include_router(workforce_router, prefix=api_prefix)
     
     # ========================================================================
     # Root & Health Endpoints

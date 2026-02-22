@@ -35,6 +35,18 @@ export const hospitalNavItems = [
   { section: 'AI & Analytics', icon: <BarIcon />, label: 'Analytics', path: '/hospital/analytics' },
   { section: 'Research', icon: <Science />, label: 'Clinical Trials', path: '/hospital/clinical-trials' },
   { section: 'Research', icon: <Assessment />, label: 'Quality Metrics', path: '/hospital/quality' },
+  { section: 'Advanced', icon: <Science />, label: 'Pathology', path: '/hospital/pathology' },
+  { section: 'Advanced', icon: <Assessment />, label: 'Supply Chain', path: '/hospital/supply-chain' },
+  { section: 'Advanced', icon: <MedicalServices />, label: 'Quality & Safety', path: '/hospital/quality-safety' },
+  { section: 'Advanced', icon: <Science />, label: 'Genomics Lab', path: '/hospital/genomics-lab' },
+  { section: 'Advanced', icon: <People />, label: 'Population Health', path: '/hospital/population-health' },
+  { section: 'Advanced', icon: <Science />, label: 'Clinical Trials+', path: '/hospital/clinical-trials-mgmt' },
+  { section: 'Advanced', icon: <MedicalServices />, label: 'Pharmacy+', path: '/hospital/pharmacy-enhanced' },
+  { section: 'Advanced', icon: <Science />, label: 'Radiology+', path: '/hospital/radiology-enhanced' },
+  { section: 'Advanced', icon: <MedicalServices />, label: 'Emergency+', path: '/hospital/emergency-enhanced' },
+  { section: 'Advanced', icon: <Psychology />, label: 'Clinical Decision', path: '/hospital/clinical-decision' },
+  { section: 'Advanced', icon: <MedicalServices />, label: 'Rehabilitation', path: '/hospital/rehabilitation' },
+  { section: 'Advanced', icon: <Science />, label: 'Nutrition Mgmt', path: '/hospital/nutrition' },
   { section: 'Management', icon: <Settings />, label: 'Settings', path: '/hospital/settings' },
 ];
 

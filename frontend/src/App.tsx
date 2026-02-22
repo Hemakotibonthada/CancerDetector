@@ -34,6 +34,20 @@ const ScreeningSchedulePage = lazy(() => import('./pages/patient/ScreeningSchedu
 const FamilyHealthPage = lazy(() => import('./pages/patient/FamilyHealthPage'));
 const BloodDonorPage = lazy(() => import('./pages/patient/BloodDonorPage'));
 
+// New Patient Pages (lazy loaded)
+const ClinicalPathwaysPage = lazy(() => import('./pages/patient/ClinicalPathwaysPage'));
+const GenomicsPage = lazy(() => import('./pages/patient/GenomicsPage'));
+const PatientEngagementPage = lazy(() => import('./pages/patient/PatientEngagementPage'));
+const RehabilitationPage = lazy(() => import('./pages/patient/RehabilitationPage'));
+const WearableEnhancedPage = lazy(() => import('./pages/patient/WearableEnhancedPage'));
+const CommunicationHubPage = lazy(() => import('./pages/patient/CommunicationHubPage'));
+const TelehealthPatientPage = lazy(() => import('./pages/patient/TelehealthPatientPage'));
+const NutritionEnhancedPage = lazy(() => import('./pages/patient/NutritionEnhancedPage'));
+const MentalHealthEnhancedPage = lazy(() => import('./pages/patient/MentalHealthEnhancedPage'));
+const EducationPage = lazy(() => import('./pages/patient/EducationPage'));
+const SocialDeterminantsPage = lazy(() => import('./pages/patient/SocialDeterminantsPage'));
+const BillingPatientPage = lazy(() => import('./pages/patient/BillingPatientPage'));
+
 // Hospital Pages (lazy loaded)
 const HospitalDashboard = lazy(() => import('./pages/hospital/HospitalDashboard'));
 const PatientManagement = lazy(() => import('./pages/hospital/PatientManagement'));
@@ -54,6 +68,20 @@ const ClinicalTrialsPage = lazy(() => import('./pages/hospital/ClinicalTrialsPag
 const QualityMetricsPage = lazy(() => import('./pages/hospital/QualityMetricsPage'));
 const BloodBankPage = lazy(() => import('./pages/hospital/BloodBankPage'));
 
+// New Hospital Pages (lazy loaded)
+const PathologyManagementPage = lazy(() => import('./pages/hospital/PathologyManagementPage'));
+const SupplyChainPage = lazy(() => import('./pages/hospital/SupplyChainPage'));
+const QualitySafetyPage = lazy(() => import('./pages/hospital/QualitySafetyPage'));
+const GenomicsLabPage = lazy(() => import('./pages/hospital/GenomicsLabPage'));
+const PopulationHealthPage = lazy(() => import('./pages/hospital/PopulationHealthPage'));
+const ClinicalTrialsManagementPage = lazy(() => import('./pages/hospital/ClinicalTrialsManagementPage'));
+const PharmacyEnhancedPage = lazy(() => import('./pages/hospital/PharmacyEnhancedPage'));
+const RadiologyEnhancedPage = lazy(() => import('./pages/hospital/RadiologyEnhancedPage'));
+const EmergencyEnhancedPage = lazy(() => import('./pages/hospital/EmergencyEnhancedPage'));
+const ClinicalDecisionPage = lazy(() => import('./pages/hospital/ClinicalDecisionPage'));
+const RehabilitationManagementPage = lazy(() => import('./pages/hospital/RehabilitationManagementPage'));
+const NutritionManagementPage = lazy(() => import('./pages/hospital/NutritionManagementPage'));
+
 // Admin Pages (lazy loaded)
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
@@ -71,6 +99,14 @@ const DataManagementPage = lazy(() => import('./pages/admin/DataManagementPage')
 const BillingManagementPage = lazy(() => import('./pages/admin/BillingManagementPage'));
 const IntegrationHubPage = lazy(() => import('./pages/admin/IntegrationHubPage'));
 const TrainingCenterPage = lazy(() => import('./pages/admin/TrainingCenterPage'));
+
+// New Admin Pages (lazy loaded)
+const ResearchPortalPage = lazy(() => import('./pages/admin/ResearchPortalPage'));
+const WorkforceManagementPage = lazy(() => import('./pages/admin/WorkforceManagementPage'));
+const PopulationHealthAdminPage = lazy(() => import('./pages/admin/PopulationHealthAdminPage'));
+const QualityDashboardPage = lazy(() => import('./pages/admin/QualityDashboardPage'));
+const EducationManagementPage = lazy(() => import('./pages/admin/EducationManagementPage'));
+const SocialDeterminantsAdminPage = lazy(() => import('./pages/admin/SocialDeterminantsAdminPage'));
 
 const LoadingFallback = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
@@ -142,6 +178,18 @@ function App() {
               <Route path="/patient/screening" element={<ProtectedRoute><ScreeningSchedulePage /></ProtectedRoute>} />
               <Route path="/patient/family-health" element={<ProtectedRoute><FamilyHealthPage /></ProtectedRoute>} />
               <Route path="/patient/blood-donor" element={<ProtectedRoute><BloodDonorPage /></ProtectedRoute>} />
+              <Route path="/patient/clinical-pathways" element={<ProtectedRoute><ClinicalPathwaysPage /></ProtectedRoute>} />
+              <Route path="/patient/genomics" element={<ProtectedRoute><GenomicsPage /></ProtectedRoute>} />
+              <Route path="/patient/engagement" element={<ProtectedRoute><PatientEngagementPage /></ProtectedRoute>} />
+              <Route path="/patient/rehabilitation" element={<ProtectedRoute><RehabilitationPage /></ProtectedRoute>} />
+              <Route path="/patient/wearables" element={<ProtectedRoute><WearableEnhancedPage /></ProtectedRoute>} />
+              <Route path="/patient/communication" element={<ProtectedRoute><CommunicationHubPage /></ProtectedRoute>} />
+              <Route path="/patient/telehealth" element={<ProtectedRoute><TelehealthPatientPage /></ProtectedRoute>} />
+              <Route path="/patient/nutrition" element={<ProtectedRoute><NutritionEnhancedPage /></ProtectedRoute>} />
+              <Route path="/patient/mental-health-enhanced" element={<ProtectedRoute><MentalHealthEnhancedPage /></ProtectedRoute>} />
+              <Route path="/patient/education" element={<ProtectedRoute><EducationPage /></ProtectedRoute>} />
+              <Route path="/patient/social-determinants" element={<ProtectedRoute><SocialDeterminantsPage /></ProtectedRoute>} />
+              <Route path="/patient/billing" element={<ProtectedRoute><BillingPatientPage /></ProtectedRoute>} />
 
               {/* Hospital Routes */}
               <Route path="/hospital" element={<ProtectedRoute roles={HOSPITAL_ROLES}><HospitalDashboard /></ProtectedRoute>} />
@@ -162,6 +210,18 @@ function App() {
               <Route path="/hospital/clinical-trials" element={<ProtectedRoute roles={HOSPITAL_ROLES}><ClinicalTrialsPage /></ProtectedRoute>} />
               <Route path="/hospital/quality" element={<ProtectedRoute roles={HOSPITAL_ROLES}><QualityMetricsPage /></ProtectedRoute>} />
               <Route path="/hospital/blood-bank" element={<ProtectedRoute roles={HOSPITAL_ROLES}><BloodBankPage /></ProtectedRoute>} />
+              <Route path="/hospital/pathology" element={<ProtectedRoute roles={HOSPITAL_ROLES}><PathologyManagementPage /></ProtectedRoute>} />
+              <Route path="/hospital/supply-chain" element={<ProtectedRoute roles={HOSPITAL_ROLES}><SupplyChainPage /></ProtectedRoute>} />
+              <Route path="/hospital/quality-safety" element={<ProtectedRoute roles={HOSPITAL_ROLES}><QualitySafetyPage /></ProtectedRoute>} />
+              <Route path="/hospital/genomics-lab" element={<ProtectedRoute roles={HOSPITAL_ROLES}><GenomicsLabPage /></ProtectedRoute>} />
+              <Route path="/hospital/population-health" element={<ProtectedRoute roles={HOSPITAL_ROLES}><PopulationHealthPage /></ProtectedRoute>} />
+              <Route path="/hospital/clinical-trials-mgmt" element={<ProtectedRoute roles={HOSPITAL_ROLES}><ClinicalTrialsManagementPage /></ProtectedRoute>} />
+              <Route path="/hospital/pharmacy-enhanced" element={<ProtectedRoute roles={HOSPITAL_ROLES}><PharmacyEnhancedPage /></ProtectedRoute>} />
+              <Route path="/hospital/radiology-enhanced" element={<ProtectedRoute roles={HOSPITAL_ROLES}><RadiologyEnhancedPage /></ProtectedRoute>} />
+              <Route path="/hospital/emergency-enhanced" element={<ProtectedRoute roles={HOSPITAL_ROLES}><EmergencyEnhancedPage /></ProtectedRoute>} />
+              <Route path="/hospital/clinical-decision" element={<ProtectedRoute roles={HOSPITAL_ROLES}><ClinicalDecisionPage /></ProtectedRoute>} />
+              <Route path="/hospital/rehabilitation" element={<ProtectedRoute roles={HOSPITAL_ROLES}><RehabilitationManagementPage /></ProtectedRoute>} />
+              <Route path="/hospital/nutrition" element={<ProtectedRoute roles={HOSPITAL_ROLES}><NutritionManagementPage /></ProtectedRoute>} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminDashboard /></ProtectedRoute>} />
@@ -180,6 +240,12 @@ function App() {
               <Route path="/admin/billing" element={<ProtectedRoute roles={ADMIN_ROLES}><BillingManagementPage /></ProtectedRoute>} />
               <Route path="/admin/integrations" element={<ProtectedRoute roles={ADMIN_ROLES}><IntegrationHubPage /></ProtectedRoute>} />
               <Route path="/admin/training" element={<ProtectedRoute roles={ADMIN_ROLES}><TrainingCenterPage /></ProtectedRoute>} />
+              <Route path="/admin/research" element={<ProtectedRoute roles={ADMIN_ROLES}><ResearchPortalPage /></ProtectedRoute>} />
+              <Route path="/admin/workforce" element={<ProtectedRoute roles={ADMIN_ROLES}><WorkforceManagementPage /></ProtectedRoute>} />
+              <Route path="/admin/population-health" element={<ProtectedRoute roles={ADMIN_ROLES}><PopulationHealthAdminPage /></ProtectedRoute>} />
+              <Route path="/admin/quality-dashboard" element={<ProtectedRoute roles={ADMIN_ROLES}><QualityDashboardPage /></ProtectedRoute>} />
+              <Route path="/admin/education" element={<ProtectedRoute roles={ADMIN_ROLES}><EducationManagementPage /></ProtectedRoute>} />
+              <Route path="/admin/social-determinants" element={<ProtectedRoute roles={ADMIN_ROLES}><SocialDeterminantsAdminPage /></ProtectedRoute>} />
 
               {/* Legacy route redirects */}
               <Route path="/health-records" element={<Navigate to="/patient/records" />} />
