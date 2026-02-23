@@ -147,7 +147,7 @@ function App() {
     <ThemeProvider theme={lightTheme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
               {/* Public Routes */}

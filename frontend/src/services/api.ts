@@ -16,7 +16,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor for token refresh
+// Response interceptor for token refresh & error normalization
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -25,6 +25,13 @@ api.interceptors.response.use(
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+    }
+    // Normalize FastAPI validation errors (detail is array of {type,loc,msg,input,ctx})
+    const detail = error.response?.data?.detail;
+    if (Array.isArray(detail)) {
+      error.response.data.detail = detail.map((e: any) => e.msg || JSON.stringify(e)).join('; ');
+    } else if (detail && typeof detail === 'object') {
+      error.response.data.detail = detail.msg || JSON.stringify(detail);
     }
     return Promise.reject(error);
   }

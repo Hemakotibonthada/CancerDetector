@@ -82,7 +82,7 @@ const MessagesPage: React.FC = () => {
     }
   }, [user, selectedConversation]);
 
-  useEffect(() => { loadMessages(); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadMessages(); }, [loadMessages]);
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversation) return;
