@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   LinearProgress, Avatar, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl,
   InputLabel, Alert, Switch, FormControlLabel, Divider, Slider,
+  CircularProgress,
 } from '@mui/material';
 import {
   Psychology, Science, TrendingUp, Speed, PlayArrow, Stop,
@@ -19,50 +20,44 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { adminAPI } from '../../services/api';
 
 const AIModelManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedModel, setSelectedModel] = useState<any>(null);
   const [showDeploy, setShowDeploy] = useState(false);
+  const [models, setModels] = useState<any[]>([]);
+  const [trainingHistory, setTrainingHistory] = useState<any[]>([]);
+  const [accuracyTrend, setAccuracyTrend] = useState<any[]>([]);
+  const [dataDrift, setDataDrift] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const models = [
-    { id: 'MDL-001', name: 'CancerGuard Ensemble v3.2', type: 'Ensemble (NN + RF + GB)', status: 'production', accuracy: 94.7, auc: 0.968, f1: 0.942, precision: 95.1, recall: 93.3, trainedOn: '1.2M records', lastTrained: '2 days ago', inferenceTime: '250ms', version: 'v3.2.1', size: '2.4 GB', environment: 'production', gpu: true },
-    { id: 'MDL-002', name: 'Random Forest Classifier', type: 'Random Forest', status: 'production', accuracy: 91.3, auc: 0.945, f1: 0.908, precision: 92.5, recall: 89.2, trainedOn: '1.2M records', lastTrained: '5 days ago', inferenceTime: '45ms', version: 'v2.8.0', size: '850 MB', environment: 'production', gpu: false },
-    { id: 'MDL-003', name: 'Gradient Boosting Predictor', type: 'XGBoost', status: 'production', accuracy: 92.1, auc: 0.952, f1: 0.917, precision: 93.0, recall: 91.2, trainedOn: '1.2M records', lastTrained: '3 days ago', inferenceTime: '35ms', version: 'v2.5.3', size: '620 MB', environment: 'production', gpu: false },
-    { id: 'MDL-004', name: 'Deep Learning CNN', type: 'Convolutional Neural Network', status: 'staging', accuracy: 93.5, auc: 0.961, f1: 0.931, precision: 94.2, recall: 92.0, trainedOn: '800K images', lastTrained: '1 day ago', inferenceTime: '180ms', version: 'v1.4.0', size: '5.1 GB', environment: 'staging', gpu: true },
-    { id: 'MDL-005', name: 'NLP Symptom Analyzer', type: 'Transformer (BERT)', status: 'staging', accuracy: 88.5, auc: 0.921, f1: 0.882, precision: 89.1, recall: 87.9, trainedOn: '500K notes', lastTrained: '1 day ago', inferenceTime: '120ms', version: 'v1.1.0', size: '1.8 GB', environment: 'staging', gpu: true },
-    { id: 'MDL-006', name: 'SVM Classifier (Legacy)', type: 'Support Vector Machine', status: 'deprecated', accuracy: 89.8, auc: 0.931, f1: 0.893, precision: 90.5, recall: 88.1, trainedOn: '500K records', lastTrained: '30 days ago', inferenceTime: '25ms', version: 'v2.1.0', size: '320 MB', environment: 'archived', gpu: false },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await adminAPI.getDashboard();
+      const data = res.data ?? res;
+      setModels(data.models ?? data.ai_models ?? []);
+      setTrainingHistory(data.trainingHistory ?? data.training_history ?? []);
+      setAccuracyTrend(data.accuracyTrend ?? data.accuracy_trend ?? []);
+      setDataDrift(data.dataDrift ?? data.data_drift ?? []);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const trainingHistory = [
-    { date: 'Dec 28', accuracy: 93.8, loss: 0.15, epoch: 50, dataset: '1.2M', duration: '4h 20m' },
-    { date: 'Dec 25', accuracy: 93.5, loss: 0.17, epoch: 45, dataset: '1.15M', duration: '4h 5m' },
-    { date: 'Dec 20', accuracy: 93.1, loss: 0.19, epoch: 50, dataset: '1.1M', duration: '3h 55m' },
-    { date: 'Dec 15', accuracy: 92.8, loss: 0.21, epoch: 45, dataset: '1.05M', duration: '3h 40m' },
-    { date: 'Dec 10', accuracy: 92.5, loss: 0.22, epoch: 50, dataset: '1.0M', duration: '3h 30m' },
-    { date: 'Dec 5', accuracy: 92.0, loss: 0.24, epoch: 40, dataset: '950K', duration: '3h 15m' },
-  ];
-
-  const accuracyTrend = [
-    { month: 'Jul', ensemble: 91.2, rf: 88.5, gb: 89.1, cnn: 85.0 },
-    { month: 'Aug', ensemble: 92.0, rf: 89.2, gb: 89.8, cnn: 87.5 },
-    { month: 'Sep', ensemble: 92.8, rf: 89.8, gb: 90.5, cnn: 89.0 },
-    { month: 'Oct', ensemble: 93.5, rf: 90.5, gb: 91.2, cnn: 91.5 },
-    { month: 'Nov', ensemble: 94.0, rf: 91.0, gb: 91.8, cnn: 92.5 },
-    { month: 'Dec', ensemble: 94.7, rf: 91.3, gb: 92.1, cnn: 93.5 },
-  ];
-
-  const dataDrift = [
-    { feature: 'Age Distribution', drift: 2.1, threshold: 5.0, status: 'normal' },
-    { feature: 'Blood Biomarkers', drift: 3.5, threshold: 5.0, status: 'normal' },
-    { feature: 'Genetic Markers', drift: 1.8, threshold: 5.0, status: 'normal' },
-    { feature: 'Lifestyle Factors', drift: 4.2, threshold: 5.0, status: 'warning' },
-    { feature: 'Vital Signs', drift: 2.8, threshold: 5.0, status: 'normal' },
-    { feature: 'Environmental', drift: 5.5, threshold: 5.0, status: 'alert' },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="AI Model Management" subtitle="Manage and monitor AI/ML models" navItems={adminNavItems} portalType="admin">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : <>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="Active Models" value={models.filter(m => m.status === 'production').length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="Best Accuracy" value="94.7%" color="#4caf50" /></Grid>
@@ -226,6 +221,7 @@ const AIModelManagement: React.FC = () => {
           </Stack>
         </Card>
       )}
+      </>}
 
       {/* Model Detail Dialog */}
       <Dialog open={!!selectedModel} onClose={() => setSelectedModel(null)} maxWidth="md" fullWidth>

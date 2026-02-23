@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Switch, FormControlLabel, Divider, Alert, Select,
   MenuItem, FormControl, InputLabel, IconButton, Dialog,
-  DialogTitle, DialogContent, DialogActions, Slider, LinearProgress,
+  DialogTitle, DialogContent, DialogActions, Slider, LinearProgress, CircularProgress,
 } from '@mui/material';
 import {
   Settings, Email, Sms, Notifications, Code, Language,
@@ -16,79 +16,53 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, SectionHeader, StatusBadge } from '../../components/common/SharedComponents';
+import { adminAPI, integrationAPI } from '../../services/api';
 
 const Configuration: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any[]>([]);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [featureFlags, setFeatureFlags] = useState<any[]>([]);
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const systemSettings = [
-    { category: 'General', settings: [
-      { name: 'Platform Name', value: 'CancerGuard AI', type: 'text' },
-      { name: 'Platform URL', value: 'https://app.cancerguard.ai', type: 'text' },
-      { name: 'Support Email', value: 'support@cancerguard.ai', type: 'text' },
-      { name: 'Default Language', value: 'English (US)', type: 'select' },
-      { name: 'Timezone', value: 'UTC-5 (Eastern)', type: 'select' },
-      { name: 'Date Format', value: 'MM/DD/YYYY', type: 'select' },
-      { name: 'Currency', value: 'USD ($)', type: 'select' },
-      { name: 'Maintenance Mode', value: false, type: 'toggle' },
-    ]},
-    { category: 'Security', settings: [
-      { name: 'Session Timeout (minutes)', value: '30', type: 'number' },
-      { name: 'Max Login Attempts', value: '5', type: 'number' },
-      { name: 'Password Min Length', value: '12', type: 'number' },
-      { name: 'Require 2FA for Admins', value: true, type: 'toggle' },
-      { name: 'Require 2FA for Staff', value: true, type: 'toggle' },
-      { name: 'Force HTTPS', value: true, type: 'toggle' },
-      { name: 'API Rate Limit (req/min)', value: '100', type: 'number' },
-      { name: 'Enable CORS', value: true, type: 'toggle' },
-    ]},
-    { category: 'AI/ML', settings: [
-      { name: 'Default AI Model', value: 'CancerGuard Ensemble v3.2', type: 'select' },
-      { name: 'Auto-Retrain Interval', value: '7 days', type: 'select' },
-      { name: 'Prediction Confidence Threshold', value: '0.85', type: 'number' },
-      { name: 'Enable Real-time Predictions', value: true, type: 'toggle' },
-      { name: 'Max Batch Size', value: '1000', type: 'number' },
-      { name: 'GPU Acceleration', value: true, type: 'toggle' },
-    ]},
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [dashRes, intRes] = await Promise.all([
+        adminAPI.getDashboard(),
+        integrationAPI.getIntegrations(),
+      ]);
+      const dash = dashRes.data;
+      setSystemSettings(dash.system_settings ?? dash.systemSettings ?? []);
+      setEmailTemplates(dash.email_templates ?? dash.emailTemplates ?? []);
+      setFeatureFlags(dash.feature_flags ?? dash.featureFlags ?? []);
+      setIntegrations(intRes.data?.integrations ?? intRes.data ?? []);
+    } catch {
+      setError('Failed to load configuration data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const emailTemplates = [
-    { id: 'TPL-001', name: 'Welcome Email', subject: 'Welcome to CancerGuard AI', trigger: 'User Registration', lastEdited: '15 days ago', active: true },
-    { id: 'TPL-002', name: 'Password Reset', subject: 'Reset Your Password', trigger: 'Password Reset Request', lastEdited: '30 days ago', active: true },
-    { id: 'TPL-003', name: 'Appointment Confirmation', subject: 'Appointment Confirmed', trigger: 'Appointment Booked', lastEdited: '10 days ago', active: true },
-    { id: 'TPL-004', name: 'Lab Results Ready', subject: 'Your Lab Results Are Ready', trigger: 'Lab Results Published', lastEdited: '20 days ago', active: true },
-    { id: 'TPL-005', name: 'Risk Assessment Alert', subject: 'Important Health Alert', trigger: 'High Risk Detection', lastEdited: '5 days ago', active: true },
-    { id: 'TPL-006', name: 'Monthly Health Summary', subject: 'Your Monthly Health Report', trigger: 'Monthly Schedule', lastEdited: '25 days ago', active: true },
-    { id: 'TPL-007', name: 'Account Deactivation', subject: 'Account Deactivated', trigger: 'Admin Action', lastEdited: '60 days ago', active: false },
-    { id: 'TPL-008', name: 'Hospital Onboarding', subject: 'Welcome to CancerGuard Network', trigger: 'Hospital Registration', lastEdited: '45 days ago', active: true },
-  ];
-
-  const featureFlags = [
-    { name: 'telemedicine_v2', description: 'New telemedicine UI with screen sharing', enabled: true, environment: 'production', rollout: 100 },
-    { name: 'ai_chat_assistant', description: 'AI-powered health chat assistant', enabled: true, environment: 'staging', rollout: 25 },
-    { name: 'genetic_risk_scoring', description: 'Genetic marker-based risk assessment', enabled: true, environment: 'production', rollout: 80 },
-    { name: 'smartwatch_ecg', description: 'ECG analysis from smartwatch data', enabled: false, environment: 'development', rollout: 0 },
-    { name: 'multi_language_support', description: 'Multi-language interface', enabled: true, environment: 'staging', rollout: 50 },
-    { name: 'dark_mode_v2', description: 'Enhanced dark mode with custom themes', enabled: true, environment: 'production', rollout: 100 },
-    { name: 'patient_portal_v3', description: 'Redesigned patient portal', enabled: false, environment: 'development', rollout: 0 },
-    { name: 'bulk_screening', description: 'Bulk cancer screening for hospitals', enabled: true, environment: 'production', rollout: 60 },
-  ];
-
-  const integrations = [
-    { name: 'SMTP (SendGrid)', status: 'connected', type: 'Email', lastSync: '2 min ago', config: { host: 'smtp.sendgrid.net', port: '587' } },
-    { name: 'Twilio SMS', status: 'connected', type: 'SMS', lastSync: '5 min ago', config: { region: 'US', sender: '+1-XXX-XXX-XXXX' } },
-    { name: 'AWS S3', status: 'connected', type: 'Storage', lastSync: '1 min ago', config: { bucket: 'cancerguard-prod', region: 'us-east-1' } },
-    { name: 'Stripe', status: 'connected', type: 'Payment', lastSync: '10 min ago', config: { mode: 'live', currency: 'USD' } },
-    { name: 'Slack', status: 'connected', type: 'Notification', lastSync: '3 min ago', config: { workspace: 'CancerGuard', channels: 3 } },
-    { name: 'Epic FHIR', status: 'partial', type: 'EHR', lastSync: '1 hr ago', config: { version: 'R4', endpoints: 12 } },
-    { name: 'HL7 Interface', status: 'connected', type: 'EHR', lastSync: '15 min ago', config: { version: '2.5', messages: 'ADT, ORM, ORU' } },
-    { name: 'Google Analytics', status: 'disconnected', type: 'Analytics', lastSync: 'Never', config: { trackingId: 'Not configured' } },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   const envColors: any = { production: '#4caf50', staging: '#ff9800', development: '#1565c0' };
 
+  if (loading) {
+    return (
+      <AppLayout title="Configuration" subtitle="System settings and integrations" navItems={adminNavItems} portalType="admin">
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout title="Configuration" subtitle="System settings and integrations" navItems={adminNavItems} portalType="admin">
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Settings />} label="Settings" value="22" color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Flag />} label="Feature Flags" value={featureFlags.filter(f => f.enabled).length} color="#4caf50" /></Grid>
@@ -220,10 +194,10 @@ const Configuration: React.FC = () => {
                 </Stack>
                 <Divider sx={{ my: 1.5 }} />
                 <Stack spacing={0.5}>
-                  {Object.entries(int.config).map(([k, v]) => (
+                  {Object.entries(int.config ?? {}).map(([k, v]) => (
                     <Stack key={k} direction="row" justifyContent="space-between">
                       <Typography sx={{ fontSize: 11, color: 'text.secondary', textTransform: 'capitalize' }}>{k}</Typography>
-                      <Typography sx={{ fontSize: 11, fontWeight: 500, fontFamily: 'monospace' }}>{v}</Typography>
+                      <Typography sx={{ fontSize: 11, fontWeight: 500, fontFamily: 'monospace' }}>{String(v)}</Typography>
                     </Stack>
                   ))}
                   <Stack direction="row" justifyContent="space-between">

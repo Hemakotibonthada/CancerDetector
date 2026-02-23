@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Select, MenuItem, FormControl, InputLabel, Alert, Divider,
   IconButton, Avatar, Rating, Stepper, Step, StepLabel,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Switch, FormControlLabel, LinearProgress,
+  Switch, FormControlLabel, LinearProgress, CircularProgress,
 } from '@mui/material';
 import {
   CalendarMonth, Add, VideoCall, Person, AccessTime, LocationOn,
@@ -17,6 +17,21 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { SectionHeader, StatusBadge, StatCard } from '../../components/common/SharedComponents';
+import { appointmentsAPI, hospitalsAPI } from '../../services/api';
+
+const formatDate = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return dateStr; }
+};
+
+const formatTime = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  } catch { return ''; }
+};
 
 const AppointmentsPage: React.FC = () => {
   const { user } = useAuth();
@@ -28,35 +43,76 @@ const AppointmentsPage: React.FC = () => {
   const [selectedTime, setSelectedTime] = useState('');
   const [isTelemedicine, setIsTelemedicine] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const appointments = [
-    { id: '1', doctor: 'Dr. Sarah Smith', specialization: 'Oncologist', date: 'Feb 25, 2026', time: '10:00 AM', type: 'Follow-up', status: 'confirmed', telemedicine: false, hospital: 'Cancer Research Center', duration: 30, reason: 'Cancer risk review' },
-    { id: '2', doctor: 'Dr. James Lee', specialization: 'Cardiologist', date: 'Mar 02, 2026', time: '2:30 PM', type: 'Consultation', status: 'scheduled', telemedicine: true, hospital: 'City Heart Hospital', duration: 20, reason: 'Heart health check' },
-    { id: '3', doctor: 'Dr. Emily Chen', specialization: 'General Physician', date: 'Mar 10, 2026', time: '9:00 AM', type: 'Check-up', status: 'pending', telemedicine: false, hospital: 'Community Health Center', duration: 45, reason: 'Annual physical exam' },
-  ];
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [pastAppointments, setPastAppointments] = useState<any[]>([]);
+  const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
 
-  const pastAppointments = [
-    { id: '4', doctor: 'Dr. Sarah Smith', specialization: 'Oncologist', date: 'Feb 15, 2026', time: '10:00 AM', type: 'Screening', status: 'completed', telemedicine: false, hospital: 'Cancer Research Center', rating: 5, notes: 'All clear, follow up in 6 months' },
-    { id: '5', doctor: 'Dr. Robert Wilson', specialization: 'Dermatologist', date: 'Jan 20, 2026', time: '3:00 PM', type: 'Consultation', status: 'completed', telemedicine: true, hospital: 'Skin Care Clinic', rating: 4, notes: 'Mole biopsy results benign' },
-    { id: '6', doctor: 'Dr. Lisa Park', specialization: 'Pathologist', date: 'Dec 15, 2025', time: '8:00 AM', type: 'Lab Review', status: 'completed', telemedicine: false, hospital: 'City Lab Corp', rating: 5, notes: 'Blood work all normal' },
-  ];
+  const loadAppointments = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await appointmentsAPI.getMyAppointments();
+      const all = Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.appointments || []);
+      
+      const upcoming = all.filter((a: any) => ['scheduled', 'confirmed', 'pending', 'waitlisted'].includes(a.status));
+      const past = all.filter((a: any) => ['completed', 'cancelled', 'no_show'].includes(a.status));
+      
+      setAppointments(upcoming.map((a: any) => ({
+        id: a.id,
+        doctor: a.doctor_name || `Doctor`,
+        specialization: a.specialization || a.appointment_type || 'Specialist',
+        date: formatDate(a.scheduled_date),
+        time: formatTime(a.scheduled_date),
+        type: (a.appointment_type || 'consultation').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        status: a.status,
+        telemedicine: a.is_telemedicine || false,
+        hospital: a.hospital_name || 'Hospital',
+        duration: a.duration_minutes || 30,
+        reason: a.reason || '',
+        telemedicine_link: a.telemedicine_link || '',
+      })));
+      
+      setPastAppointments(past.map((a: any) => ({
+        id: a.id,
+        doctor: a.doctor_name || `Doctor`,
+        specialization: a.specialization || a.appointment_type || 'Specialist',
+        date: formatDate(a.scheduled_date),
+        time: formatTime(a.scheduled_date),
+        type: (a.appointment_type || 'consultation').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        status: a.status,
+        telemedicine: a.is_telemedicine || false,
+        hospital: a.hospital_name || 'Hospital',
+        rating: a.patient_rating || 0,
+        notes: a.notes || a.patient_feedback || '',
+      })));
+    } catch (err: any) {
+      console.error('Failed to load appointments:', err);
+      setError(err?.response?.data?.detail || 'Failed to load appointments');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const availableDoctors = [
-    { id: '1', name: 'Dr. Sarah Smith', specialization: 'Oncologist', rating: 4.9, experience: 15, hospital: 'Cancer Research Center', fee: 200, available: true, photo: 'SS' },
-    { id: '2', name: 'Dr. James Lee', specialization: 'Cardiologist', rating: 4.8, experience: 12, hospital: 'City Heart Hospital', fee: 180, available: true, photo: 'JL' },
-    { id: '3', name: 'Dr. Emily Chen', specialization: 'General Physician', rating: 4.7, experience: 8, hospital: 'Community Health Center', fee: 100, available: true, photo: 'EC' },
-    { id: '4', name: 'Dr. Robert Wilson', specialization: 'Dermatologist', rating: 4.6, experience: 20, hospital: 'Skin Care Clinic', fee: 150, available: false, photo: 'RW' },
-    { id: '5', name: 'Dr. Maria Garcia', specialization: 'Neurologist', rating: 4.9, experience: 18, hospital: 'Brain Health Institute', fee: 250, available: true, photo: 'MG' },
-  ];
+  useEffect(() => { loadAppointments(); }, [loadAppointments]);
 
-  const timeSlots = ['9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '2:00 PM', '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM'];
+  if (loading) {
+    return (
+      <AppLayout title="Appointments" subtitle="Manage your healthcare appointments" navItems={patientNavItems} portalType="patient">
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Appointments" subtitle="Manage your healthcare appointments" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<EventAvailable />} label="Upcoming" value={appointments.length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Completed" value={pastAppointments.length} color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<VideoCall />} label="Telemedicine" value={1} color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Completed" value={pastAppointments.filter(a => a.status === 'completed').length} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<VideoCall />} label="Telemedicine" value={appointments.filter(a => a.telemedicine).length} color="#7b1fa2" /></Grid>
         <Grid item xs={6} sm={3}>
           <Card sx={{ p: 2.5, cursor: 'pointer', '&:hover': { transform: 'translateY(-3px)', boxShadow: 4 }, transition: 'all 0.25s' }} onClick={() => setShowBookDialog(true)}>
             <Stack direction="row" spacing={1.5} alignItems="center">
@@ -79,6 +135,14 @@ const AppointmentsPage: React.FC = () => {
       </Tabs>
 
       {activeTab === 0 && (
+        appointments.length === 0 ? (
+          <Card sx={{ p: 4, textAlign: 'center' }}>
+            <EventBusy sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+            <Typography variant="h6" color="text.secondary">No upcoming appointments</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Book your first appointment to get started</Typography>
+            <Button variant="contained" startIcon={<Add />} onClick={() => setShowBookDialog(true)}>Book Appointment</Button>
+          </Card>
+        ) : (
         <Grid container spacing={2}>
           {appointments.map((apt) => (
             <Grid item xs={12} md={6} key={apt.id}>
@@ -132,9 +196,17 @@ const AppointmentsPage: React.FC = () => {
             </Grid>
           ))}
         </Grid>
+        )
       )}
 
       {activeTab === 1 && (
+        pastAppointments.length === 0 ? (
+          <Card sx={{ p: 4, textAlign: 'center' }}>
+            <Schedule sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+            <Typography variant="h6" color="text.secondary">No past appointments</Typography>
+            <Typography variant="body2" color="text.secondary">Your completed appointments will appear here</Typography>
+          </Card>
+        ) : (
         <Card>
           <TableContainer>
             <Table>
@@ -170,38 +242,16 @@ const AppointmentsPage: React.FC = () => {
             </Table>
           </TableContainer>
         </Card>
+        )
       )}
 
       {activeTab === 2 && (
-        <Grid container spacing={2}>
-          {availableDoctors.map((doc) => (
-            <Grid item xs={12} sm={6} md={4} key={doc.id}>
-              <Card sx={{ p: 3, opacity: doc.available ? 1 : 0.6, '&:hover': { boxShadow: doc.available ? 4 : 1 }, transition: 'all 0.2s' }}>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                  <Avatar sx={{ width: 56, height: 56, bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 700 }}>{doc.photo}</Avatar>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: 15 }}>{doc.name}</Typography>
-                    <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{doc.specialization}</Typography>
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Star sx={{ fontSize: 14, color: '#f57c00' }} />
-                      <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{doc.rating}</Typography>
-                      <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>• {doc.experience} yrs</Typography>
-                    </Stack>
-                  </Box>
-                </Stack>
-                <Divider sx={{ mb: 1.5 }} />
-                <Stack spacing={0.5} sx={{ mb: 2 }}>
-                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{doc.hospital}</Typography>
-                  <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Consultation Fee: ${doc.fee}</Typography>
-                </Stack>
-                <Chip label={doc.available ? 'Available' : 'Not Available'} size="small" color={doc.available ? 'success' : 'default'} sx={{ mb: 1.5 }} />
-                <Button variant="contained" fullWidth disabled={!doc.available} onClick={() => { setSelectedDoctor(doc.name); setShowBookDialog(true); }}>
-                  Book Appointment
-                </Button>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+        <Card sx={{ p: 4, textAlign: 'center' }}>
+          <Search sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+          <Typography variant="h6" color="text.secondary">Find a Doctor</Typography>
+          <Typography variant="body2" color="text.secondary">Search for doctors and book appointments through the hospitals page</Typography>
+          <Button variant="outlined" sx={{ mt: 2 }} href="/patient/hospitals">Browse Hospitals</Button>
+        </Card>
       )}
 
       {/* Book Appointment Dialog */}
@@ -227,12 +277,11 @@ const AppointmentsPage: React.FC = () => {
               </FormControl>
               <FormControl fullWidth size="small">
                 <InputLabel>Doctor</InputLabel>
-                <Select label="Doctor" value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value)}>
-                  {availableDoctors.filter(d => d.available).map(d => (
-                    <MenuItem key={d.id} value={d.name}>{d.name} - {d.specialization}</MenuItem>
-                  ))}
+                <Select label="Doctor" value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value as string)}>
+                  <MenuItem value="">Select a doctor</MenuItem>
                 </Select>
               </FormControl>
+              <Alert severity="info" sx={{ fontSize: 12 }}>Visit the Hospitals page to browse available doctors</Alert>
             </Stack>
           )}
           {bookingStep === 1 && (
@@ -240,7 +289,7 @@ const AppointmentsPage: React.FC = () => {
               <TextField label="Date" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
               <Typography sx={{ fontWeight: 600, fontSize: 14 }}>Available Time Slots</Typography>
               <Grid container spacing={1}>
-                {timeSlots.map((slot) => (
+                {['9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM'].map((slot) => (
                   <Grid item xs={4} key={slot}>
                     <Button
                       variant={selectedTime === slot ? 'contained' : 'outlined'}

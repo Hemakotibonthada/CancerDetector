@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   IconButton, Avatar, Divider, Alert, Switch, FormControlLabel,
-  LinearProgress, Tooltip, Slider,
+  LinearProgress, Tooltip, Slider, CircularProgress,
 } from '@mui/material';
 import {
   Watch, Favorite, DirectionsWalk, Bedtime, Speed, Thermostat,
@@ -16,63 +16,90 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { StatCard, MetricGauge } from '../../components/common/SharedComponents';
+import { smartwatchAPI } from '../../services/api';
 
 const SmartwatchPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [showDeviceDialog, setShowDeviceDialog] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'done'>('idle');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [watchData, setWatchData] = useState<any[]>([]);
 
-  const deviceInfo = {
-    name: 'Apple Watch Series 9', model: 'A2857', firmware: '10.3.1',
-    battery: 78, lastSync: '5 minutes ago', connected: true,
-    serialNumber: 'FHKLM2GNXX', storage: '32GB', os: 'watchOS 10.3'
+  const loadDashboard = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [dashRes, dataRes] = await Promise.all([
+        smartwatchAPI.getDashboard().catch(() => ({ data: null })),
+        smartwatchAPI.getData({ limit: 7 }),
+      ]);
+      setDashboard(dashRes.data);
+      const data = Array.isArray(dataRes.data) ? dataRes.data : (dataRes.data?.items || []);
+      setWatchData(data);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to load smartwatch data:', err);
+      setError('Failed to load smartwatch data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+  const deviceInfo = dashboard?.device || {
+    name: 'No device connected', model: '-', firmware: '-',
+    battery: 0, lastSync: '-', connected: false,
+    serialNumber: '-', storage: '-', os: '-'
   };
 
-  const heartRateData = Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`, rate: 60 + Math.floor(Math.random() * 40), min: 55 + Math.floor(Math.random() * 10), max: 85 + Math.floor(Math.random() * 30),
+  const latest = watchData.length > 0 ? watchData[0] : null;
+  const heartRateData = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
+    time: `D${i+1}`, rate: d.avg_heart_rate || 70, min: d.min_heart_rate || 55, max: d.max_heart_rate || 90,
   }));
 
-  const sleepData = [
-    { stage: 'Awake', duration: 0.5, color: '#ef5350', pct: 6 },
-    { stage: 'REM', duration: 1.8, color: '#7b1fa2', pct: 23 },
-    { stage: 'Light', duration: 3.2, color: '#42a5f5', pct: 41 },
-    { stage: 'Deep', duration: 2.3, color: '#1565c0', pct: 30 },
-  ];
+  const sleepData = latest ? [
+    { stage: 'Awake', duration: latest.awake_time || 0.5, color: '#ef5350', pct: latest.awake_pct || 6 },
+    { stage: 'REM', duration: latest.rem_sleep || 1.8, color: '#7b1fa2', pct: latest.rem_pct || 23 },
+    { stage: 'Light', duration: latest.light_sleep || 3.2, color: '#42a5f5', pct: latest.light_pct || 41 },
+    { stage: 'Deep', duration: latest.deep_sleep || 2.3, color: '#1565c0', pct: latest.deep_pct || 30 },
+  ] : [];
 
-  const weeklySteps = [
-    { day: 'Mon', steps: 8432 }, { day: 'Tue', steps: 12450 },
-    { day: 'Wed', steps: 6780 }, { day: 'Thu', steps: 9876 },
-    { day: 'Fri', steps: 11234 }, { day: 'Sat', steps: 15678 },
-    { day: 'Sun', steps: 4567 },
-  ];
-
-  const spo2Data = Array.from({ length: 12 }, (_, i) => ({
-    time: `${i * 2}:00`, value: 96 + Math.floor(Math.random() * 3),
+  const weeklySteps = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
+    day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i % 7], steps: d.steps || 0,
   }));
 
-  const stressData = Array.from({ length: 24 }, (_, i) => ({
-    time: `${i}:00`, level: 20 + Math.floor(Math.random() * 60),
+  const spo2Data = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
+    time: `D${i+1}`, value: d.avg_spo2 || d.spo2 || 97,
   }));
 
-  const weeklyActivity = [
-    { day: 'Mon', calories: 320, active: 45, exercise: 30 },
-    { day: 'Tue', calories: 480, active: 62, exercise: 45 },
-    { day: 'Wed', calories: 290, active: 38, exercise: 20 },
-    { day: 'Thu', calories: 410, active: 55, exercise: 40 },
-    { day: 'Fri', calories: 520, active: 68, exercise: 50 },
-    { day: 'Sat', calories: 650, active: 82, exercise: 60 },
-    { day: 'Sun', calories: 210, active: 28, exercise: 15 },
-  ];
+  const stressData = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
+    time: `D${i+1}`, level: d.stress_level || d.avg_stress || 30,
+  }));
+
+  const weeklyActivity = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
+    day: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i % 7], calories: d.calories_burned || d.calories || 0,
+  }));
 
   const handleSync = () => {
     setSyncStatus('syncing');
-    setTimeout(() => setSyncStatus('done'), 2000);
+    setTimeout(() => { setSyncStatus('done'); loadDashboard(); }, 2000);
     setTimeout(() => setSyncStatus('idle'), 4000);
   };
 
   return (
     <AppLayout title="Smartwatch Data" subtitle="Monitor real-time health data from your wearable" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : !latest ? (
+        <Card sx={{ p: 6, textAlign: 'center' }}>
+          <Watch sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">No smartwatch data available</Typography>
+          <Typography color="text.secondary" sx={{ fontSize: 13 }}>Connect a smartwatch device to start monitoring</Typography>
+          <Button variant="contained" sx={{ mt: 2 }} startIcon={<Bluetooth />} onClick={() => setShowDeviceDialog(true)}>Connect Device</Button>
+        </Card>
+      ) : <>
       {/* Device Status Bar */}
       <Card sx={{ p: 2, mb: 3, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', color: 'white' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={2}>
@@ -114,42 +141,42 @@ const SmartwatchPage: React.FC = () => {
         <Grid item xs={6} sm={4} md={2}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <Favorite sx={{ fontSize: 28, color: '#c62828', mb: 0.5 }} />
-            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#c62828' }}>72</Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#c62828' }}>{latest?.avg_heart_rate || latest?.heart_rate || '-'}</Typography>
             <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Heart Rate (bpm)</Typography>
           </Card>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <Opacity sx={{ fontSize: 28, color: '#1565c0', mb: 0.5 }} />
-            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#1565c0' }}>98%</Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#1565c0' }}>{latest?.avg_spo2 || latest?.spo2 || '-'}%</Typography>
             <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>SpO2</Typography>
           </Card>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <DirectionsWalk sx={{ fontSize: 28, color: '#2e7d32', mb: 0.5 }} />
-            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#2e7d32' }}>8,432</Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#2e7d32' }}>{(latest?.steps || 0).toLocaleString()}</Typography>
             <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Steps Today</Typography>
           </Card>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <FitnessCenter sx={{ fontSize: 28, color: '#f57c00', mb: 0.5 }} />
-            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#f57c00' }}>420</Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#f57c00' }}>{latest?.calories_burned || latest?.calories || 0}</Typography>
             <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Calories Burned</Typography>
           </Card>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <Bedtime sx={{ fontSize: 28, color: '#7b1fa2', mb: 0.5 }} />
-            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#7b1fa2' }}>7.8h</Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#7b1fa2' }}>{latest?.sleep_duration || latest?.total_sleep ? `${(latest.sleep_duration || latest.total_sleep).toFixed(1)}h` : '-'}</Typography>
             <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Sleep Last Night</Typography>
           </Card>
         </Grid>
         <Grid item xs={6} sm={4} md={2}>
           <Card sx={{ p: 2, textAlign: 'center' }}>
             <SelfImprovement sx={{ fontSize: 28, color: '#00897b', mb: 0.5 }} />
-            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#00897b' }}>32</Typography>
+            <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#00897b' }}>{latest?.stress_level || latest?.avg_stress || '-'}</Typography>
             <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>Stress Level</Typography>
           </Card>
         </Grid>
@@ -367,6 +394,8 @@ const SmartwatchPage: React.FC = () => {
           </Grid>
         </Grid>
       )}
+
+      </>}
 
       {/* Device Settings Dialog */}
       <Dialog open={showDeviceDialog} onClose={() => setShowDeviceDialog(false)} maxWidth="sm" fullWidth>

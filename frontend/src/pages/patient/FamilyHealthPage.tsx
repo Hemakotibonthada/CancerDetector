@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Avatar,
   LinearProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, MenuItem, Divider, Switch, FormControlLabel, IconButton,
-  Tooltip,
+  Tooltip, CircularProgress,
 } from '@mui/material';
 import {
   FamilyRestroom, AccountTree, Person, PersonAdd, Warning, CheckCircle,
@@ -15,31 +15,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
-
-const FAMILY_MEMBERS = [
-  { id: '1', name: 'Robert Johnson', relationship: 'Father', age: 68, alive: true, conditions: ['Hypertension', 'Type 2 Diabetes'], cancerHistory: [{ type: 'Prostate', age: 62, outcome: 'Remission' }], geneticTested: true },
-  { id: '2', name: 'Mary Johnson', relationship: 'Mother', age: 65, alive: true, conditions: ['Osteoporosis'], cancerHistory: [{ type: 'Breast', age: 55, outcome: 'Remission' }], geneticTested: true },
-  { id: '3', name: 'James Johnson', relationship: 'Brother', age: 40, alive: true, conditions: ['High Cholesterol'], cancerHistory: [], geneticTested: false },
-  { id: '4', name: 'Sarah Johnson', relationship: 'Sister', age: 35, alive: true, conditions: [], cancerHistory: [], geneticTested: true },
-  { id: '5', name: 'William Johnson', relationship: 'Paternal GF', age: 0, alive: false, conditions: ['Heart Disease'], cancerHistory: [{ type: 'Lung', age: 70, outcome: 'Deceased' }], geneticTested: false },
-  { id: '6', name: 'Elizabeth Johnson', relationship: 'Maternal GM', age: 0, alive: false, conditions: [], cancerHistory: [{ type: 'Ovarian', age: 58, outcome: 'Deceased' }], geneticTested: false },
-  { id: '7', name: 'Patricia Wilson', relationship: 'Maternal Aunt', age: 60, alive: true, conditions: [], cancerHistory: [{ type: 'Breast', age: 48, outcome: 'Remission' }], geneticTested: true },
-];
-
-const HEREDITARY_RISK = [
-  { cancer: 'Breast', risk: 35, population: 12, inherited: true },
-  { cancer: 'Ovarian', risk: 22, population: 2, inherited: true },
-  { cancer: 'Prostate', risk: 18, population: 12, inherited: true },
-  { cancer: 'Lung', risk: 8, population: 6, inherited: false },
-  { cancer: 'Colorectal', risk: 10, population: 5, inherited: false },
-];
-
-const CANCER_PATTERN = [
-  { name: 'Breast', value: 2, fill: '#e91e63' },
-  { name: 'Prostate', value: 1, fill: '#5e92f3' },
-  { name: 'Lung', value: 1, fill: '#9e9e9e' },
-  { name: 'Ovarian', value: 1, fill: '#ae52d4' },
-];
+import { familyHealthAPI } from '../../services/api';
 
 const getRelationIcon = (rel: string) => {
   if (rel.includes('Father') || rel.includes('Brother') || rel.includes('GF')) return <Male />;
@@ -49,23 +25,72 @@ const getRelationIcon = (rel: string) => {
 
 const FamilyHealthPage: React.FC = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
+  const [hereditaryRisk, setHereditaryRisk] = useState<any[]>([]);
+  const [cancerPattern, setCancerPattern] = useState<any[]>([]);
 
-  const membersWithCancer = FAMILY_MEMBERS.filter(m => m.cancerHistory.length > 0);
-  const geneticTestedCount = FAMILY_MEMBERS.filter(m => m.geneticTested).length;
+  const membersWithCancer = familyMembers.filter(m => m.cancerHistory?.length > 0);
+  const geneticTestedCount = familyMembers.filter(m => m.geneticTested).length;
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [treeRes, riskRes] = await Promise.all([
+        familyHealthAPI.getTree().catch(() => null),
+        familyHealthAPI.getRiskAnalysis().catch(() => null),
+      ]);
+
+      if (treeRes?.data) {
+        const members = Array.isArray(treeRes.data) ? treeRes.data : (treeRes.data.members ?? treeRes.data.family ?? []);
+        setFamilyMembers(members.map((m: any) => ({
+          id: m.id ?? '', name: m.name ?? '', relationship: m.relationship ?? '', age: m.age ?? 0,
+          alive: m.alive ?? m.is_alive ?? true, conditions: m.conditions ?? m.medical_conditions ?? [],
+          cancerHistory: m.cancer_history ?? m.cancerHistory ?? [], geneticTested: m.genetic_tested ?? m.geneticTested ?? false,
+        })));
+      }
+      if (riskRes?.data) {
+        if (Array.isArray(riskRes.data.hereditary_risks ?? riskRes.data.risks)) {
+          setHereditaryRisk((riskRes.data.hereditary_risks ?? riskRes.data.risks).map((r: any) => ({
+            cancer: r.cancer_type ?? r.cancer ?? '', risk: r.risk ?? r.risk_percentage ?? 0,
+            population: r.population_average ?? r.population ?? 0, inherited: r.inherited ?? r.is_inherited ?? false,
+          })));
+        }
+        if (Array.isArray(riskRes.data.cancer_patterns ?? riskRes.data.patterns)) {
+          setCancerPattern((riskRes.data.cancer_patterns ?? riskRes.data.patterns).map((p: any) => ({
+            name: p.name ?? p.cancer_type ?? '', value: p.count ?? p.value ?? 0, fill: p.fill ?? p.color ?? '#5e92f3',
+          })));
+        }
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load family health data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Family Health" navItems={patientNavItems} portalType="patient" subtitle="Hereditary risk & family health tree">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (
       <Box sx={{ p: 3 }}>
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<FamilyRestroom />} label="Family Members" value={FAMILY_MEMBERS.length.toString()} color="#5e92f3" subtitle="In health tree" />
+            <StatCard icon={<FamilyRestroom />} label="Family Members" value={familyMembers.length.toString()} color="#5e92f3" subtitle="In health tree" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Warning />} label="Cancer History" value={membersWithCancer.length.toString()} color="#f44336" subtitle={`${CANCER_PATTERN.length} types`} />
+            <StatCard icon={<Warning />} label="Cancer History" value={membersWithCancer.length.toString()} color="#f44336" subtitle={`${cancerPattern.length} types`} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Science />} label="Genetic Testing" value={`${geneticTestedCount}/${FAMILY_MEMBERS.length}`} color="#ae52d4" subtitle="Members tested" />
+            <StatCard icon={<Science />} label="Genetic Testing" value={`${geneticTestedCount}/${familyMembers.length}`} color="#ae52d4" subtitle="Members tested" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<TrendingUp />} label="Hereditary Risk" value="Elevated" color="#ff9800" subtitle="Based on family history" />
@@ -84,7 +109,7 @@ const FamilyHealthPage: React.FC = () => {
               <SectionHeader title="Family Health Tree" subtitle="Medical history of family members" icon={<AccountTree />}
                 action={<Button startIcon={<PersonAdd />} variant="contained" size="small" onClick={() => setShowAddDialog(true)}>Add Member</Button>}
               />
-              {FAMILY_MEMBERS.map((member, idx) => (
+              {familyMembers.map((member, idx) => (
                 <Box key={idx} sx={{ mb: 2, p: 2, bgcolor: member.cancerHistory.length > 0 ? '#fff8f8' : '#f8fafc', borderRadius: 3, border: `1px solid ${member.cancerHistory.length > 0 ? '#ffcdd2' : '#f0f0f0'}` }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack direction="row" spacing={2} alignItems="center">
@@ -127,8 +152,8 @@ const FamilyHealthPage: React.FC = () => {
               <SectionHeader title="Cancer Pattern" icon={<Favorite />} />
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={CANCER_PATTERN} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
-                    {CANCER_PATTERN.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                  <Pie data={cancerPattern} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
+                    {cancerPattern.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                   </Pie>
                   <RTooltip />
                 </PieChart>
@@ -136,7 +161,7 @@ const FamilyHealthPage: React.FC = () => {
               <Divider sx={{ my: 2 }} />
               <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Family Cancer Summary</Typography>
               <Stack spacing={0.5}>
-                {CANCER_PATTERN.map((p, i) => (
+                {cancerPattern.map((p, i) => (
                   <Stack key={i} direction="row" spacing={1} alignItems="center">
                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: p.fill }} />
                     <Typography variant="body2" fontSize={12}>{p.name}: {p.value} case(s)</Typography>
@@ -147,7 +172,7 @@ const FamilyHealthPage: React.FC = () => {
 
             <Card sx={{ p: 3, mb: 2.5 }}>
               <SectionHeader title="Hereditary Risk Assessment" icon={<TrendingUp />} />
-              {HEREDITARY_RISK.filter(r => r.inherited).map((risk, idx) => (
+              {hereditaryRisk.filter(r => r.inherited).map((risk, idx) => (
                 <Box key={idx} sx={{ mb: 2 }}>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
                     <Typography variant="body2" fontWeight={600}>{risk.cancer}</Typography>
@@ -213,6 +238,7 @@ const FamilyHealthPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      )}
     </AppLayout>
   );
 };

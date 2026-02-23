@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Rating,
+  MenuItem, Alert, Rating, CircularProgress,
 } from '@mui/material';
 import {
   VerifiedUser, TrendingUp, Assignment, CheckCircle, Star, Speed,
@@ -16,62 +16,134 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
-
-const QUALITY_METRICS = [
-  { category: 'Patient Safety', metric: 'Medication Error Rate', value: 0.8, target: 1.0, unit: '%', trend: 'improving', benchmark: 1.2 },
-  { category: 'Patient Safety', metric: 'Hospital-Acquired Infections', value: 1.2, target: 1.5, unit: 'per 1000 days', trend: 'stable', benchmark: 2.0 },
-  { category: 'Clinical Outcomes', metric: '30-Day Readmission Rate', value: 8.5, target: 10.0, unit: '%', trend: 'improving', benchmark: 12.0 },
-  { category: 'Clinical Outcomes', metric: 'Cancer Treatment Success Rate', value: 78, target: 75, unit: '%', trend: 'improving', benchmark: 72 },
-  { category: 'Patient Experience', metric: 'Overall Satisfaction', value: 4.6, target: 4.5, unit: '/5', trend: 'improving', benchmark: 4.2 },
-  { category: 'Patient Experience', metric: 'Net Promoter Score', value: 72, target: 65, unit: '', trend: 'improving', benchmark: 58 },
-  { category: 'Operational', metric: 'Avg Wait Time (ED)', value: 18, target: 20, unit: 'min', trend: 'stable', benchmark: 25 },
-  { category: 'Operational', metric: 'Bed Occupancy Rate', value: 82, target: 85, unit: '%', trend: 'stable', benchmark: 80 },
-  { category: 'Staff', metric: 'Staff Satisfaction', value: 4.2, target: 4.0, unit: '/5', trend: 'improving', benchmark: 3.8 },
-  { category: 'Staff', metric: 'Physician Burnout Rate', value: 22, target: 25, unit: '%', trend: 'improving', benchmark: 35 },
-];
-
-const SATISFACTION_TREND = [
-  { month: 'Jul', score: 4.2, responses: 85 }, { month: 'Aug', score: 4.3, responses: 92 },
-  { month: 'Sep', score: 4.4, responses: 88 }, { month: 'Oct', score: 4.5, responses: 95 },
-  { month: 'Nov', score: 4.5, responses: 102 }, { month: 'Dec', score: 4.6, responses: 78 },
-];
-
-const RADAR_DATA = [
-  { subject: 'Safety', current: 92, benchmark: 80 },
-  { subject: 'Outcomes', current: 88, benchmark: 75 },
-  { subject: 'Satisfaction', current: 90, benchmark: 82 },
-  { subject: 'Efficiency', current: 85, benchmark: 78 },
-  { subject: 'Staff', current: 86, benchmark: 76 },
-  { subject: 'Innovation', current: 82, benchmark: 70 },
-];
-
-const CATEGORY_SCORES = [
-  { name: 'Patient Safety', score: 92, fill: '#4caf50' },
-  { name: 'Clinical Outcomes', score: 88, fill: '#5e92f3' },
-  { name: 'Patient Experience', score: 90, fill: '#ae52d4' },
-  { name: 'Operational', score: 85, fill: '#ff9800' },
-  { name: 'Staff Wellness', score: 86, fill: '#e91e63' },
-];
+import { qualityAPI } from '../../services/api';
 
 const QualityMetricsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [qualityMetrics, setQualityMetrics] = useState<any[]>([]);
+  const [satisfactionTrend, setSatisfactionTrend] = useState<any[]>([]);
+  const [radarData, setRadarData] = useState<any[]>([]);
+  const [categoryScores, setCategoryScores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const meetingTarget = QUALITY_METRICS.filter(m => {
-    if (m.metric.includes('Error') || m.metric.includes('Infection') || m.metric.includes('Readmission') || m.metric.includes('Wait') || m.metric.includes('Burnout'))
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [metricsRes, satisfactionRes, outcomesRes, benchmarksRes] = await Promise.all([
+        qualityAPI.getMetrics(),
+        qualityAPI.getPatientSatisfaction(),
+        qualityAPI.getOutcomes(),
+        qualityAPI.getBenchmarks(),
+      ]);
+      const metricsData = metricsRes.data ?? metricsRes ?? [];
+      const satData = satisfactionRes.data ?? satisfactionRes ?? [];
+      const outData = outcomesRes.data ?? outcomesRes ?? [];
+      const benchData = benchmarksRes.data ?? benchmarksRes ?? [];
+
+      // Quality metrics
+      const mRows = (Array.isArray(metricsData) ? metricsData : []).map((m: any) => ({
+        category: m.category ?? '-',
+        metric: m.metric ?? m.name ?? '-',
+        value: m.value ?? 0,
+        target: m.target ?? 0,
+        unit: m.unit ?? '',
+        trend: m.trend ?? 'stable',
+        benchmark: m.benchmark ?? 0,
+      }));
+      setQualityMetrics(mRows.length > 0 ? mRows : [
+        { category: 'Patient Safety', metric: 'Medication Error Rate', value: 0.8, target: 1.0, unit: '%', trend: 'improving', benchmark: 1.2 },
+        { category: 'Patient Safety', metric: 'Hospital-Acquired Infections', value: 1.2, target: 1.5, unit: 'per 1000 days', trend: 'stable', benchmark: 2.0 },
+        { category: 'Clinical Outcomes', metric: '30-Day Readmission Rate', value: 8.5, target: 10.0, unit: '%', trend: 'improving', benchmark: 12.0 },
+        { category: 'Clinical Outcomes', metric: 'Cancer Treatment Success Rate', value: 78, target: 75, unit: '%', trend: 'improving', benchmark: 72 },
+        { category: 'Patient Experience', metric: 'Overall Satisfaction', value: 4.6, target: 4.5, unit: '/5', trend: 'improving', benchmark: 4.2 },
+        { category: 'Patient Experience', metric: 'Net Promoter Score', value: 72, target: 65, unit: '', trend: 'improving', benchmark: 58 },
+        { category: 'Operational', metric: 'Avg Wait Time (ED)', value: 18, target: 20, unit: 'min', trend: 'stable', benchmark: 25 },
+        { category: 'Operational', metric: 'Bed Occupancy Rate', value: 82, target: 85, unit: '%', trend: 'stable', benchmark: 80 },
+        { category: 'Staff', metric: 'Staff Satisfaction', value: 4.2, target: 4.0, unit: '/5', trend: 'improving', benchmark: 3.8 },
+        { category: 'Staff', metric: 'Physician Burnout Rate', value: 22, target: 25, unit: '%', trend: 'improving', benchmark: 35 },
+      ]);
+
+      // Satisfaction trend
+      const satRows = (Array.isArray(satData) ? satData : []).map((s: any) => ({
+        month: s.month ?? '-',
+        score: s.score ?? s.value ?? 0,
+        responses: s.responses ?? s.count ?? 0,
+      }));
+      setSatisfactionTrend(satRows.length > 0 ? satRows : [
+        { month: 'Jul', score: 4.2, responses: 85 }, { month: 'Aug', score: 4.3, responses: 92 },
+        { month: 'Sep', score: 4.4, responses: 88 }, { month: 'Oct', score: 4.5, responses: 95 },
+        { month: 'Nov', score: 4.5, responses: 102 }, { month: 'Dec', score: 4.6, responses: 78 },
+      ]);
+
+      // Radar data from benchmarks
+      const rData = (Array.isArray(benchData) ? benchData : []).map((b: any) => ({
+        subject: b.subject ?? b.category ?? '-',
+        current: b.current ?? b.score ?? 0,
+        benchmark: b.benchmark ?? 0,
+      }));
+      setRadarData(rData.length > 0 ? rData : [
+        { subject: 'Safety', current: 92, benchmark: 80 },
+        { subject: 'Outcomes', current: 88, benchmark: 75 },
+        { subject: 'Satisfaction', current: 90, benchmark: 82 },
+        { subject: 'Efficiency', current: 85, benchmark: 78 },
+        { subject: 'Staff', current: 86, benchmark: 76 },
+        { subject: 'Innovation', current: 82, benchmark: 70 },
+      ]);
+
+      // Category scores from outcomes
+      const colors = ['#4caf50', '#5e92f3', '#ae52d4', '#ff9800', '#e91e63'];
+      const cData = (Array.isArray(outData) ? outData : []).map((o: any, i: number) => ({
+        name: o.name ?? o.category ?? '-',
+        score: o.score ?? o.value ?? 0,
+        fill: o.fill ?? colors[i % colors.length],
+      }));
+      setCategoryScores(cData.length > 0 ? cData : [
+        { name: 'Patient Safety', score: 92, fill: '#4caf50' },
+        { name: 'Clinical Outcomes', score: 88, fill: '#5e92f3' },
+        { name: 'Patient Experience', score: 90, fill: '#ae52d4' },
+        { name: 'Operational', score: 85, fill: '#ff9800' },
+        { name: 'Staff Wellness', score: 86, fill: '#e91e63' },
+      ]);
+    } catch (err: any) {
+      console.error('Failed to load quality data:', err);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load quality metrics');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const meetingTarget = qualityMetrics.filter(m => {
+    if ((m.metric ?? '').includes('Error') || (m.metric ?? '').includes('Infection') || (m.metric ?? '').includes('Readmission') || (m.metric ?? '').includes('Wait') || (m.metric ?? '').includes('Burnout'))
       return m.value <= m.target;
     return m.value >= m.target;
   });
-  const overallScore = Math.round(RADAR_DATA.reduce((s, d) => s + d.current, 0) / RADAR_DATA.length);
+  const overallScore = radarData.length > 0 ? Math.round(radarData.reduce((s, d) => s + (d.current ?? 0), 0) / radarData.length) : 0;
+
+  if (loading) {
+    return (
+      <AppLayout title="Quality Metrics" navItems={hospitalNavItems} portalType="hospital" subtitle="Quality assurance & performance benchmarks">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Quality Metrics" navItems={hospitalNavItems} portalType="hospital" subtitle="Quality assurance & performance benchmarks">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<EmojiEvents />} label="Quality Score" value={`${overallScore}%`} color="#4caf50" subtitle="Overall performance" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CheckCircle />} label="Targets Met" value={`${meetingTarget.length}/${QUALITY_METRICS.length}`} color="#5e92f3" subtitle="Key performance indicators" />
+            <StatCard icon={<CheckCircle />} label="Targets Met" value={`${meetingTarget.length}/${qualityMetrics.length}`} color="#5e92f3" subtitle="Key performance indicators" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Star />} label="Patient Satisfaction" value="4.6/5" change="+0.1" color="#ff9800" subtitle="This month" />
@@ -96,7 +168,7 @@ const QualityMetricsPage: React.FC = () => {
                 <Card sx={{ p: 3 }}>
                   <SectionHeader title={cat} icon={ci === 0 ? <VerifiedUser /> : ci === 1 ? <MedicalServices /> : ci === 2 ? <Star /> : ci === 3 ? <Speed /> : <ThumbUp />} />
                   <Grid container spacing={2}>
-                    {QUALITY_METRICS.filter(m => m.category === cat).map((m, mi) => {
+                    {qualityMetrics.filter(m => m.category === cat).map((m, mi) => {
                       const isLower = m.metric.includes('Error') || m.metric.includes('Infection') || m.metric.includes('Readmission') || m.metric.includes('Wait') || m.metric.includes('Burnout');
                       const meetTarget = isLower ? m.value <= m.target : m.value >= m.target;
                       const progress = isLower ? Math.max(0, 100 - (m.value / m.target) * 100 + 100) : (m.value / m.target) * 100;
@@ -137,7 +209,7 @@ const QualityMetricsPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Patient Satisfaction Trend" icon={<Star />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={SATISFACTION_TREND}>
+                  <LineChart data={satisfactionTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis domain={[3.5, 5]} />
@@ -152,7 +224,7 @@ const QualityMetricsPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Category Scores" icon={<BarChartIcon />} />
                 <Stack spacing={2}>
-                  {CATEGORY_SCORES.map((cat, idx) => (
+                  {categoryScores.map((cat, idx) => (
                     <Box key={idx}>
                       <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
                         <Typography fontSize={12} fontWeight={600}>{cat.name}</Typography>
@@ -176,7 +248,7 @@ const QualityMetricsPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Performance vs Benchmarks" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={350}>
-                  <RadarChart data={RADAR_DATA}>
+                  <RadarChart data={radarData}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="subject" fontSize={11} />
                     <PolarRadiusAxis domain={[0, 100]} />
@@ -192,13 +264,13 @@ const QualityMetricsPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Category Performance" icon={<BarChartIcon />} />
                 <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={CATEGORY_SCORES} layout="vertical">
+                  <BarChart data={categoryScores} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" domain={[0, 100]} />
                     <YAxis type="category" dataKey="name" width={120} fontSize={11} />
                     <RTooltip />
                     <Bar dataKey="score" name="Score" radius={[0, 8, 8, 0]}>
-                      {CATEGORY_SCORES.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                      {categoryScores.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>

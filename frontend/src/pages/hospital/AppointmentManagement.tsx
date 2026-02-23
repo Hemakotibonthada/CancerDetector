@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
-  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
+  InputAdornment, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Badge, Avatar,
   Stepper, Step, StepLabel, ToggleButton, ToggleButtonGroup, Divider,
@@ -15,6 +15,7 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge } from '../../components/common/SharedComponents';
+import { appointmentsAPI } from '../../services/api';
 
 const AppointmentManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -22,33 +23,42 @@ const AppointmentManagement: React.FC = () => {
   const [showNewAppt, setShowNewAppt] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
   const [calendarView, setCalendarView] = useState<'day' | 'week'>('day');
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [waitlist, setWaitlist] = useState<any[]>([]);
+  const [timeSlots, setTimeSlots] = useState<any[]>(['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30']);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const appointments = [
-    { id: 'APT-1001', patient: 'Alice Johnson', patientId: 'P-1234', doctor: 'Dr. Sarah Smith', department: 'Oncology', time: '09:00 AM', duration: '30 min', type: 'follow_up', status: 'checked_in', mode: 'in_person', room: 'R-205', notes: 'Post-chemo review', phone: '+1-555-1001' },
-    { id: 'APT-1002', patient: 'Bob Williams', patientId: 'P-2345', doctor: 'Dr. James Lee', department: 'Cardiology', time: '09:30 AM', duration: '45 min', type: 'new_visit', status: 'waiting', mode: 'in_person', room: 'R-312', notes: 'Heart screening', phone: '+1-555-1002' },
-    { id: 'APT-1003', patient: 'Carmen Davis', patientId: 'P-3456', doctor: 'Dr. Emily Chen', department: 'Neurology', time: '10:00 AM', duration: '30 min', type: 'consultation', status: 'in_progress', mode: 'telemedicine', room: 'Virtual', notes: 'Brain MRI review', phone: '+1-555-1003' },
-    { id: 'APT-1004', patient: 'David Martinez', patientId: 'P-4567', doctor: 'Dr. Sarah Smith', department: 'Oncology', time: '10:30 AM', duration: '60 min', type: 'procedure', status: 'scheduled', mode: 'in_person', room: 'R-205', notes: 'Biopsy follow-up', phone: '+1-555-1004' },
-    { id: 'APT-1005', patient: 'Elena Foster', patientId: 'P-5678', doctor: 'Dr. Robert Wilson', department: 'Surgery', time: '11:00 AM', duration: '30 min', type: 'follow_up', status: 'scheduled', mode: 'in_person', room: 'R-108', notes: 'Post-op check', phone: '+1-555-1005' },
-    { id: 'APT-1006', patient: 'Frank Green', patientId: 'P-6789', doctor: 'Dr. Lisa Park', department: 'Pathology', time: '11:30 AM', duration: '15 min', type: 'lab_review', status: 'completed', mode: 'telemedicine', room: 'Virtual', notes: 'Lab results discussion', phone: '+1-555-1006' },
-    { id: 'APT-1007', patient: 'Grace Kim', patientId: 'P-7890', doctor: 'Dr. James Lee', department: 'Cardiology', time: '01:00 PM', duration: '45 min', type: 'new_visit', status: 'no_show', mode: 'in_person', room: 'R-312', notes: 'ECG evaluation', phone: '+1-555-1007' },
-    { id: 'APT-1008', patient: 'Henry Liu', patientId: 'P-8901', doctor: 'Dr. Sarah Smith', department: 'Oncology', time: '02:00 PM', duration: '30 min', type: 'follow_up', status: 'cancelled', mode: 'in_person', room: 'R-205', notes: 'Treatment plan review', phone: '+1-555-1008' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [apptRes] = await Promise.all([
+        appointmentsAPI.getMyAppointments().catch(() => ({ data: [] })),
+      ]);
+      const data = apptRes.data || [];
+      setAppointments(Array.isArray(data) ? data : data.appointments ?? []);
+      setWaitlist(Array.isArray(data) ? [] : data.waitlist ?? []);
+      setTimeSlots(prev => Array.isArray(data) ? prev : data.timeSlots ?? prev);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const waitlist = [
-    { patient: 'Ivan Petrov', urgency: 'high', waiting: '25 min', department: 'Emergency' },
-    { patient: 'Julia Chang', urgency: 'low', waiting: '15 min', department: 'Oncology' },
-    { patient: 'Kevin Moore', urgency: 'medium', waiting: '35 min', department: 'Cardiology' },
-  ];
-
-  const timeSlots = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30'];
+  useEffect(() => { loadData(); }, [loadData]);
 
   const statusColor = (s: string) => {
     const m: Record<string, string> = { checked_in: '#43a047', waiting: '#f57c00', in_progress: '#1565c0', scheduled: '#9e9e9e', completed: '#2e7d32', no_show: '#d32f2f', cancelled: '#757575' };
     return m[s] || '#9e9e9e';
   };
 
+  if (loading) return <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>;
+
   return (
     <AppLayout title="Appointment Management" subtitle="Schedule and manage appointments" navItems={hospitalNavItems} portalType="hospital">
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<CalendarMonth />} label="Today's Appts" value={appointments.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<AccessTime />} label="In Progress" value={appointments.filter(a => a.status === 'in_progress').length} color="#f57c00" /></Grid>

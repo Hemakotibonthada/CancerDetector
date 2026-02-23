@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   TextField, InputAdornment, Avatar, Divider, Dialog, DialogTitle,
   DialogContent, DialogActions, IconButton, Alert, LinearProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Select, MenuItem, FormControl, InputLabel, Badge,
+  Select, MenuItem, FormControl, InputLabel, Badge, CircularProgress,
 } from '@mui/material';
 import {
   People, Search, Add, FilterList, PersonAdd, Download, Upload,
@@ -14,32 +14,71 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { usersAPI } from '../../services/api';
 
 const PatientManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdmitDialog, setShowAdmitDialog] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const patients = [
-    { id: 'P-001', healthId: 'CG-2026-001234', name: 'John Davis', age: 65, gender: 'M', bloodType: 'O+', phone: '+1-555-1001', status: 'admitted', ward: 'Oncology', bed: 'A-12', doctor: 'Dr. Smith', riskScore: 82, cancerType: 'Lung', admitDate: 'Feb 15, 2026', insurance: 'BlueCross' },
-    { id: 'P-002', healthId: 'CG-2026-001235', name: 'Mary Johnson', age: 58, gender: 'F', bloodType: 'A+', phone: '+1-555-1002', status: 'admitted', ward: 'Oncology', bed: 'A-15', doctor: 'Dr. Lee', riskScore: 75, cancerType: 'Breast', admitDate: 'Feb 18, 2026', insurance: 'Aetna' },
-    { id: 'P-003', healthId: 'CG-2026-001236', name: 'Robert Brown', age: 72, gender: 'M', bloodType: 'B-', phone: '+1-555-1003', status: 'surgery', ward: 'Surgery', bed: 'S-03', doctor: 'Dr. Chen', riskScore: 68, cancerType: 'Prostate', admitDate: 'Feb 20, 2026', insurance: 'UnitedHealth' },
-    { id: 'P-004', healthId: 'CG-2026-001237', name: 'Susan Wilson', age: 45, gender: 'F', bloodType: 'AB+', phone: '+1-555-1004', status: 'outpatient', ward: 'Outpatient', bed: '-', doctor: 'Dr. Park', riskScore: 45, cancerType: 'Screening', admitDate: 'Feb 22, 2026', insurance: 'Cigna' },
-    { id: 'P-005', healthId: 'CG-2026-001238', name: 'Michael Lee', age: 55, gender: 'M', bloodType: 'O-', phone: '+1-555-1005', status: 'icu', ward: 'ICU', bed: 'ICU-05', doctor: 'Dr. Smith', riskScore: 91, cancerType: 'Liver', admitDate: 'Feb 10, 2026', insurance: 'Medicare' },
-    { id: 'P-006', healthId: 'CG-2026-001239', name: 'Jennifer Garcia', age: 38, gender: 'F', bloodType: 'A-', phone: '+1-555-1006', status: 'discharged', ward: '-', bed: '-', doctor: 'Dr. Lee', riskScore: 22, cancerType: 'Clear', admitDate: 'Feb 05, 2026', insurance: 'BlueCross' },
-    { id: 'P-007', healthId: 'CG-2026-001240', name: 'William Taylor', age: 68, gender: 'M', bloodType: 'B+', phone: '+1-555-1007', status: 'admitted', ward: 'Cardiology', bed: 'C-08', doctor: 'Dr. Lee', riskScore: 55, cancerType: 'Monitoring', admitDate: 'Feb 19, 2026', insurance: 'Aetna' },
-    { id: 'P-008', healthId: 'CG-2026-001241', name: 'Patricia Anderson', age: 62, gender: 'F', bloodType: 'O+', phone: '+1-555-1008', status: 'admitted', ward: 'Neurology', bed: 'N-03', doctor: 'Dr. Chen', riskScore: 60, cancerType: 'Brain screening', admitDate: 'Feb 21, 2026', insurance: 'UnitedHealth' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await usersAPI.list();
+      const data = res.data ?? res ?? [];
+      const rows = (Array.isArray(data) ? data : []).map((u: any, idx: number) => ({
+        id: u.id ?? u.patient_id ?? `P-${String(idx + 1).padStart(3, '0')}`,
+        healthId: u.health_id ?? u.healthId ?? `CG-2026-${String(idx + 1).padStart(6, '0')}`,
+        name: u.full_name ?? u.name ?? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() ?? 'Unknown',
+        age: u.age ?? '-',
+        gender: u.gender ?? '-',
+        bloodType: u.blood_type ?? u.bloodType ?? '-',
+        phone: u.phone ?? u.phone_number ?? '-',
+        status: u.status ?? 'admitted',
+        ward: u.ward ?? '-',
+        bed: u.bed ?? '-',
+        doctor: u.doctor ?? u.attending_doctor ?? '-',
+        riskScore: u.risk_score ?? u.riskScore ?? 0,
+        cancerType: u.cancer_type ?? u.cancerType ?? '-',
+        admitDate: u.admit_date ?? u.admitDate ?? u.created_at ?? '-',
+        insurance: u.insurance ?? u.insurance_provider ?? '-',
+      }));
+      setPatients(rows);
+    } catch (err: any) {
+      console.error('Failed to load patients:', err);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load patients');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = patients.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.healthId.toLowerCase().includes(searchQuery.toLowerCase())
+    (p.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.id ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.healthId ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <AppLayout title="Patient Management" subtitle="Manage all patients in your hospital" navItems={hospitalNavItems} portalType="hospital">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Patient Management" subtitle="Manage all patients in your hospital" navItems={hospitalNavItems} portalType="hospital">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Patients" value={patients.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Admitted" value={patients.filter(p => p.status === 'admitted' || p.status === 'icu' || p.status === 'surgery').length} color="#2e7d32" /></Grid>

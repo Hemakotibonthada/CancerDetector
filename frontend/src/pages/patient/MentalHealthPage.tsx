@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, TextField, MenuItem, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Slider, Rating, Divider, List, ListItem,
   ListItemAvatar, ListItemText, ListItemSecondaryAction, IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Psychology, SelfImprovement, Mood, MoodBad, NightsStay, Favorite,
@@ -17,49 +18,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
-
-const MOOD_HISTORY = [
-  { date: 'Mon', mood: 7, anxiety: 3, energy: 6, sleep: 7 },
-  { date: 'Tue', mood: 6, anxiety: 5, energy: 5, sleep: 6 },
-  { date: 'Wed', mood: 8, anxiety: 2, energy: 7, sleep: 8 },
-  { date: 'Thu', mood: 5, anxiety: 6, energy: 4, sleep: 5 },
-  { date: 'Fri', mood: 7, anxiety: 3, energy: 7, sleep: 7 },
-  { date: 'Sat', mood: 8, anxiety: 2, energy: 8, sleep: 8 },
-  { date: 'Sun', mood: 9, anxiety: 1, energy: 8, sleep: 9 },
-];
-
-const WELLNESS_RADAR = [
-  { dimension: 'Anxiety Mgmt', score: 72, benchmark: 65 },
-  { dimension: 'Depression', score: 80, benchmark: 70 },
-  { dimension: 'Sleep Quality', score: 68, benchmark: 72 },
-  { dimension: 'Coping Skills', score: 85, benchmark: 68 },
-  { dimension: 'Social Support', score: 78, benchmark: 75 },
-  { dimension: 'Mindfulness', score: 70, benchmark: 60 },
-  { dimension: 'Self-Care', score: 75, benchmark: 65 },
-];
-
-const THERAPY_SESSIONS = [
-  { id: '1', therapist: 'Dr. Sarah Chen', date: '2024-12-18', type: 'Individual', duration: 50, status: 'scheduled', mood_before: 5, mood_after: 7, notes: 'CBT session for treatment anxiety' },
-  { id: '2', therapist: 'Dr. Sarah Chen', date: '2024-12-11', type: 'Individual', duration: 50, status: 'completed', mood_before: 4, mood_after: 7, notes: 'Processing diagnosis emotions' },
-  { id: '3', therapist: 'Support Group', date: '2024-12-10', type: 'Group', duration: 90, status: 'completed', mood_before: 5, mood_after: 8, notes: 'Cancer survivor support group' },
-  { id: '4', therapist: 'Dr. Sarah Chen', date: '2024-12-04', type: 'Online', duration: 50, status: 'completed', mood_before: 3, mood_after: 6, notes: 'Anxiety management techniques' },
-];
-
-const COPING_ACTIVITIES = [
-  { name: 'Meditation', icon: <SelfImprovement />, duration: '15 min', frequency: 'Daily', benefit: 'Reduces anxiety by 32%', color: '#ae52d4', completed: 5, target: 7 },
-  { name: 'Journaling', icon: <Book />, duration: '10 min', frequency: 'Daily', benefit: 'Improves emotional processing', color: '#5e92f3', completed: 4, target: 7 },
-  { name: 'Deep Breathing', icon: <Spa />, duration: '5 min', frequency: '3x daily', benefit: 'Lowers cortisol levels', color: '#4ebaaa', completed: 12, target: 21 },
-  { name: 'Gentle Yoga', icon: <FitnessCenter />, duration: '30 min', frequency: '3x week', benefit: 'Reduces fatigue & pain', color: '#ff9800', completed: 2, target: 3 },
-  { name: 'Music Therapy', icon: <MusicNote />, duration: '20 min', frequency: 'Daily', benefit: 'Elevates mood by 25%', color: '#f44336', completed: 6, target: 7 },
-  { name: 'Nature Walks', icon: <EmojiNature />, duration: '30 min', frequency: '4x week', benefit: 'Boosts immune function', color: '#4caf50', completed: 3, target: 4 },
-];
-
-const SUPPORT_RESOURCES = [
-  { name: 'Cancer Support Hotline', type: 'Phone', availability: '24/7', contact: '1-800-XXX-XXXX', icon: <Phone /> },
-  { name: 'Online Therapy Sessions', type: 'Video', availability: 'Mon-Sat 9AM-9PM', contact: 'Book via app', icon: <VideoCall /> },
-  { name: 'Peer Support Chat', type: 'Chat', availability: '24/7', contact: 'In-app chat', icon: <Chat /> },
-  { name: 'Cancer Survivors Group', type: 'Group', availability: 'Tuesdays 6PM', contact: 'Hospital Center', icon: <Group /> },
-];
+import { mentalHealthAPI } from '../../services/api';
 
 const MentalHealthPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -67,11 +26,59 @@ const MentalHealthPage: React.FC = () => {
   const [showSessionDialog, setShowSessionDialog] = useState(false);
   const [moodValue, setMoodValue] = useState(7);
   const [anxietyValue, setAnxietyValue] = useState(3);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [moodHistory, setMoodHistory] = useState<any[]>([]);
+  const [wellnessRadar, setWellnessRadar] = useState<any[]>([]);
+  const [therapySessions, setTherapySessions] = useState<any[]>([]);
+  const [copingActivities, setCopingActivities] = useState<any[]>([]);
+  const [supportResources, setSupportResources] = useState<any[]>([]);
+
+  const iconMap: Record<string, any> = { Meditation: <SelfImprovement />, Journaling: <Book />, 'Deep Breathing': <Spa />, Yoga: <FitnessCenter />, Music: <MusicNote />, Nature: <EmojiNature />, Phone: <Phone />, Video: <VideoCall />, Chat: <Chat />, Group: <Group /> };
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [moodRes, sessionsRes, resourcesRes] = await Promise.all([
+        mentalHealthAPI.getMoodHistory().catch(() => null),
+        mentalHealthAPI.getSessions().catch(() => null),
+        mentalHealthAPI.getResources().catch(() => null),
+      ]);
+
+      if (moodRes?.data) {
+        const d = moodRes.data;
+        const history = Array.isArray(d) ? d : (d.history ?? d.mood_history ?? []);
+        setMoodHistory(history.map((m: any) => ({ date: m.date ?? m.day ?? '', mood: m.mood ?? m.mood_score ?? 0, anxiety: m.anxiety ?? m.anxiety_score ?? 0, energy: m.energy ?? 0, sleep: m.sleep ?? m.sleep_quality ?? 0 })));
+        if (d.wellness_radar ?? d.wellness) setWellnessRadar((d.wellness_radar ?? d.wellness ?? []).map((w: any) => ({ dimension: w.dimension ?? w.name ?? '', score: w.score ?? 0, benchmark: w.benchmark ?? w.average ?? 0 })));
+        if (d.coping_activities ?? d.activities) setCopingActivities((d.coping_activities ?? d.activities ?? []).map((c: any) => ({ name: c.name ?? '', icon: iconMap[c.name] ?? <SelfImprovement />, duration: c.duration ?? '', frequency: c.frequency ?? '', benefit: c.benefit ?? '', color: c.color ?? '#ae52d4', completed: c.completed ?? 0, target: c.target ?? 0 })));
+      }
+      if (sessionsRes?.data) {
+        const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : (sessionsRes.data.sessions ?? []);
+        setTherapySessions(sessions.map((s: any) => ({ id: s.id ?? '', therapist: s.therapist ?? s.therapist_name ?? '', date: s.date ?? s.session_date ?? '', type: s.type ?? s.session_type ?? '', duration: s.duration ?? 0, status: s.status ?? '', mood_before: s.mood_before ?? 0, mood_after: s.mood_after ?? 0, notes: s.notes ?? '' })));
+      }
+      if (resourcesRes?.data) {
+        const resources = Array.isArray(resourcesRes.data) ? resourcesRes.data : (resourcesRes.data.resources ?? []);
+        setSupportResources(resources.map((r: any) => ({ name: r.name ?? '', type: r.type ?? r.resource_type ?? '', availability: r.availability ?? '', contact: r.contact ?? '', icon: iconMap[r.type] ?? <Phone /> })));
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load mental health data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const getMoodEmoji = (val: number) => val >= 8 ? '😊' : val >= 6 ? '🙂' : val >= 4 ? '😐' : '😟';
 
   return (
     <AppLayout title="Mental Wellness" navItems={patientNavItems} portalType="patient" subtitle="Emotional support & coping resources">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (
       <Box sx={{ p: 3 }}>
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -108,7 +115,7 @@ const MentalHealthPage: React.FC = () => {
                   action={<Button startIcon={<Add />} variant="contained" size="small" onClick={() => setShowMoodDialog(true)}>Log Mood</Button>}
                 />
                 <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={MOOD_HISTORY}>
+                  <AreaChart data={moodHistory}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis domain={[0, 10]} />
@@ -167,7 +174,7 @@ const MentalHealthPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Wellness Dimensions" subtitle="Your scores vs cancer patient benchmark" icon={<Psychology />} />
                 <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart data={WELLNESS_RADAR}>
+                  <RadarChart data={wellnessRadar}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="dimension" tick={{ fontSize: 11 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} />
@@ -213,7 +220,7 @@ const MentalHealthPage: React.FC = () => {
             <SectionHeader title="Therapy Sessions" subtitle="Individual & group therapy tracking" icon={<CalendarMonth />}
               action={<Button startIcon={<Add />} variant="contained" size="small" onClick={() => setShowSessionDialog(true)}>Book Session</Button>}
             />
-            {THERAPY_SESSIONS.map((session, idx) => (
+            {therapySessions.map((session, idx) => (
               <Box key={idx} sx={{ mb: 2, p: 2.5, bgcolor: '#f8fafc', borderRadius: 3, border: '1px solid #f0f0f0' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                   <Stack direction="row" spacing={2} alignItems="center">
@@ -247,7 +254,7 @@ const MentalHealthPage: React.FC = () => {
         {/* Tab 3: Coping Activities */}
         {activeTab === 3 && (
           <Grid container spacing={2.5}>
-            {COPING_ACTIVITIES.map((activity, idx) => (
+            {copingActivities.map((activity, idx) => (
               <Grid item xs={12} sm={6} md={4} key={idx}>
                 <Card sx={{ p: 2.5, height: '100%' }}>
                   <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -275,7 +282,7 @@ const MentalHealthPage: React.FC = () => {
             <Grid item xs={12} md={7}>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Support Resources" subtitle="Help is always available" icon={<Favorite />} />
-                {SUPPORT_RESOURCES.map((resource, idx) => (
+                {supportResources.map((resource, idx) => (
                   <Box key={idx} sx={{ mb: 2, p: 2, bgcolor: '#f8fafc', borderRadius: 3, border: '1px solid #f0f0f0' }}>
                     <Stack direction="row" spacing={2} alignItems="center">
                       <Avatar sx={{ bgcolor: '#e3f2fd', color: '#1565c0' }}>{resource.icon}</Avatar>
@@ -364,6 +371,7 @@ const MentalHealthPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      )}
     </AppLayout>
   );
 };

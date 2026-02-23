@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
   InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Avatar,
-  LinearProgress, Switch, FormControlLabel, Rating, Alert,
+  LinearProgress, CircularProgress, Switch, FormControlLabel, Rating, Alert,
 } from '@mui/material';
 import {
   LocalHospital, Search, Add, Edit, Visibility, CheckCircle,
@@ -14,21 +14,31 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { hospitalsAPI } from '../../services/api';
 
 const HospitalManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [selectedHospital, setSelectedHospital] = useState<any>(null);
   const [showAddHospital, setShowAddHospital] = useState(false);
+  const [hospitals, setHospitals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const hospitals = [
-    { id: 'H-001', name: 'CancerGuard Medical Center', city: 'San Francisco', state: 'CA', type: 'Specialty', beds: 132, doctors: 45, patients: 1200, status: 'active', rating: 4.8, verified: true, joined: '2022-01-15', subscription: 'Enterprise', occupancy: 82, aiEnabled: true, screenings: 450 },
-    { id: 'H-002', name: 'Metro Health Hospital', city: 'New York', state: 'NY', type: 'General', beds: 250, doctors: 85, patients: 2500, status: 'active', rating: 4.6, verified: true, joined: '2022-03-20', subscription: 'Enterprise', occupancy: 76, aiEnabled: true, screenings: 680 },
-    { id: 'H-003', name: 'Pacific Coast Cancer Center', city: 'Los Angeles', state: 'CA', type: 'Specialty', beds: 80, doctors: 30, patients: 650, status: 'active', rating: 4.9, verified: true, joined: '2022-06-10', subscription: 'Professional', occupancy: 88, aiEnabled: true, screenings: 320 },
-    { id: 'H-004', name: 'Central Valley Hospital', city: 'Sacramento', state: 'CA', type: 'General', beds: 180, doctors: 60, patients: 1800, status: 'active', rating: 4.3, verified: true, joined: '2022-09-01', subscription: 'Professional', occupancy: 71, aiEnabled: true, screenings: 420 },
-    { id: 'H-005', name: 'Sunrise Community Clinic', city: 'Phoenix', state: 'AZ', type: 'Clinic', beds: 20, doctors: 8, patients: 350, status: 'pending', rating: 0, verified: false, joined: '2024-01-02', subscription: 'Basic', occupancy: 45, aiEnabled: false, screenings: 25 },
-    { id: 'H-006', name: 'Lakeview Medical Center', city: 'Chicago', state: 'IL', type: 'General', beds: 200, doctors: 72, patients: 2100, status: 'suspended', rating: 3.8, verified: true, joined: '2022-11-15', subscription: 'Enterprise', occupancy: 0, aiEnabled: false, screenings: 280 },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await hospitalsAPI.list();
+      setHospitals(res.data?.hospitals ?? res.data ?? []);
+    } catch (err) {
+      setError('Failed to load hospitals');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = hospitals.filter(h =>
     h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -37,6 +47,11 @@ const HospitalManagement: React.FC = () => {
 
   return (
     <AppLayout title="Hospital Management" subtitle="Manage registered hospitals" navItems={adminNavItems} portalType="admin">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : (
+        <>
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Total Hospitals" value={hospitals.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Active" value={hospitals.filter(h => h.status === 'active').length} color="#4caf50" /></Grid>
@@ -170,6 +185,9 @@ const HospitalManagement: React.FC = () => {
             </Grid>
           ))}
         </Grid>
+      )}
+
+      </>
       )}
 
       {/* Hospital Detail Dialog */}

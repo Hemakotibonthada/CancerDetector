@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, MenuItem, Alert, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Divider,
+  TableHead, TableRow, Divider, CircularProgress,
 } from '@mui/material';
 import {
   FitnessCenter, DirectionsRun, SelfImprovement, Pool, DirectionsBike,
@@ -16,53 +16,61 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, ProgressCard, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
-
-const WEEKLY_EXERCISE = [
-  { day: 'Mon', minutes: 45, calories: 280, type: 'Walking', heartRate: 110 },
-  { day: 'Tue', minutes: 30, calories: 200, type: 'Yoga', heartRate: 85 },
-  { day: 'Wed', minutes: 60, calories: 380, type: 'Swimming', heartRate: 125 },
-  { day: 'Thu', minutes: 0, calories: 0, type: 'Rest', heartRate: 0 },
-  { day: 'Fri', minutes: 35, calories: 250, type: 'Cycling', heartRate: 115 },
-  { day: 'Sat', minutes: 50, calories: 320, type: 'Walking', heartRate: 108 },
-  { day: 'Sun', minutes: 40, calories: 180, type: 'Stretching', heartRate: 78 },
-];
-
-const HEART_RATE_ZONES = [
-  { name: 'Rest (50-60%)', value: 15, fill: '#e3f2fd', color: '#1565c0' },
-  { name: 'Fat Burn (60-70%)', value: 40, fill: '#e8f5e9', color: '#2e7d32' },
-  { name: 'Cardio (70-80%)', value: 30, fill: '#fff3e0', color: '#e65100' },
-  { name: 'Peak (80-90%)', value: 15, fill: '#ffebee', color: '#c62828' },
-];
-
-const FITNESS_GOALS = [
-  { type: 'Weekly Steps', target: 50000, current: 38500, unit: 'steps', icon: <DirectionsRun />, color: '#5e92f3' },
-  { type: 'Exercise Minutes', target: 150, current: 120, unit: 'min', icon: <Timer />, color: '#4caf50' },
-  { type: 'Calories Burned', target: 2000, current: 1610, unit: 'cal', icon: <LocalFireDepartment />, color: '#f44336' },
-  { type: 'Active Days', target: 5, current: 4, unit: 'days', icon: <CalendarMonth />, color: '#ff9800' },
-];
-
-const AI_RECOMMENDATIONS = [
-  { exercise: 'Moderate Walking', duration: '30 min', frequency: 'Daily', benefit: 'Reduces cancer recurrence risk by 25%', safetyLevel: 'Very Safe', icon: <DirectionsRun />, color: '#4caf50' },
-  { exercise: 'Gentle Yoga', duration: '20 min', frequency: '3x/week', benefit: 'Improves flexibility & mental wellness', safetyLevel: 'Very Safe', icon: <SelfImprovement />, color: '#ae52d4' },
-  { exercise: 'Swimming', duration: '30 min', frequency: '2x/week', benefit: 'Low-impact full body workout', safetyLevel: 'Safe', icon: <Pool />, color: '#0288d1' },
-  { exercise: 'Light Cycling', duration: '20 min', frequency: '3x/week', benefit: 'Cardiovascular health improvement', safetyLevel: 'Safe', icon: <DirectionsBike />, color: '#ff9800' },
-  { exercise: 'Resistance Bands', duration: '15 min', frequency: '3x/week', benefit: 'Maintains muscle mass during treatment', safetyLevel: 'Moderate', icon: <FitnessCenter />, color: '#f44336' },
-  { exercise: 'Tai Chi', duration: '20 min', frequency: '2x/week', benefit: 'Balance & fall prevention', safetyLevel: 'Very Safe', icon: <AccessibilityNew />, color: '#1565c0' },
-];
-
-const MONTHLY_PROGRESS = [
-  { month: 'Sep', minutes: 320, calories: 4200, sessions: 16 },
-  { month: 'Oct', minutes: 380, calories: 5100, sessions: 18 },
-  { month: 'Nov', minutes: 420, calories: 5800, sessions: 20 },
-  { month: 'Dec', minutes: 260, calories: 3400, sessions: 12 },
-];
+import { exerciseAPI } from '../../services/api';
 
 const ExerciseFitnessPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showLogDialog, setShowLogDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [weeklyExercise, setWeeklyExercise] = useState<any[]>([]);
+  const [heartRateZones, setHeartRateZones] = useState<any[]>([]);
+  const [fitnessGoals, setFitnessGoals] = useState<any[]>([]);
+  const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
+  const [monthlyProgress, setMonthlyProgress] = useState<any[]>([]);
+
+  const iconMap: Record<string, any> = { Walking: <DirectionsRun />, Yoga: <SelfImprovement />, Swimming: <Pool />, Cycling: <DirectionsBike />, Stretching: <AccessibilityNew />, Resistance: <FitnessCenter /> };
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [sessionsRes, goalsRes, recsRes] = await Promise.all([
+        exerciseAPI.getSessions().catch(() => null),
+        exerciseAPI.getGoals().catch(() => null),
+        exerciseAPI.getRecommendations().catch(() => null),
+      ]);
+
+      if (sessionsRes?.data) {
+        const sessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : (sessionsRes.data.sessions ?? sessionsRes.data.weekly ?? []);
+        setWeeklyExercise(sessions.map((s: any) => ({ day: s.day ?? s.date ?? '', minutes: s.duration ?? s.minutes ?? 0, calories: s.calories_burned ?? s.calories ?? 0, type: s.exercise_type ?? s.type ?? 'Rest', heartRate: s.avg_heart_rate ?? s.heartRate ?? 0 })));
+        if (sessionsRes.data.heart_rate_zones) setHeartRateZones(sessionsRes.data.heart_rate_zones);
+        if (sessionsRes.data.monthly_progress) setMonthlyProgress(sessionsRes.data.monthly_progress);
+      }
+      if (goalsRes?.data) {
+        const goals = Array.isArray(goalsRes.data) ? goalsRes.data : (goalsRes.data.goals ?? []);
+        setFitnessGoals(goals.map((g: any) => ({ type: g.goal_type ?? g.type ?? '', target: g.target ?? 0, current: g.current ?? g.progress ?? 0, unit: g.unit ?? '', icon: iconMap[g.goal_type] ?? <FitnessCenter />, color: g.color ?? '#5e92f3' })));
+      }
+      if (recsRes?.data) {
+        const recs = Array.isArray(recsRes.data) ? recsRes.data : (recsRes.data.recommendations ?? []);
+        setAiRecommendations(recs.map((r: any) => ({ exercise: r.exercise ?? r.name ?? '', duration: r.duration ?? '', frequency: r.frequency ?? '', benefit: r.benefit ?? r.description ?? '', safetyLevel: r.safety_level ?? r.safetyLevel ?? 'Safe', icon: iconMap[r.exercise] ?? <FitnessCenter />, color: r.color ?? '#4caf50' })));
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load exercise data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Exercise & Fitness" navItems={patientNavItems} portalType="patient" subtitle="Cancer-safe fitness tracking & recommendations">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (
       <Box sx={{ p: 3 }}>
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -98,7 +106,7 @@ const ExerciseFitnessPage: React.FC = () => {
                   action={<Button startIcon={<Add />} variant="contained" size="small" onClick={() => setShowLogDialog(true)}>Log Exercise</Button>}
                 />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={WEEKLY_EXERCISE}>
+                  <BarChart data={weeklyExercise}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -115,14 +123,14 @@ const ExerciseFitnessPage: React.FC = () => {
                 <SectionHeader title="Heart Rate Zones" icon={<Favorite />} />
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={HEART_RATE_ZONES} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
-                      {HEART_RATE_ZONES.map((entry, idx) => <Cell key={idx} fill={entry.color} />)}
+                    <Pie data={heartRateZones} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value">
+                      {heartRateZones.map((entry, idx) => <Cell key={idx} fill={entry.color} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
                 </ResponsiveContainer>
                 <Stack spacing={0.5}>
-                  {HEART_RATE_ZONES.map((zone, i) => (
+                  {heartRateZones.map((zone, i) => (
                     <Stack key={i} direction="row" spacing={1} alignItems="center">
                       <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: zone.color }} />
                       <Typography variant="caption">{zone.name}: {zone.value}%</Typography>
@@ -132,7 +140,7 @@ const ExerciseFitnessPage: React.FC = () => {
               </Card>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Session Log" icon={<Timer />} />
-                {WEEKLY_EXERCISE.filter(e => e.minutes > 0).map((session, i) => (
+                {weeklyExercise.filter(e => e.minutes > 0).map((session, i) => (
                   <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1, borderBottom: '1px solid #f5f5f5' }}>
                     <Box>
                       <Typography variant="body2" fontWeight={600}>{session.day} - {session.type}</Typography>
@@ -149,7 +157,7 @@ const ExerciseFitnessPage: React.FC = () => {
         {/* Tab 1: Goals */}
         {activeTab === 1 && (
           <Grid container spacing={2.5}>
-            {FITNESS_GOALS.map((goal, idx) => (
+            {fitnessGoals.map((goal, idx) => (
               <Grid item xs={12} sm={6} key={idx}>
                 <Card sx={{ p: 3 }}>
                   <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -180,7 +188,7 @@ const ExerciseFitnessPage: React.FC = () => {
               <strong>AI Exercise Advisor:</strong> Based on your cancer type, treatment phase, and fitness level, these exercises are recommended. Always consult your oncologist before starting new activities.
             </Alert>
             <Grid container spacing={2.5}>
-              {AI_RECOMMENDATIONS.map((rec, idx) => (
+              {aiRecommendations.map((rec, idx) => (
                 <Grid item xs={12} sm={6} md={4} key={idx}>
                   <Card sx={{ p: 2.5, height: '100%', transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }}>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
@@ -216,7 +224,7 @@ const ExerciseFitnessPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Monthly Exercise Trends" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={MONTHLY_PROGRESS}>
+                  <AreaChart data={monthlyProgress}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -291,6 +299,7 @@ const ExerciseFitnessPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      )}
     </AppLayout>
   );
 };

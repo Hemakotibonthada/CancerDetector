@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
-  Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem,
+  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem,
   FormControl, InputLabel, Tabs, Tab, LinearProgress, Tooltip, Avatar,
   Divider, IconButton, Alert,
 } from '@mui/material';
@@ -13,22 +13,33 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge } from '../../components/common/SharedComponents';
+import { hospitalsAPI } from '../../services/api';
 
 const BedManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedBed, setSelectedBed] = useState<any>(null);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [wards, setWards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const wards = [
-    { name: 'General Ward A', floor: '2nd Floor', total: 30, occupied: 22, available: 6, maintenance: 2, color: '#4caf50' },
-    { name: 'General Ward B', floor: '2nd Floor', total: 25, occupied: 20, available: 4, maintenance: 1, color: '#2196f3' },
-    { name: 'ICU', floor: '3rd Floor', total: 12, occupied: 10, available: 1, maintenance: 1, color: '#d32f2f' },
-    { name: 'Oncology Ward', floor: '4th Floor', total: 20, occupied: 16, available: 3, maintenance: 1, color: '#9c27b0' },
-    { name: 'Surgery Ward', floor: '3rd Floor', total: 15, occupied: 11, available: 3, maintenance: 1, color: '#ff9800' },
-    { name: 'Pediatric Ward', floor: '1st Floor', total: 10, occupied: 6, available: 3, maintenance: 1, color: '#00bcd4' },
-    { name: 'Maternity Ward', floor: '1st Floor', total: 12, occupied: 8, available: 3, maintenance: 1, color: '#e91e63' },
-    { name: 'Emergency', floor: 'Ground', total: 8, occupied: 6, available: 2, maintenance: 0, color: '#f44336' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [hospitalsRes] = await Promise.all([
+        hospitalsAPI.list().catch(() => ({ data: [] })),
+      ]);
+      const data = hospitalsRes.data || [];
+      setWards(Array.isArray(data) ? data : data.wards ?? []);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   type BedStatus = 'occupied' | 'available' | 'maintenance' | 'reserved' | 'discharge_pending';
 
@@ -57,8 +68,11 @@ const BedManagement: React.FC = () => {
     return m[s] || '#9e9e9e';
   };
 
+  if (loading) return <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>;
+
   return (
     <AppLayout title="Bed Management" subtitle="Ward & bed occupancy tracking" navItems={hospitalNavItems} portalType="hospital">
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {occupancyRate > 85 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <strong>High Occupancy Alert:</strong> Hospital at {occupancyRate}% capacity. {totalAvail} beds available.

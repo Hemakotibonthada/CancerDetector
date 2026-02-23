@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
-  TextField, Alert, Divider,
+  TextField, Alert, Divider, CircularProgress,
 } from '@mui/material';
 import {
   MonitorHeart, Favorite, Thermostat, Opacity, Speed, Height,
@@ -11,21 +11,57 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tool
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { StatCard, MetricGauge } from '../../components/common/SharedComponents';
+import { smartwatchAPI } from '../../services/api';
 
 const VitalSignsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [vitals, setVitals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const vitals = [
-    { name: 'Heart Rate', value: 72, unit: 'bpm', icon: <Favorite />, color: '#c62828', normal: '60-100', trend: 'stable', history: Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, value: 65 + Math.floor(Math.random() * 20) })) },
-    { name: 'Blood Pressure', value: '120/80', unit: 'mmHg', icon: <Speed />, color: '#1565c0', normal: '< 120/80', trend: 'improving', history: Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, value: 110 + Math.floor(Math.random() * 20) })) },
-    { name: 'Temperature', value: 98.6, unit: '°F', icon: <Thermostat />, color: '#f57c00', normal: '97-99', trend: 'stable', history: Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, value: 97.5 + Math.random() * 2 })) },
-    { name: 'SpO2', value: 98, unit: '%', icon: <Opacity />, color: '#2e7d32', normal: '95-100', trend: 'stable', history: Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, value: 95 + Math.floor(Math.random() * 4) })) },
-    { name: 'Respiratory Rate', value: 16, unit: 'breaths/min', icon: <MonitorHeart />, color: '#7b1fa2', normal: '12-20', trend: 'stable', history: Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, value: 14 + Math.floor(Math.random() * 6) })) },
-    { name: 'Weight', value: 165, unit: 'lbs', icon: <MonitorWeight />, color: '#00897b', normal: 'BMI 18.5-24.9', trend: 'decreasing', history: Array.from({ length: 7 }, (_, i) => ({ day: `D${i + 1}`, value: 167 - i * 0.3 })) },
-  ];
+  const loadVitals = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await smartwatchAPI.getData({ limit: 30 });
+      const data = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      // Build vitals from smartwatch daily summaries
+      if (data.length > 0) {
+        const latest = data[0];
+        const history = data.slice(0, 7).reverse();
+        const vitalsList = [
+          { name: 'Heart Rate', value: latest.avg_heart_rate || latest.heart_rate || 72, unit: 'bpm', icon: <Favorite />, color: '#c62828', normal: '60-100', trend: 'stable', history: history.map((d: any, i: number) => ({ day: `D${i+1}`, value: d.avg_heart_rate || d.heart_rate || 70 })) },
+          { name: 'Blood Pressure', value: `${latest.systolic_bp || 120}/${latest.diastolic_bp || 80}`, unit: 'mmHg', icon: <Speed />, color: '#1565c0', normal: '< 120/80', trend: 'stable', history: history.map((d: any, i: number) => ({ day: `D${i+1}`, value: d.systolic_bp || 120 })) },
+          { name: 'Temperature', value: latest.temperature || latest.skin_temperature || 98.6, unit: '°F', icon: <Thermostat />, color: '#f57c00', normal: '97-99', trend: 'stable', history: history.map((d: any, i: number) => ({ day: `D${i+1}`, value: d.temperature || d.skin_temperature || 98.6 })) },
+          { name: 'SpO2', value: latest.avg_spo2 || latest.spo2 || 98, unit: '%', icon: <Opacity />, color: '#2e7d32', normal: '95-100', trend: 'stable', history: history.map((d: any, i: number) => ({ day: `D${i+1}`, value: d.avg_spo2 || d.spo2 || 97 })) },
+          { name: 'Steps', value: latest.steps || 0, unit: 'steps', icon: <MonitorHeart />, color: '#7b1fa2', normal: '8000-10000', trend: 'stable', history: history.map((d: any, i: number) => ({ day: `D${i+1}`, value: d.steps || 0 })) },
+          { name: 'Calories', value: latest.calories_burned || latest.calories || 0, unit: 'kcal', icon: <MonitorWeight />, color: '#00897b', normal: '2000+', trend: 'stable', history: history.map((d: any, i: number) => ({ day: `D${i+1}`, value: d.calories_burned || d.calories || 0 })) },
+        ];
+        setVitals(vitalsList);
+      } else {
+        setVitals([]);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to load vitals:', err);
+      setError('Failed to load vital sign data');
+      setVitals([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadVitals(); }, [loadVitals]);
 
   return (
     <AppLayout title="Vital Signs" subtitle="Monitor and track your vital signs" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : vitals.length === 0 ? (
+        <Card sx={{ p: 6, textAlign: 'center' }}>
+          <MonitorHeart sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">No vital sign data available</Typography>
+          <Typography color="text.secondary" sx={{ fontSize: 13 }}>Connect a smartwatch or manually log vital signs</Typography>
+        </Card>
+      ) : <>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {vitals.map((v) => (
           <Grid item xs={6} sm={4} md={2} key={v.name}>
@@ -107,6 +143,7 @@ const VitalSignsPage: React.FC = () => {
           </Card>
         </Stack>
       )}
+      </>}
     </AppLayout>
   );
 };

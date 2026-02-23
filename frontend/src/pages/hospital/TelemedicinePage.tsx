@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Switch, FormControlLabel, Divider,
+  MenuItem, Alert, Switch, FormControlLabel, Divider, CircularProgress,
 } from '@mui/material';
 import {
   Videocam, Schedule, Person, CheckCircle, Timer, TrendingUp,
@@ -15,44 +15,54 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
-
-const SESSIONS = [
-  { id: 'TM-001', patient: 'Alice Thompson', doctor: 'Dr. Patel', specialty: 'Oncology', date: '2024-12-18', time: '9:00 AM', duration: 30, status: 'in_progress', type: 'Follow-up', platform: 'Video', rating: 0, notes: '' },
-  { id: 'TM-002', patient: 'Bob Williams', doctor: 'Dr. Kim', specialty: 'Radiation', date: '2024-12-18', time: '10:00 AM', duration: 20, status: 'scheduled', type: 'Consultation', platform: 'Video', rating: 0, notes: '' },
-  { id: 'TM-003', patient: 'Carol Davis', doctor: 'Dr. Patel', specialty: 'Oncology', date: '2024-12-18', time: '11:00 AM', duration: 45, status: 'scheduled', type: 'New Patient', platform: 'Video', rating: 0, notes: '' },
-  { id: 'TM-004', patient: 'David Lee', doctor: 'Dr. Chen', specialty: 'Surgery', date: '2024-12-17', time: '2:00 PM', duration: 25, status: 'completed', type: 'Pre-Op', platform: 'Video', rating: 5, notes: 'Discussed surgical plan. Patient well-informed.' },
-  { id: 'TM-005', patient: 'Eva Martinez', doctor: 'Dr. Patel', specialty: 'Oncology', date: '2024-12-17', time: '3:30 PM', duration: 35, status: 'completed', type: 'Follow-up', platform: 'Phone', rating: 4, notes: 'Treatment response positive. Adjusting medication.' },
-  { id: 'TM-006', patient: 'Frank Chen', doctor: 'Dr. Kim', specialty: 'Radiation', date: '2024-12-16', time: '10:00 AM', duration: 30, status: 'completed', type: 'Treatment Review', platform: 'Video', rating: 5, notes: 'Radiation plan finalized. Side effects manageable.' },
-];
-
-const WEEKLY_STATS = [
-  { day: 'Mon', sessions: 8, minutes: 240 },
-  { day: 'Tue', sessions: 10, minutes: 320 },
-  { day: 'Wed', sessions: 7, minutes: 210 },
-  { day: 'Thu', sessions: 12, minutes: 380 },
-  { day: 'Fri', sessions: 9, minutes: 280 },
-];
-
-const SESSION_TYPES = [
-  { name: 'Follow-up', value: 40, fill: '#5e92f3' },
-  { name: 'Consultation', value: 25, fill: '#ae52d4' },
-  { name: 'New Patient', value: 15, fill: '#4caf50' },
-  { name: 'Pre-Op', value: 10, fill: '#ff9800' },
-  { name: 'Treatment Review', value: 10, fill: '#f44336' },
-];
+import { telemedicineAPI } from '../../services/api';
 
 const TelemedicinePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showSessionView, setShowSessionView] = useState(false);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<any[]>([]);
+  const [sessionTypes, setSessionTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const todaySessions = SESSIONS.filter(s => s.date === '2024-12-18');
-  const completed = SESSIONS.filter(s => s.status === 'completed');
-  const avgRating = completed.reduce((s, c) => s + c.rating, 0) / completed.length;
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await telemedicineAPI.getSessions();
+      const data = res.data ?? res;
+      setSessions(Array.isArray(data) ? data : data.sessions ?? []);
+      setWeeklyStats(data.weekly_stats ?? data.weeklyStats ?? []);
+      setSessionTypes(data.session_types ?? data.sessionTypes ?? []);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load telemedicine data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const todaySessions = sessions.filter(s => s.date === '2024-12-18');
+  const completed = sessions.filter(s => s.status === 'completed');
+  const avgRating = completed.length > 0 ? completed.reduce((s, c) => s + (c.rating ?? 0), 0) / completed.length : 0;
+
+  if (loading) {
+    return (
+      <AppLayout title="Telemedicine" navItems={hospitalNavItems} portalType="hospital" subtitle="Virtual consultation management">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Telemedicine" navItems={hospitalNavItems} portalType="hospital" subtitle="Virtual consultation management">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Videocam />} label="Today's Sessions" value={todaySessions.length.toString()} color="#5e92f3" subtitle="Scheduled & in-progress" />
@@ -97,7 +107,7 @@ const TelemedicinePage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {SESSIONS.map((s, idx) => (
+                  {sessions.map((s, idx) => (
                     <TableRow key={idx} sx={{ bgcolor: s.status === 'in_progress' ? '#e8f5e9' : 'transparent' }}>
                       <TableCell><Chip label={s.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 10 }} /></TableCell>
                       <TableCell><Typography fontWeight={600} fontSize={13}>{s.patient}</Typography></TableCell>
@@ -184,7 +194,7 @@ const TelemedicinePage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Weekly Session Volume" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={WEEKLY_STATS}>
+                  <BarChart data={weeklyStats}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -200,8 +210,8 @@ const TelemedicinePage: React.FC = () => {
                 <SectionHeader title="Session Types" icon={<Assignment />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={SESSION_TYPES} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
-                      {SESSION_TYPES.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={sessionTypes} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
+                      {sessionTypes.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>

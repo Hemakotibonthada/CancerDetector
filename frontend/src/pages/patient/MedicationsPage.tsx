@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   IconButton, Avatar, Divider, Alert, Switch, FormControlLabel,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  LinearProgress, Tooltip,
+  LinearProgress, Tooltip, CircularProgress,
 } from '@mui/material';
 import {
   Medication as MedIcon, Add, AccessTime, CheckCircle, Warning,
@@ -15,40 +15,57 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { StatCard } from '../../components/common/SharedComponents';
+import { pharmacyAPI } from '../../services/api';
 
 const MedicationsPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showInteractionDialog, setShowInteractionDialog] = useState(false);
+  const [medications, setMedications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const medications = [
-    { id: '1', name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', timeOfDay: ['Morning', 'Evening'], purpose: 'Blood sugar control', prescribedBy: 'Dr. Smith', startDate: '2025-01-15', endDate: '', refillsLeft: 3, sideEffects: ['Nausea', 'Diarrhea'], adherence: 95, nextDose: '6:00 PM Today', taken: true, category: 'Diabetes' },
-    { id: '2', name: 'Lisinopril', dosage: '10mg', frequency: 'Once daily', timeOfDay: ['Morning'], purpose: 'Blood pressure control', prescribedBy: 'Dr. Lee', startDate: '2024-11-01', endDate: '', refillsLeft: 5, sideEffects: ['Dry cough', 'Dizziness'], adherence: 88, nextDose: '8:00 AM Tomorrow', taken: true, category: 'Cardiovascular' },
-    { id: '3', name: 'Vitamin D3', dosage: '2000 IU', frequency: 'Once daily', timeOfDay: ['Morning'], purpose: 'Vitamin D supplement', prescribedBy: 'Dr. Chen', startDate: '2025-02-01', endDate: '', refillsLeft: 8, sideEffects: [], adherence: 100, nextDose: '8:00 AM Tomorrow', taken: true, category: 'Supplement' },
-    { id: '4', name: 'Atorvastatin', dosage: '20mg', frequency: 'Once daily', timeOfDay: ['Evening'], purpose: 'Cholesterol control', prescribedBy: 'Dr. Lee', startDate: '2024-09-01', endDate: '', refillsLeft: 1, sideEffects: ['Muscle pain'], adherence: 78, nextDose: '9:00 PM Today', taken: false, category: 'Cardiovascular' },
-    { id: '5', name: 'Omega-3 Fish Oil', dosage: '1000mg', frequency: 'Twice daily', timeOfDay: ['Morning', 'Evening'], purpose: 'Heart health', prescribedBy: 'Self', startDate: '2025-01-01', endDate: '', refillsLeft: 10, sideEffects: ['Fishy aftertaste'], adherence: 60, nextDose: '6:00 PM Today', taken: false, category: 'Supplement' },
-    { id: '6', name: 'Aspirin', dosage: '81mg', frequency: 'Once daily', timeOfDay: ['Morning'], purpose: 'Blood thinner / cancer prevention', prescribedBy: 'Dr. Smith', startDate: '2024-06-01', endDate: '', refillsLeft: 7, sideEffects: ['Stomach irritation'], adherence: 92, nextDose: '8:00 AM Tomorrow', taken: true, category: 'Cardiovascular' },
-  ];
+  const loadMedications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await pharmacyAPI.getPrescriptions();
+      const data = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const meds = data.map((p: any) => ({
+        id: p.id || p.prescription_id,
+        name: p.medication_name || p.medication?.name || 'Unknown',
+        dosage: p.dosage || '',
+        frequency: p.frequency || 'As directed',
+        timeOfDay: p.frequency?.toLowerCase().includes('twice') ? ['Morning', 'Evening'] : ['Morning'],
+        purpose: p.instructions || p.medication?.purpose || '',
+        prescribedBy: p.prescribed_by_name || p.doctor_name || 'Doctor',
+        startDate: p.start_date || p.prescribed_date || '',
+        endDate: p.end_date || '',
+        refillsLeft: p.refills_remaining ?? p.refills ?? 0,
+        sideEffects: p.side_effects ? (Array.isArray(p.side_effects) ? p.side_effects : [p.side_effects]) : [],
+        adherence: p.adherence ?? 85,
+        nextDose: '',
+        taken: false,
+        category: p.category || p.medication?.category || 'General',
+      }));
+      setMedications(meds);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to load medications:', err);
+      setError('Failed to load medications');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const interactions = [
-    { drugs: ['Metformin', 'Lisinopril'], severity: 'mild', description: 'Lisinopril may increase the blood glucose lowering effect of metformin. Monitor blood sugar levels closely.' },
-    { drugs: ['Aspirin', 'Omega-3 Fish Oil'], severity: 'moderate', description: 'Both medications have blood-thinning properties. Combined use may increase bleeding risk.' },
-    { drugs: ['Atorvastatin', 'Omega-3 Fish Oil'], severity: 'mild', description: 'Both affect lipid levels. Generally beneficial combination but monitor liver function.' },
-  ];
+  useEffect(() => { loadMedications(); }, [loadMedications]);
 
-  const schedule = [
-    { time: '8:00 AM', meds: ['Metformin 500mg', 'Lisinopril 10mg', 'Vitamin D3 2000 IU', 'Aspirin 81mg', 'Omega-3 1000mg'], period: 'Morning' },
-    { time: '6:00 PM', meds: ['Metformin 500mg', 'Omega-3 1000mg'], period: 'Evening' },
-    { time: '9:00 PM', meds: ['Atorvastatin 20mg'], period: 'Night' },
-  ];
-
-  const refillHistory = [
-    { date: 'Feb 10, 2026', medication: 'Metformin', pharmacy: 'CVS Pharmacy', status: 'picked_up' },
-    { date: 'Feb 05, 2026', medication: 'Aspirin', pharmacy: 'Walgreens', status: 'picked_up' },
-    { date: 'Jan 28, 2026', medication: 'Lisinopril', pharmacy: 'CVS Pharmacy', status: 'picked_up' },
-    { date: 'Jan 20, 2026', medication: 'Atorvastatin', pharmacy: 'CVS Pharmacy', status: 'picked_up' },
-  ];
+  const interactions: any[] = [];
+  const schedule = medications.length > 0 ? [
+    { time: '8:00 AM', meds: medications.filter(m => m.timeOfDay.includes('Morning')).map(m => `${m.name} ${m.dosage}`), period: 'Morning' },
+    { time: '6:00 PM', meds: medications.filter(m => m.timeOfDay.includes('Evening')).map(m => `${m.name} ${m.dosage}`), period: 'Evening' },
+  ].filter(s => s.meds.length > 0) : [];
+  const refillHistory: any[] = [];
 
   const getCategoryColor = (cat: string) => {
     const m: Record<string, string> = { Diabetes: '#1565c0', Cardiovascular: '#c62828', Supplement: '#2e7d32' };
@@ -57,9 +74,11 @@ const MedicationsPage: React.FC = () => {
 
   return (
     <AppLayout title="Medications" subtitle="Track your medications and schedules" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : <>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<MedIcon />} label="Active Meds" value={medications.length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Avg. Adherence" value={`${Math.round(medications.reduce((a, m) => a + m.adherence, 0) / medications.length)}%`} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Avg. Adherence" value={medications.length > 0 ? `${Math.round(medications.reduce((a, m) => a + m.adherence, 0) / medications.length)}%` : '0%'} color="#4caf50" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Low Refills" value={medications.filter(m => m.refillsLeft <= 2).length} color="#f57c00" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<WarningAmber />} label="Interactions" value={interactions.length} color="#c62828" /></Grid>
       </Grid>
@@ -76,6 +95,13 @@ const MedicationsPage: React.FC = () => {
           <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
             <Button variant="contained" startIcon={<Add />} onClick={() => setShowAddDialog(true)}>Add Medication</Button>
           </Box>
+          {medications.length === 0 ? (
+            <Card sx={{ p: 6, textAlign: 'center' }}>
+              <MedIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary">No medications found</Typography>
+              <Typography color="text.secondary" sx={{ fontSize: 13 }}>Your prescriptions will appear here</Typography>
+            </Card>
+          ) : (
           <Grid container spacing={2}>
             {medications.map((med) => (
               <Grid item xs={12} md={6} key={med.id}>
@@ -153,6 +179,7 @@ const MedicationsPage: React.FC = () => {
               </Grid>
             ))}
           </Grid>
+          )}
         </>
       )}
 
@@ -243,6 +270,8 @@ const MedicationsPage: React.FC = () => {
           </TableContainer>
         </Card>
       )}
+
+      </>}
 
       {/* Add Medication Dialog */}
       <Dialog open={showAddDialog} onClose={() => setShowAddDialog(false)} maxWidth="sm" fullWidth>

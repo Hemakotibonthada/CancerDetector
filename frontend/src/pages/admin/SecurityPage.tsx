@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   LinearProgress, Avatar, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Select, MenuItem, FormControl,
   InputLabel, Alert, Switch, FormControlLabel, Divider, IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Security, Shield, Lock, VpnKey, Fingerprint, VerifiedUser,
@@ -19,78 +20,58 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { adminAPI } from '../../services/api';
 
 const SecurityPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const securityEvents = [
-    { id: 'SEC-001', type: 'Unauthorized Access', severity: 'critical', source: '192.168.1.45', user: 'unknown', timestamp: '2 min ago', description: 'Multiple failed login attempts from suspicious IP', resolved: false },
-    { id: 'SEC-002', type: 'Data Export', severity: 'medium', source: '10.0.0.32', user: 'Dr. Johnson', timestamp: '15 min ago', description: 'Large data export from patient records module', resolved: false },
-    { id: 'SEC-003', type: 'Permission Escalation', severity: 'high', source: '10.0.0.88', user: 'nurse_kelly', timestamp: '1 hr ago', description: 'User attempted to access admin panel without clearance', resolved: true },
-    { id: 'SEC-004', type: 'Session Hijacking Attempt', severity: 'critical', source: '203.45.67.89', user: 'unknown', timestamp: '2 hr ago', description: 'Suspicious session token reuse detected', resolved: true },
-    { id: 'SEC-005', type: 'Suspicious API Call', severity: 'medium', source: '10.0.0.15', user: 'api_service', timestamp: '3 hr ago', description: 'Unusual API pattern detected from internal service', resolved: false },
-    { id: 'SEC-006', type: 'Password Attack', severity: 'high', source: '185.23.45.67', user: 'multiple', timestamp: '5 hr ago', description: 'Brute force attack detected, 450 attempts blocked', resolved: true },
-    { id: 'SEC-007', type: 'Certificate Warning', severity: 'low', source: 'system', user: 'system', timestamp: '8 hr ago', description: 'SSL certificate for api.cancerguard.ai expires in 30 days', resolved: false },
-    { id: 'SEC-008', type: 'Malware Detection', severity: 'critical', source: '10.0.0.42', user: 'lab_user_3', timestamp: '1 day ago', description: 'Quarantined suspicious file upload in lab module', resolved: true },
-  ];
+  const [securityEvents, setSecurityEvents] = useState<any[]>([]);
+  const [complianceChecks, setComplianceChecks] = useState<any[]>([]);
+  const [attacksByDay, setAttacksByDay] = useState<any[]>([]);
+  const [threatTypes, setThreatTypes] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [vulnScan, setVulnScan] = useState<any[]>([]);
 
-  const complianceChecks = [
-    { name: 'HIPAA - Access Controls', status: 'passed', lastChecked: '1 day ago', score: 98, category: 'HIPAA' },
-    { name: 'HIPAA - Data Encryption', status: 'passed', lastChecked: '1 day ago', score: 100, category: 'HIPAA' },
-    { name: 'HIPAA - Audit Logging', status: 'passed', lastChecked: '1 day ago', score: 95, category: 'HIPAA' },
-    { name: 'HIPAA - Data Backup', status: 'warning', lastChecked: '2 days ago', score: 85, category: 'HIPAA' },
-    { name: 'GDPR - Consent Management', status: 'passed', lastChecked: '1 day ago', score: 92, category: 'GDPR' },
-    { name: 'GDPR - Right to Erasure', status: 'passed', lastChecked: '3 days ago', score: 90, category: 'GDPR' },
-    { name: 'GDPR - Data Portability', status: 'warning', lastChecked: '5 days ago', score: 78, category: 'GDPR' },
-    { name: 'SOC 2 - Security', status: 'passed', lastChecked: '1 week ago', score: 96, category: 'SOC2' },
-    { name: 'SOC 2 - Availability', status: 'passed', lastChecked: '1 week ago', score: 99, category: 'SOC2' },
-    { name: 'SOC 2 - Confidentiality', status: 'passed', lastChecked: '1 week ago', score: 94, category: 'SOC2' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await adminAPI.getDashboard();
+      const d = res.data ?? res;
+      setSecurityEvents(d.security_events ?? d.securityEvents ?? []);
+      setComplianceChecks(d.compliance_checks ?? d.complianceChecks ?? []);
+      setAttacksByDay(d.attacks_by_day ?? d.attacksByDay ?? []);
+      setThreatTypes(d.threat_types ?? d.threatTypes ?? []);
+      setPolicies(d.policies ?? []);
+      setVulnScan(d.vuln_scan ?? d.vulnScan ?? d.vulnerabilities ?? []);
+    } catch {
+      setError('Failed to load security data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const attacksByDay = [
-    { day: 'Mon', attacks: 45, blocked: 44, flagged: 1 },
-    { day: 'Tue', attacks: 32, blocked: 31, flagged: 1 },
-    { day: 'Wed', attacks: 67, blocked: 66, flagged: 1 },
-    { day: 'Thu', attacks: 28, blocked: 28, flagged: 0 },
-    { day: 'Fri', attacks: 52, blocked: 50, flagged: 2 },
-    { day: 'Sat', attacks: 18, blocked: 18, flagged: 0 },
-    { day: 'Sun', attacks: 12, blocked: 12, flagged: 0 },
-  ];
-
-  const threatTypes = [
-    { name: 'Brute Force', value: 35, color: '#d32f2f' },
-    { name: 'SQL Injection', value: 20, color: '#ff9800' },
-    { name: 'XSS Attempts', value: 15, color: '#f57c00' },
-    { name: 'Bot Traffic', value: 25, color: '#795548' },
-    { name: 'Other', value: 5, color: '#9e9e9e' },
-  ];
-
-  const policies = [
-    { name: 'Password Policy', enabled: true, description: 'Min 12 chars, uppercase, lowercase, number, special', lastUpdated: '30 days ago' },
-    { name: 'Session Timeout', enabled: true, description: '30 minutes of inactivity', lastUpdated: '60 days ago' },
-    { name: 'Two-Factor Authentication', enabled: true, description: 'Required for all admin and staff accounts', lastUpdated: '15 days ago' },
-    { name: 'IP Whitelisting', enabled: false, description: 'Restrict access to approved IP ranges', lastUpdated: '90 days ago' },
-    { name: 'Rate Limiting', enabled: true, description: '100 API requests per minute per user', lastUpdated: '45 days ago' },
-    { name: 'Data Encryption at Rest', enabled: true, description: 'AES-256 encryption for all stored data', lastUpdated: '120 days ago' },
-    { name: 'Data Encryption in Transit', enabled: true, description: 'TLS 1.3 for all communications', lastUpdated: '120 days ago' },
-    { name: 'Automatic Account Lockout', enabled: true, description: 'Lock after 5 consecutive failed login attempts', lastUpdated: '60 days ago' },
-    { name: 'Audit Log Retention', enabled: true, description: 'Retain all audit logs for 7 years (HIPAA)', lastUpdated: '180 days ago' },
-    { name: 'Data Loss Prevention', enabled: true, description: 'Block unauthorized data exports over 1000 records', lastUpdated: '30 days ago' },
-  ];
-
-  const vulnScan = [
-    { id: 'VUL-001', name: 'Outdated OpenSSL Library', severity: 'high', component: 'API Server', discovered: '3 days ago', status: 'in-progress', cve: 'CVE-2024-1234' },
-    { id: 'VUL-002', name: 'Missing CORS Headers', severity: 'medium', component: 'Frontend', discovered: '5 days ago', status: 'fixed', cve: 'N/A' },
-    { id: 'VUL-003', name: 'Weak Cipher Suite', severity: 'low', component: 'Load Balancer', discovered: '1 week ago', status: 'fixed', cve: 'N/A' },
-    { id: 'VUL-004', name: 'Log4j Dependency', severity: 'critical', component: 'Analytics Service', discovered: '2 weeks ago', status: 'fixed', cve: 'CVE-2021-44228' },
-    { id: 'VUL-005', name: 'Insecure Direct Object Ref', severity: 'high', component: 'Patient API', discovered: '1 week ago', status: 'in-progress', cve: 'N/A' },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   const sevColors: any = { critical: '#d32f2f', high: '#f57c00', medium: '#ff9800', low: '#4caf50' };
 
+  if (loading) {
+    return (
+      <AppLayout title="Security & Compliance" subtitle="Monitor security events and compliance" navItems={adminNavItems} portalType="admin">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout title="Security & Compliance" subtitle="Monitor security events and compliance" navItems={adminNavItems} portalType="admin">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Active Threats" value={securityEvents.filter(e => !e.resolved && (e.severity === 'critical' || e.severity === 'high')).length} color="#d32f2f" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Shield />} label="Attacks Blocked" value="249" color="#4caf50" /></Grid>

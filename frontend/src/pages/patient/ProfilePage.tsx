@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Avatar, Divider, Alert, Switch, FormControlLabel, IconButton,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Select, MenuItem, FormControl, InputLabel, Badge,
+  Select, MenuItem, FormControl, InputLabel, Badge, CircularProgress,
 } from '@mui/material';
 import {
   Person, Edit, Save, CameraAlt, LocalHospital, FamilyRestroom,
@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { SectionHeader, InfoRow, StatCard } from '../../components/common/SharedComponents';
+import { patientsAPI } from '../../services/api';
 
 const ProfilePage: React.FC = () => {
   const { user } = useAuth();
@@ -23,45 +24,63 @@ const ProfilePage: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [showEmergencyDialog, setShowEmergencyDialog] = useState(false);
   const [showAllergyDialog, setShowAllergyDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>({
+    name: user?.full_name || '', email: user?.email || '',
+    phone: '', dateOfBirth: '', gender: '', bloodType: '',
+    height: '', weight: '', bmi: 0, address: '', healthId: '',
+    insuranceProvider: '', insuranceId: '', pcp: '', pcpPhone: '',
+    joinDate: '', lastLogin: '',
+  });
+  const [emergencyContacts, setEmergencyContacts] = useState<any[]>([]);
+  const [allergies, setAllergies] = useState<any[]>([]);
+  const [familyHistory, setFamilyHistory] = useState<any[]>([]);
+  const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
 
-  const profile = {
-    name: user?.full_name || 'John Doe', email: user?.email || 'john.doe@email.com',
-    phone: '+1 (555) 123-4567', dateOfBirth: '1985-06-15', gender: 'Male',
-    bloodType: 'O+', height: '5\'10"', weight: '165 lbs', bmi: 23.7,
-    address: '456 Health Street, Medical City, MC 12345',
-    healthId: 'CG-2026-001234', insuranceProvider: 'BlueCross BlueShield',
-    insuranceId: 'BCB-789456', pcp: 'Dr. Sarah Smith', pcpPhone: '+1 (555) 987-6543',
-    joinDate: 'January 15, 2025', lastLogin: 'February 20, 2026',
-  };
+  const loadProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await patientsAPI.getMyProfile();
+      const p = res.data;
+      setProfile({
+        name: p.full_name || p.user?.full_name || user?.full_name || '',
+        email: p.email || p.user?.email || user?.email || '',
+        phone: p.phone_number || p.phone || '',
+        dateOfBirth: p.date_of_birth || '',
+        gender: p.gender || '',
+        bloodType: p.blood_type || '',
+        height: p.height ? `${p.height}` : '',
+        weight: p.weight ? `${p.weight} lbs` : '',
+        bmi: p.bmi || 0,
+        address: p.address || '',
+        healthId: p.health_id || '',
+        insuranceProvider: p.insurance_provider || '',
+        insuranceId: p.insurance_id || '',
+        pcp: p.primary_care_physician || '',
+        pcpPhone: p.pcp_phone || '',
+        joinDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+        lastLogin: p.last_login ? new Date(p.last_login).toLocaleDateString() : new Date().toLocaleDateString(),
+      });
+      if (p.emergency_contacts) setEmergencyContacts(Array.isArray(p.emergency_contacts) ? p.emergency_contacts : []);
+      if (p.allergies) setAllergies(Array.isArray(p.allergies) ? p.allergies : JSON.parse(p.allergies || '[]'));
+      if (p.family_history) setFamilyHistory(Array.isArray(p.family_history) ? p.family_history : JSON.parse(p.family_history || '[]'));
+      if (p.medical_history) setMedicalHistory(Array.isArray(p.medical_history) ? p.medical_history : JSON.parse(p.medical_history || '[]'));
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to load profile:', err);
+      setError('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-  const emergencyContacts = [
-    { id: '1', name: 'Jane Doe', relationship: 'Spouse', phone: '+1 (555) 234-5678', email: 'jane.doe@email.com', primary: true },
-    { id: '2', name: 'Robert Doe', relationship: 'Brother', phone: '+1 (555) 345-6789', email: 'robert.doe@email.com', primary: false },
-  ];
-
-  const allergies = [
-    { id: '1', allergen: 'Penicillin', type: 'Drug', severity: 'Severe', reaction: 'Anaphylaxis', diagnosed: '2010' },
-    { id: '2', allergen: 'Peanuts', type: 'Food', severity: 'Moderate', reaction: 'Hives, swelling', diagnosed: '2005' },
-    { id: '3', allergen: 'Latex', type: 'Environmental', severity: 'Mild', reaction: 'Skin irritation', diagnosed: '2015' },
-  ];
-
-  const familyHistory = [
-    { relation: 'Father', condition: 'Type 2 Diabetes', age: 52, status: 'Living with condition' },
-    { relation: 'Mother', condition: 'Breast Cancer', age: 48, status: 'In remission' },
-    { relation: 'Grandfather (Paternal)', condition: 'Colon Cancer', age: 65, status: 'Deceased' },
-    { relation: 'Grandmother (Maternal)', condition: 'Heart Disease', age: 70, status: 'Living with condition' },
-    { relation: 'Uncle (Paternal)', condition: 'Prostate Cancer', age: 58, status: 'In remission' },
-  ];
-
-  const medicalHistory = [
-    { condition: 'Appendectomy', date: '2010', type: 'Surgery', status: 'Resolved' },
-    { condition: 'Pre-diabetes', date: '2023', type: 'Chronic', status: 'Monitoring' },
-    { condition: 'High Cholesterol', date: '2024', type: 'Chronic', status: 'Managed with medication' },
-    { condition: 'Seasonal Allergies', date: '2015', type: 'Chronic', status: 'Managed' },
-  ];
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   return (
     <AppLayout title="My Profile" subtitle="Manage your personal and medical information" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : <>
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
         <Tab label="Personal Info" />
         <Tab label="Medical Info" />
@@ -342,6 +361,8 @@ const ProfilePage: React.FC = () => {
           </Grid>
         </Grid>
       )}
+
+      </>}
 
       {/* Emergency Contact Dialog */}
       <Dialog open={showEmergencyDialog} onClose={() => setShowEmergencyDialog(false)} maxWidth="sm" fullWidth>

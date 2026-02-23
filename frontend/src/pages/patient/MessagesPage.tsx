@@ -1,46 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
   InputAdornment, Avatar, Divider, Badge, IconButton, Tabs, Tab,
+  CircularProgress, Alert,
 } from '@mui/material';
 import {
   Send, AttachFile, Search, MoreVert, Phone, VideoCall,
   Circle, DoneAll, Done, Image, InsertDriveFile, Mic,
-  EmojiEmotions,
+  EmojiEmotions, Inbox as InboxIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
+import { communicationAPI } from '../../services/api';
 
 const MessagesPage: React.FC = () => {
   const { user } = useAuth();
-  const [selectedConversation, setSelectedConversation] = useState<string | null>('1');
+  const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Record<string, any[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const conversations = [
-    { id: '1', name: 'Dr. Sarah Smith', specialization: 'Oncologist', lastMessage: 'Your latest test results look good. Keep up the healthy lifestyle.', time: '10:30 AM', unread: 2, online: true, avatar: 'SS' },
-    { id: '2', name: 'Dr. James Lee', specialization: 'Cardiologist', lastMessage: 'I\'ve adjusted your medication dosage. Please pick up the new prescription.', time: 'Yesterday', unread: 0, online: false, avatar: 'JL' },
-    { id: '3', name: 'Lab Support', specialization: 'Cancer Research Center', lastMessage: 'Your blood test results are ready. You can view them in your records.', time: 'Feb 18', unread: 1, online: true, avatar: 'LS' },
-    { id: '4', name: 'Dr. Emily Chen', specialization: 'General Physician', lastMessage: 'Don\'t forget your annual checkup next week!', time: 'Feb 15', unread: 0, online: false, avatar: 'EC' },
-    { id: '5', name: 'CancerGuard AI', specialization: 'AI Assistant', lastMessage: 'Based on your recent data, here are some personalized recommendations.', time: 'Feb 14', unread: 0, online: true, avatar: 'AI' },
-  ];
+  const loadMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [inboxRes, sentRes] = await Promise.all([
+        communicationAPI.getInbox(),
+        communicationAPI.getSent(),
+      ]);
+      const inbox = Array.isArray(inboxRes.data) ? inboxRes.data : (inboxRes.data?.items || []);
+      const sent = Array.isArray(sentRes.data) ? sentRes.data : (sentRes.data?.items || []);
 
-  const messages: Record<string, Array<{ id: string; sender: 'me' | 'them'; text: string; time: string; read: boolean; type?: string }>> = {
-    '1': [
-      { id: 'm1', sender: 'them', text: 'Good morning! I\'ve reviewed your latest cancer screening results.', time: '9:00 AM', read: true },
-      { id: 'm2', sender: 'them', text: 'Everything looks great. Your risk levels have decreased compared to last quarter.', time: '9:01 AM', read: true },
-      { id: 'm3', sender: 'me', text: 'That\'s wonderful news, Dr. Smith! I\'ve been following the diet plan you recommended.', time: '9:15 AM', read: true },
-      { id: 'm4', sender: 'them', text: 'That\'s excellent! The dietary changes are clearly making a positive impact. I can see improvements in your biomarkers.', time: '9:20 AM', read: true },
-      { id: 'm5', sender: 'me', text: 'Should I continue with the same supplement regimen?', time: '9:30 AM', read: true },
-      { id: 'm6', sender: 'them', text: 'Yes, please continue with Vitamin D3 and Omega-3. I\'d also like you to increase your fiber intake.', time: '10:00 AM', read: true },
-      { id: 'm7', sender: 'them', text: 'Your latest test results look good. Keep up the healthy lifestyle. See you at your next appointment on March 10th!', time: '10:30 AM', read: false },
-    ],
-    '2': [
-      { id: 'm1', sender: 'them', text: 'Hi, I wanted to discuss your recent ECG results.', time: 'Yesterday', read: true },
-      { id: 'm2', sender: 'me', text: 'Of course, Dr. Lee. What did you find?', time: 'Yesterday', read: true },
-      { id: 'm3', sender: 'them', text: 'Everything is within normal range. However, I\'d like to adjust your medication slightly.', time: 'Yesterday', read: true },
-      { id: 'm4', sender: 'them', text: 'I\'ve adjusted your medication dosage. Please pick up the new prescription.', time: 'Yesterday', read: true },
-    ],
+      // Group messages into conversations by sender/recipient
+      const convMap = new Map<string, { contact: any; msgs: any[] }>();
+      [...inbox, ...sent].forEach((msg: any) => {
+        const isIncoming = msg.recipient_id === user?.id || msg.to_user_id === user?.id;
+        const contactId = isIncoming ? (msg.sender_id || msg.from_user_id) : (msg.recipient_id || msg.to_user_id);
+        const contactName = isIncoming ? (msg.sender_name || msg.from_name || 'Unknown') : (msg.recipient_name || msg.to_name || 'Unknown');
+        if (!convMap.has(contactId)) {
+          convMap.set(contactId, { contact: { id: contactId, name: contactName, avatar: contactName.split(' ').map((n: string) => n[0]).join('').slice(0, 2) }, msgs: [] });
+        }
+        convMap.get(contactId)!.msgs.push({
+          id: msg.id,
+          sender: isIncoming ? 'them' : 'me',
+          text: msg.content || msg.message || msg.body || '',
+          time: msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          read: msg.is_read ?? msg.read ?? true,
+          timestamp: new Date(msg.created_at || 0).getTime(),
+        });
+      });
+
+      const convList = Array.from(convMap.entries()).map(([id, { contact, msgs }]) => {
+        msgs.sort((a, b) => a.timestamp - b.timestamp);
+        const lastMsg = msgs[msgs.length - 1];
+        return {
+          id,
+          name: contact.name,
+          specialization: '',
+          lastMessage: lastMsg?.text || '',
+          time: lastMsg?.time || '',
+          unread: msgs.filter(m => m.sender === 'them' && !m.read).length,
+          online: false,
+          avatar: contact.avatar,
+        };
+      });
+      convList.sort((a, b) => b.unread - a.unread);
+
+      setConversations(convList);
+      const msgMap: Record<string, any[]> = {};
+      convMap.forEach((v, k) => { msgMap[k] = v.msgs; });
+      setMessages(msgMap);
+      if (convList.length > 0 && !selectedConversation) setSelectedConversation(convList[0].id);
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to load messages:', err);
+      setError('Failed to load messages');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, selectedConversation]);
+
+  useEffect(() => { loadMessages(); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedConversation) return;
+    try {
+      await communicationAPI.sendMessage({
+        recipient_id: selectedConversation,
+        content: messageText.trim(),
+      });
+      setMessageText('');
+      loadMessages();
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   const currentMessages = selectedConversation ? messages[selectedConversation] || [] : [];
@@ -48,6 +103,14 @@ const MessagesPage: React.FC = () => {
 
   return (
     <AppLayout title="Messages" subtitle="Communicate with your healthcare team" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : conversations.length === 0 ? (
+        <Card sx={{ p: 6, textAlign: 'center' }}>
+          <InboxIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">No messages yet</Typography>
+          <Typography color="text.secondary" sx={{ fontSize: 13 }}>Your conversations with healthcare providers will appear here</Typography>
+        </Card>
+      ) : (
       <Card sx={{ height: 'calc(100vh - 200px)', display: 'flex', overflow: 'hidden' }}>
         {/* Conversations List */}
         <Box sx={{ width: 340, borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column' }}>
@@ -155,11 +218,11 @@ const MessagesPage: React.FC = () => {
                   <TextField
                     placeholder="Type a message..."
                     fullWidth size="small" value={messageText} onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => { if (e.key === 'Enter') { setMessageText(''); } }}
+                    onKeyPress={(e) => { if (e.key === 'Enter') { handleSendMessage(); } }}
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 3 } }}
                   />
                   <IconButton size="small"><Mic sx={{ fontSize: 22, color: 'text.secondary' }} /></IconButton>
-                  <IconButton size="small" color="primary" onClick={() => setMessageText('')}><Send sx={{ fontSize: 22 }} /></IconButton>
+                  <IconButton size="small" color="primary" onClick={handleSendMessage}><Send sx={{ fontSize: 22 }} /></IconButton>
                 </Stack>
               </Box>
             </>
@@ -170,6 +233,7 @@ const MessagesPage: React.FC = () => {
           )}
         </Box>
       </Card>
+      )}
     </AppLayout>
   );
 };

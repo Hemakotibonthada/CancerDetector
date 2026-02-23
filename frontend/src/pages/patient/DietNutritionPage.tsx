@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TextField, MenuItem, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Avatar, List, ListItem, ListItemAvatar, ListItemText,
-  Rating, Divider, IconButton,
+  Rating, Divider, IconButton, CircularProgress,
 } from '@mui/material';
 import {
   Restaurant, FoodBank, LocalDining, WaterDrop, Spa, EggAlt,
@@ -16,57 +16,60 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, ProgressCard } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
-
-const WEEKLY_NUTRITION = [
-  { day: 'Mon', calories: 1850, protein: 75, carbs: 220, fat: 58, antioxidants: 82 },
-  { day: 'Tue', calories: 2100, protein: 88, carbs: 240, fat: 65, antioxidants: 78 },
-  { day: 'Wed', calories: 1920, protein: 80, carbs: 210, fat: 62, antioxidants: 90 },
-  { day: 'Thu', calories: 1780, protein: 72, carbs: 195, fat: 55, antioxidants: 85 },
-  { day: 'Fri', calories: 2050, protein: 85, carbs: 235, fat: 61, antioxidants: 88 },
-  { day: 'Sat', calories: 2200, protein: 90, carbs: 260, fat: 70, antioxidants: 75 },
-  { day: 'Sun', calories: 1950, protein: 78, carbs: 225, fat: 60, antioxidants: 92 },
-];
-
-const MACRO_BREAKDOWN = [
-  { name: 'Protein', value: 25, fill: '#5e92f3', target: 30 },
-  { name: 'Carbs', value: 50, fill: '#4ebaaa', target: 45 },
-  { name: 'Fats', value: 20, fill: '#ff9800', target: 25 },
-  { name: 'Fiber', value: 5, fill: '#ae52d4', target: 8 },
-];
-
-const ANTI_CANCER_FOODS = [
-  { name: 'Broccoli', category: 'Cruciferous', score: 95, benefit: 'Sulforaphane - powerful anti-cancer compound', icon: '🥦', servings: 3 },
-  { name: 'Blueberries', category: 'Berries', score: 92, benefit: 'High in antioxidants, reduces oxidative stress', icon: '🫐', servings: 5 },
-  { name: 'Turmeric', category: 'Spices', score: 90, benefit: 'Curcumin inhibits cancer cell growth', icon: '🟡', servings: 2 },
-  { name: 'Green Tea', category: 'Beverages', score: 88, benefit: 'EGCG catechins fight multiple cancer types', icon: '🍵', servings: 4 },
-  { name: 'Salmon', category: 'Fish', score: 87, benefit: 'Omega-3 fatty acids reduce inflammation', icon: '🐟', servings: 2 },
-  { name: 'Garlic', category: 'Allium', score: 85, benefit: 'Allicin compounds prevent DNA damage', icon: '🧄', servings: 6 },
-  { name: 'Tomatoes', category: 'Fruits', score: 84, benefit: 'Lycopene linked to reduced prostate cancer risk', icon: '🍅', servings: 4 },
-  { name: 'Spinach', category: 'Leafy Greens', score: 83, benefit: 'Folate and carotenoids for cancer prevention', icon: '🥬', servings: 3 },
-  { name: 'Walnuts', category: 'Nuts', score: 80, benefit: 'Ellagic acid & omega-3 anti-cancer properties', icon: '🥜', servings: 1 },
-  { name: 'Mushrooms', category: 'Fungi', score: 78, benefit: 'Beta-glucans boost immune anti-cancer response', icon: '🍄', servings: 2 },
-];
-
-const MEAL_PLAN = [
-  { meal: 'Breakfast', time: '7:30 AM', items: ['Oatmeal with blueberries & walnuts', 'Green tea', 'Greek yogurt'], calories: 420, antiCancer: 3 },
-  { meal: 'Snack', time: '10:00 AM', items: ['Mixed berries & almonds', 'Turmeric latte'], calories: 180, antiCancer: 2 },
-  { meal: 'Lunch', time: '12:30 PM', items: ['Grilled salmon salad', 'Broccoli & spinach', 'Quinoa'], calories: 580, antiCancer: 4 },
-  { meal: 'Snack', time: '3:30 PM', items: ['Apple with almond butter', 'Green tea'], calories: 220, antiCancer: 2 },
-  { meal: 'Dinner', time: '7:00 PM', items: ['Turmeric chicken', 'Roasted vegetables', 'Brown rice', 'Garlic mushrooms'], calories: 620, antiCancer: 5 },
-];
-
-const HYDRATION_DATA = [
-  { time: '8 AM', ml: 300 }, { time: '10 AM', ml: 250 }, { time: '12 PM', ml: 400 },
-  { time: '2 PM', ml: 300 }, { time: '4 PM', ml: 350 }, { time: '6 PM', ml: 200 },
-  { time: '8 PM', ml: 300 }, { time: '10 PM', ml: 150 },
-];
+import { dietAPI } from '../../services/api';
 
 const DietNutritionPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showLogDialog, setShowLogDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [weeklyNutrition, setWeeklyNutrition] = useState<any[]>([]);
+  const [macroBreakdown, setMacroBreakdown] = useState<any[]>([]);
+  const [antiCancerFoods, setAntiCancerFoods] = useState<any[]>([]);
+  const [mealPlan, setMealPlan] = useState<any[]>([]);
+  const [hydrationData, setHydrationData] = useState<any[]>([]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [planRes, logRes, foodsRes, recsRes] = await Promise.all([
+        dietAPI.getPlan().catch(() => null),
+        dietAPI.getNutritionLog().catch(() => null),
+        dietAPI.getAntiCancerFoods().catch(() => null),
+        dietAPI.getRecommendations().catch(() => null),
+      ]);
+
+      if (planRes?.data) {
+        const p = planRes.data;
+        if (Array.isArray(p.meals ?? p.meal_plan)) setMealPlan(p.meals ?? p.meal_plan ?? []);
+        if (Array.isArray(p.macro_breakdown ?? p.macros)) setMacroBreakdown((p.macro_breakdown ?? p.macros ?? []).map((m: any) => ({ name: m.name ?? m.macro, value: m.value ?? m.percentage ?? 0, fill: m.fill ?? m.color ?? '#5e92f3', target: m.target ?? 0 })));
+      }
+      if (logRes?.data) {
+        const logs = Array.isArray(logRes.data) ? logRes.data : (logRes.data.weekly ?? logRes.data.logs ?? []);
+        setWeeklyNutrition(logs.map((l: any) => ({ day: l.day ?? l.date ?? '', calories: l.calories ?? 0, protein: l.protein ?? 0, carbs: l.carbs ?? 0, fat: l.fat ?? 0, antioxidants: l.antioxidants ?? 0 })));
+        if (Array.isArray(logRes.data.hydration)) setHydrationData(logRes.data.hydration);
+      }
+      if (foodsRes?.data) {
+        const foods = Array.isArray(foodsRes.data) ? foodsRes.data : (foodsRes.data.foods ?? []);
+        setAntiCancerFoods(foods.map((f: any) => ({ name: f.name ?? '', category: f.category ?? '', score: f.score ?? f.anti_cancer_score ?? 0, benefit: f.benefit ?? f.description ?? '', icon: f.icon ?? '🥗', servings: f.servings ?? f.recommended_servings ?? 0 })));
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load diet data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Diet & Nutrition" navItems={patientNavItems} portalType="patient" subtitle="AI-powered cancer-fighting nutrition">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (
       <Box sx={{ p: 3 }}>
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -101,7 +104,7 @@ const DietNutritionPage: React.FC = () => {
                 <SectionHeader title="Today's AI Meal Plan" subtitle="Personalized for cancer prevention" icon={<Restaurant />}
                   action={<Button startIcon={<Add />} variant="contained" size="small" onClick={() => setShowLogDialog(true)}>Log Meal</Button>}
                 />
-                {MEAL_PLAN.map((meal, idx) => (
+                {mealPlan.map((meal, idx) => (
                   <Box key={idx} sx={{ mb: 2.5, p: 2, bgcolor: '#f8fafc', borderRadius: 3, border: '1px solid #f0f0f0' }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                       <Stack direction="row" spacing={1.5} alignItems="center">
@@ -132,13 +135,13 @@ const DietNutritionPage: React.FC = () => {
                 <SectionHeader title="Macro Breakdown" icon={<EggAlt />} />
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={MACRO_BREAKDOWN} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }: any) => `${name} ${value}%`}>
-                      {MACRO_BREAKDOWN.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    <Pie data={macroBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }: any) => `${name} ${value}%`}>
+                      {macroBreakdown.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
                 </ResponsiveContainer>
-                {MACRO_BREAKDOWN.map((macro, idx) => (
+                {macroBreakdown.map((macro, idx) => (
                   <Stack key={idx} direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: macro.fill }} />
@@ -168,7 +171,7 @@ const DietNutritionPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Weekly Nutrition Overview" subtitle="Calorie & macronutrient tracking" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={WEEKLY_NUTRITION}>
+                  <AreaChart data={weeklyNutrition}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -183,7 +186,7 @@ const DietNutritionPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Protein Intake" icon={<FitnessCenter />} />
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={WEEKLY_NUTRITION}>
+                  <BarChart data={weeklyNutrition}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -197,7 +200,7 @@ const DietNutritionPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Antioxidant Score" icon={<EcoIcon />} />
                 <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={WEEKLY_NUTRITION}>
+                  <LineChart data={weeklyNutrition}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis domain={[60, 100]} />
@@ -218,7 +221,7 @@ const DietNutritionPage: React.FC = () => {
               You've consumed <strong>8 out of 10</strong> recommended cancer-fighting foods this week. Keep it up!
             </Alert>
             <Grid container spacing={2}>
-              {ANTI_CANCER_FOODS.map((food, idx) => (
+              {antiCancerFoods.map((food, idx) => (
                 <Grid item xs={12} sm={6} md={4} key={idx}>
                   <Card variant="outlined" sx={{ p: 2, height: '100%', transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 } }}>
                     <Stack direction="row" spacing={2} alignItems="flex-start">
@@ -247,7 +250,7 @@ const DietNutritionPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Today's Hydration" subtitle="Water intake throughout the day" icon={<WaterDrop />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={HYDRATION_DATA}>
+                  <BarChart data={hydrationData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis />
@@ -301,6 +304,7 @@ const DietNutritionPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      )}
     </AppLayout>
   );
 };

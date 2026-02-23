@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Select, MenuItem, FormControl, InputLabel, IconButton,
-  Switch, FormControlLabel, Checkbox, LinearProgress,
+  Switch, FormControlLabel, Checkbox, LinearProgress, CircularProgress, Alert,
 } from '@mui/material';
 import {
   Assessment, Download, Schedule, Add, Description,
@@ -19,43 +19,43 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { analyticsAPI } from '../../services/api';
 
 const AdminReports: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [platformReports, setPlatformReports] = useState<any[]>([]);
+  const [scheduledReports, setScheduledReports] = useState<any[]>([]);
+  const [reportCategories, setReportCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const platformReports = [
-    { id: 'RPT-001', name: 'Monthly Platform Summary', type: 'summary', frequency: 'monthly', lastGenerated: 'Dec 1, 2024', size: '2.4 MB', format: 'PDF', status: 'ready', recipients: 5 },
-    { id: 'RPT-002', name: 'Weekly User Activity Report', type: 'activity', frequency: 'weekly', lastGenerated: 'Dec 28, 2024', size: '1.1 MB', format: 'PDF', status: 'ready', recipients: 3 },
-    { id: 'RPT-003', name: 'AI Model Performance Report', type: 'ai', frequency: 'weekly', lastGenerated: 'Dec 27, 2024', size: '3.2 MB', format: 'PDF', status: 'ready', recipients: 2 },
-    { id: 'RPT-004', name: 'Hospital Compliance Report', type: 'compliance', frequency: 'monthly', lastGenerated: 'Dec 1, 2024', size: '5.8 MB', format: 'PDF', status: 'ready', recipients: 8 },
-    { id: 'RPT-005', name: 'Cancer Detection Statistics', type: 'medical', frequency: 'monthly', lastGenerated: 'Dec 1, 2024', size: '4.1 MB', format: 'XLSX', status: 'ready', recipients: 4 },
-    { id: 'RPT-006', name: 'Revenue & Billing Report', type: 'financial', frequency: 'monthly', lastGenerated: 'Dec 1, 2024', size: '1.8 MB', format: 'XLSX', status: 'ready', recipients: 2 },
-    { id: 'RPT-007', name: 'Security Audit Report', type: 'security', frequency: 'quarterly', lastGenerated: 'Oct 1, 2024', size: '8.5 MB', format: 'PDF', status: 'ready', recipients: 3 },
-    { id: 'RPT-008', name: 'Daily System Health Report', type: 'system', frequency: 'daily', lastGenerated: 'Dec 30, 2024', size: '0.5 MB', format: 'PDF', status: 'generating', recipients: 2 },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await analyticsAPI.getOverview();
+      const data = res.data ?? res;
+      setPlatformReports(data.reports ?? data.platform_reports ?? []);
+      setScheduledReports(data.scheduled ?? data.scheduled_reports ?? []);
+      setReportCategories(data.categories ?? data.report_categories ?? []);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const scheduledReports = [
-    { name: 'Daily Health Summary', schedule: 'Every day at 6:00 AM', next: 'Dec 31, 6:00 AM', enabled: true, format: 'PDF' },
-    { name: 'Weekly User Activity', schedule: 'Every Monday at 8:00 AM', next: 'Jan 6, 8:00 AM', enabled: true, format: 'PDF' },
-    { name: 'Monthly Platform Summary', schedule: '1st of every month', next: 'Jan 1, 12:00 AM', enabled: true, format: 'PDF' },
-    { name: 'Quarterly Security Audit', schedule: 'Every 3 months', next: 'Jan 1, 12:00 AM', enabled: true, format: 'PDF' },
-    { name: 'Annual Compliance Report', schedule: 'January 1st', next: 'Jan 1, 12:00 AM', enabled: false, format: 'PDF' },
-  ];
-
-  const reportCategories = [
-    { name: 'Platform', count: 8, icon: <Assessment />, color: '#1565c0' },
-    { name: 'Medical', count: 12, icon: <Description />, color: '#4caf50' },
-    { name: 'Financial', count: 5, icon: <TableChart />, color: '#ff9800' },
-    { name: 'Security', count: 4, icon: <FilterList />, color: '#d32f2f' },
-    { name: 'AI/ML', count: 6, icon: <BarChartIcon />, color: '#9c27b0' },
-    { name: 'Compliance', count: 3, icon: <CalendarMonth />, color: '#00796b' },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   const typeColors: any = { summary: '#1565c0', activity: '#4caf50', ai: '#9c27b0', compliance: '#00796b', medical: '#e91e63', financial: '#ff9800', security: '#d32f2f', system: '#795548' };
 
   return (
     <AppLayout title="Reports" subtitle="Platform reports and analytics exports" navItems={adminNavItems} portalType="admin">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : <>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Assessment />} label="Total Reports" value="38" color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Schedule />} label="Scheduled" value="5" color="#4caf50" /></Grid>
@@ -245,6 +245,7 @@ const AdminReports: React.FC = () => {
           </Grid>
         </Card>
       )}
+      </>}
     </AppLayout>
   );
 };

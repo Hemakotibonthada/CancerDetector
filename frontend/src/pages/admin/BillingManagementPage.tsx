@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert,
+  MenuItem, Alert, CircularProgress,
 } from '@mui/material';
 import {
   Payment, Receipt, TrendingUp, CheckCircle, CreditCard, AccountBalance,
@@ -14,57 +14,59 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { adminNavItems } from './AdminDashboard';
-
-const SUBSCRIPTIONS = [
-  { id: 'SUB-001', hospital: 'City Cancer Center', plan: 'Enterprise', amount: 4999, status: 'active', startDate: '2024-01-01', nextBilling: '2025-01-01', users: 150, features: ['All Modules', 'AI Analytics', 'Priority Support', 'Custom Integrations'] },
-  { id: 'SUB-002', hospital: 'Metro Oncology Hospital', plan: 'Professional', amount: 2499, status: 'active', startDate: '2024-03-15', nextBilling: '2025-03-15', users: 75, features: ['Core Modules', 'AI Analytics', 'Standard Support'] },
-  { id: 'SUB-003', hospital: 'Regional Medical Center', plan: 'Professional', amount: 2499, status: 'active', startDate: '2024-06-01', nextBilling: '2025-06-01', users: 60, features: ['Core Modules', 'AI Analytics', 'Standard Support'] },
-  { id: 'SUB-004', hospital: 'Community Health Clinic', plan: 'Basic', amount: 999, status: 'active', startDate: '2024-09-01', nextBilling: '2025-09-01', users: 25, features: ['Core Modules', 'Basic Support'] },
-  { id: 'SUB-005', hospital: 'University Hospital', plan: 'Enterprise', amount: 4999, status: 'trial', startDate: '2024-12-01', nextBilling: '2025-01-01', users: 200, features: ['All Modules', 'AI Analytics', 'Priority Support', 'Custom Integrations'] },
-];
-
-const INVOICES = [
-  { id: 'INV-2024-012', hospital: 'City Cancer Center', amount: 4999, status: 'paid', date: '2024-12-01', dueDate: '2024-12-15', plan: 'Enterprise' },
-  { id: 'INV-2024-011', hospital: 'Metro Oncology Hospital', amount: 2499, status: 'paid', date: '2024-12-01', dueDate: '2024-12-15', plan: 'Professional' },
-  { id: 'INV-2024-010', hospital: 'Regional Medical Center', amount: 2499, status: 'pending', date: '2024-12-01', dueDate: '2024-12-31', plan: 'Professional' },
-  { id: 'INV-2024-009', hospital: 'Community Health Clinic', amount: 999, status: 'paid', date: '2024-12-01', dueDate: '2024-12-15', plan: 'Basic' },
-  { id: 'INV-2024-008', hospital: 'City Cancer Center', amount: 4999, status: 'paid', date: '2024-11-01', dueDate: '2024-11-15', plan: 'Enterprise' },
-];
-
-const REVENUE_TREND = [
-  { month: 'Jul', revenue: 8500, mrr: 8500 },
-  { month: 'Aug', revenue: 8500, mrr: 8500 },
-  { month: 'Sep', revenue: 10996, mrr: 10996 },
-  { month: 'Oct', revenue: 10996, mrr: 10996 },
-  { month: 'Nov', revenue: 10996, mrr: 10996 },
-  { month: 'Dec', revenue: 15995, mrr: 15995 },
-];
-
-const PLAN_DISTRIBUTION = [
-  { name: 'Enterprise', value: 2, fill: '#ae52d4' },
-  { name: 'Professional', value: 2, fill: '#5e92f3' },
-  { name: 'Basic', value: 1, fill: '#4caf50' },
-];
+import { billingAPI } from '../../services/api';
 
 const planColors: Record<string, string> = { Enterprise: '#ae52d4', Professional: '#5e92f3', Basic: '#4caf50' };
 
 const BillingManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [revenueTrend, setRevenueTrend] = useState<any[]>([]);
+  const [planDistribution, setPlanDistribution] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalMRR = SUBSCRIPTIONS.filter(s => s.status === 'active').reduce((s, sub) => s + sub.amount, 0);
-  const paidInvoices = INVOICES.filter(i => i.status === 'paid');
-  const pendingInvoices = INVOICES.filter(i => i.status === 'pending');
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [subsRes, invRes, revRes] = await Promise.all([
+        billingAPI.getSubscriptions(),
+        billingAPI.getInvoices(),
+        billingAPI.getRevenue(),
+      ]);
+      setSubscriptions(subsRes.data?.subscriptions ?? subsRes.data ?? []);
+      setInvoices(invRes.data?.invoices ?? invRes.data ?? []);
+      setRevenueTrend(revRes.data?.revenue_trend ?? revRes.data?.revenueTrend ?? []);
+      setPlanDistribution(revRes.data?.plan_distribution ?? revRes.data?.planDistribution ?? []);
+    } catch {
+      setError('Failed to load billing data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const totalMRR = subscriptions.filter(s => s.status === 'active').reduce((s, sub) => s + sub.amount, 0);
+  const paidInvoices = invoices.filter(i => i.status === 'paid');
+  const pendingInvoices = invoices.filter(i => i.status === 'pending');
 
   return (
     <AppLayout title="Billing" navItems={adminNavItems} portalType="admin" subtitle="Subscriptions, invoices & revenue management">
       <Box sx={{ p: 3 }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+        ) : <>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<AttachMoney />} label="Monthly Revenue" value={`$${totalMRR.toLocaleString()}`} change="+45%" color="#4caf50" subtitle="MRR" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Business />} label="Active Subscriptions" value={SUBSCRIPTIONS.filter(s => s.status === 'active').length.toString()} color="#5e92f3" subtitle="Hospital accounts" />
+            <StatCard icon={<Business />} label="Active Subscriptions" value={subscriptions.filter(s => s.status === 'active').length.toString()} color="#5e92f3" subtitle="Hospital accounts" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Receipt />} label="Pending Invoices" value={pendingInvoices.length.toString()} color="#ff9800" subtitle={`$${pendingInvoices.reduce((s, i) => s + i.amount, 0).toLocaleString()}`} />
@@ -86,7 +88,7 @@ const BillingManagementPage: React.FC = () => {
           <Card sx={{ p: 3 }}>
             <SectionHeader title="Hospital Subscriptions" icon={<CreditCard />} />
             <Stack spacing={2}>
-              {SUBSCRIPTIONS.map((sub, idx) => (
+              {subscriptions.map((sub, idx) => (
                 <Box key={idx} sx={{ p: 2.5, border: '1px solid #f0f0f0', borderRadius: 3, '&:hover': { borderColor: planColors[sub.plan], bgcolor: '#fafafa' } }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1.5 }}>
                     <Box>
@@ -134,7 +136,7 @@ const BillingManagementPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {INVOICES.map((inv, idx) => (
+                  {invoices.map((inv, idx) => (
                     <TableRow key={idx}>
                       <TableCell><Chip label={inv.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 10 }} /></TableCell>
                       <TableCell><Typography fontWeight={600} fontSize={13}>{inv.hospital}</Typography></TableCell>
@@ -166,7 +168,7 @@ const BillingManagementPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Revenue Growth" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={REVENUE_TREND}>
+                  <AreaChart data={revenueTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -182,8 +184,8 @@ const BillingManagementPage: React.FC = () => {
                 <SectionHeader title="Subscriptions by Plan" icon={<Assessment />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={PLAN_DISTRIBUTION} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
-                      {PLAN_DISTRIBUTION.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={planDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
+                      {planDistribution.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -193,13 +195,16 @@ const BillingManagementPage: React.FC = () => {
           </Grid>
         )}
 
+        </>
+        }
+
         {/* Invoice Dialog */}
         <Dialog open={showInvoiceDialog} onClose={() => setShowInvoiceDialog(false)} maxWidth="sm" fullWidth>
           <DialogTitle>Generate Invoice</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField select label="Hospital" fullWidth defaultValue="">
-                {SUBSCRIPTIONS.map(s => <MenuItem key={s.id} value={s.id}>{s.hospital}</MenuItem>)}
+                {subscriptions.map(s => <MenuItem key={s.id} value={s.id}>{s.hospital}</MenuItem>)}
               </TextField>
               <TextField label="Billing Period" fullWidth placeholder="e.g., January 2025" />
               <TextField label="Amount" type="number" fullWidth />

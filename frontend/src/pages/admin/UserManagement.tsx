@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
   InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Avatar,
   Switch, FormControlLabel, Checkbox, IconButton, Alert, Divider,
+  CircularProgress,
 } from '@mui/material';
 import {
   People, Search, PersonAdd, Edit, Delete, Block, CheckCircle,
@@ -14,6 +15,7 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { usersAPI } from '../../services/api';
 
 const UserManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,35 +23,49 @@ const UserManagement: React.FC = () => {
   const [showAddUser, setShowAddUser] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [roleFilter, setRoleFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const users = [
-    { id: 1, name: 'John Morrison', email: 'john.m@email.com', role: 'patient', status: 'active', lastLogin: '2 min ago', joined: '2023-06-15', twoFA: true, sessions: 1, avatar: 'JM', healthId: 'HID-001234' },
-    { id: 2, name: 'Dr. Sarah Smith', email: 'sarah.s@hospital.org', role: 'doctor', status: 'active', lastLogin: '15 min ago', joined: '2022-03-20', twoFA: true, sessions: 2, avatar: 'SS', hospital: 'CancerGuard MC' },
-    { id: 3, name: 'Dr. James Lee', email: 'james.l@hospital.org', role: 'doctor', status: 'active', lastLogin: '1 hr ago', joined: '2022-05-10', twoFA: true, sessions: 1, avatar: 'JL', hospital: 'CancerGuard MC' },
-    { id: 4, name: 'Amanda Foster', email: 'a.foster@hospital.org', role: 'staff', status: 'active', lastLogin: '30 min ago', joined: '2023-01-15', twoFA: false, sessions: 1, avatar: 'AF', hospital: 'CancerGuard MC' },
-    { id: 5, name: 'Admin User', email: 'admin@cancerguard.org', role: 'admin', status: 'active', lastLogin: 'Just now', joined: '2022-01-01', twoFA: true, sessions: 3, avatar: 'AU' },
-    { id: 6, name: 'Bob Williams', email: 'bob.w@email.com', role: 'patient', status: 'active', lastLogin: '3 hrs ago', joined: '2023-09-20', twoFA: false, sessions: 0, avatar: 'BW', healthId: 'HID-002345' },
-    { id: 7, name: 'Carmen Davis', email: 'carmen.d@email.com', role: 'patient', status: 'suspended', lastLogin: '5 days ago', joined: '2023-07-12', twoFA: false, sessions: 0, avatar: 'CD', healthId: 'HID-003456' },
-    { id: 8, name: 'David Kim', email: 'd.kim@hospital.org', role: 'staff', status: 'active', lastLogin: '2 hrs ago', joined: '2023-04-01', twoFA: true, sessions: 1, avatar: 'DK', hospital: 'Metro Health' },
-    { id: 9, name: 'Elena Foster', email: 'elena.f@email.com', role: 'patient', status: 'inactive', lastLogin: '30 days ago', joined: '2023-02-28', twoFA: false, sessions: 0, avatar: 'EF', healthId: 'HID-004567' },
-    { id: 10, name: 'Frank Green', email: 'frank.g@email.com', role: 'patient', status: 'locked', lastLogin: 'Never', joined: '2024-01-05', twoFA: false, sessions: 0, avatar: 'FG', healthId: 'HID-005678' },
-  ];
+  const [users, setUsers] = useState<any[]>([]);
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
 
-  const loginHistory = [
-    { user: 'Admin User', ip: '192.168.1.100', location: 'San Francisco, CA', device: 'Chrome/Windows', time: 'Just now', status: 'success' },
-    { user: 'Dr. Sarah Smith', ip: '10.0.0.45', location: 'San Francisco, CA', device: 'Safari/macOS', time: '15 min ago', status: 'success' },
-    { user: 'Carmen Davis', ip: '172.16.0.22', location: 'New York, NY', device: 'Chrome/Android', time: '5 days ago', status: 'failed' },
-    { user: 'Unknown', ip: '45.133.200.15', location: 'Moscow, RU', device: 'Bot', time: '2 days ago', status: 'blocked' },
-    { user: 'Frank Green', ip: '192.168.2.50', location: 'Chicago, IL', device: 'Firefox/Linux', time: '1 day ago', status: 'locked' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await usersAPI.list();
+      const d = res.data ?? res;
+      const userList = Array.isArray(d) ? d : (d.users ?? []);
+      setUsers(userList);
+      setLoginHistory(d.login_history ?? d.loginHistory ?? []);
+    } catch {
+      setError('Failed to load user data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = users.filter(u =>
     (roleFilter === 'all' || u.role === roleFilter) &&
-    (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    ((u.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) || (u.email ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  if (loading) {
+    return (
+      <AppLayout title="User Management" subtitle="Manage platform users and access" navItems={adminNavItems} portalType="admin">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="User Management" subtitle="Manage platform users and access" navItems={adminNavItems} portalType="admin">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Users" value={users.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Active" value={users.filter(u => u.status === 'active').length} color="#4caf50" /></Grid>

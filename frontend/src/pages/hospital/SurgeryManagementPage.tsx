@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Divider, IconButton,
+  MenuItem, Alert, Divider, IconButton, CircularProgress,
 } from '@mui/material';
 import {
   LocalHospital, EventNote, Schedule, People, Add, MedicalServices,
@@ -15,39 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
-
-const SURGERIES = [
-  { id: 'SRG-001', patient: 'Alice Thompson', surgeon: 'Dr. James Miller', type: 'Lumpectomy', or: 'OR-3', date: '2024-12-18 08:00', duration: 2.5, status: 'scheduled', priority: 'Elective', cancer: true, anesthesia: 'General', team: ['Dr. Miller', 'Dr. Singh', 'Nurse Johnson', 'Anesthesiologist'] },
-  { id: 'SRG-002', patient: 'Bob Williams', surgeon: 'Dr. Emily Roberts', type: 'Colectomy', or: 'OR-1', date: '2024-12-18 10:30', duration: 3, status: 'pre_op', priority: 'Urgent', cancer: true, anesthesia: 'General', team: ['Dr. Roberts', 'Dr. Chen', 'Nurse Davis'] },
-  { id: 'SRG-003', patient: 'Carol Davis', surgeon: 'Dr. James Miller', type: 'Thyroidectomy', or: 'OR-5', date: '2024-12-18 14:00', duration: 2, status: 'scheduled', priority: 'Elective', cancer: true, anesthesia: 'General', team: ['Dr. Miller', 'Nurse Brown'] },
-  { id: 'SRG-004', patient: 'David Lee', surgeon: 'Dr. Smith', type: 'Appendectomy', or: 'OR-2', date: '2024-12-18 07:30', duration: 1.5, status: 'in_progress', priority: 'Emergency', cancer: false, anesthesia: 'General', team: ['Dr. Smith', 'Dr. Patel'] },
-  { id: 'SRG-005', patient: 'Eva Martinez', surgeon: 'Dr. Emily Roberts', type: 'Mastectomy', or: 'OR-4', date: '2024-12-17 09:00', duration: 3.5, status: 'completed', priority: 'Elective', cancer: true, anesthesia: 'General', team: ['Dr. Roberts', 'Dr. Wilson'], outcome: 'Successful' },
-  { id: 'SRG-006', patient: 'Frank Chen', surgeon: 'Dr. James Miller', type: 'Prostatectomy', or: 'OR-1', date: '2024-12-17 13:00', duration: 4, status: 'post_op', priority: 'Elective', cancer: true, anesthesia: 'General', team: ['Dr. Miller'], outcome: 'Monitoring' },
-];
-
-const OR_STATUS = [
-  { room: 'OR-1', status: 'In Use', patient: 'Bob Williams', surgeon: 'Dr. Roberts', start: '10:30', estimated_end: '13:30' },
-  { room: 'OR-2', status: 'In Use', patient: 'David Lee', surgeon: 'Dr. Smith', start: '07:30', estimated_end: '09:00' },
-  { room: 'OR-3', status: 'Preparing', patient: 'Alice Thompson', surgeon: 'Dr. Miller', start: '08:00', estimated_end: '10:30' },
-  { room: 'OR-4', status: 'Cleaning', patient: '-', surgeon: '-', start: '-', estimated_end: '-' },
-  { room: 'OR-5', status: 'Available', patient: '-', surgeon: '-', start: '-', estimated_end: '-' },
-  { room: 'OR-6', status: 'Maintenance', patient: '-', surgeon: '-', start: '-', estimated_end: '-' },
-];
-
-const WEEKLY_STATS = [
-  { day: 'Mon', surgeries: 8, cancerRelated: 5, complications: 0 },
-  { day: 'Tue', surgeries: 10, cancerRelated: 7, complications: 1 },
-  { day: 'Wed', surgeries: 9, cancerRelated: 6, complications: 0 },
-  { day: 'Thu', surgeries: 7, cancerRelated: 4, complications: 0 },
-  { day: 'Fri', surgeries: 11, cancerRelated: 8, complications: 1 },
-];
-
-const TYPE_DISTRIBUTION = [
-  { name: 'Cancer Surgery', value: 65, fill: '#f44336' },
-  { name: 'General Surgery', value: 20, fill: '#5e92f3' },
-  { name: 'Emergency', value: 10, fill: '#ff9800' },
-  { name: 'Diagnostic', value: 5, fill: '#4caf50' },
-];
+import { surgeryAPI } from '../../services/api';
 
 const statusColors: Record<string, string> = {
   scheduled: '#5e92f3', pre_op: '#ff9800', in_progress: '#4caf50', post_op: '#ae52d4', completed: '#2e7d32', cancelled: '#f44336',
@@ -59,10 +27,50 @@ const orStatusColors: Record<string, string> = {
 const SurgeryManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [surgeries, setSurgeries] = useState<any[]>([]);
+  const [orStatus, setOrStatus] = useState<any[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<any[]>([]);
+  const [typeDistribution, setTypeDistribution] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [listRes, orRes] = await Promise.all([
+        surgeryAPI.list(),
+        surgeryAPI.getORSchedule(),
+      ]);
+      const listData = listRes.data ?? listRes;
+      const orData = orRes.data ?? orRes;
+      setSurgeries(Array.isArray(listData) ? listData : listData.surgeries ?? []);
+      setOrStatus(Array.isArray(orData) ? orData : orData.or_status ?? orData.orStatus ?? []);
+      setWeeklyStats(listData.weekly_stats ?? listData.weeklyStats ?? []);
+      setTypeDistribution(listData.type_distribution ?? listData.typeDistribution ?? []);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load surgery data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  if (loading) {
+    return (
+      <AppLayout title="Surgery Management" navItems={hospitalNavItems} portalType="hospital" subtitle="Operating room scheduling & tracking">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Surgery Management" navItems={hospitalNavItems} portalType="hospital" subtitle="Operating room scheduling & tracking">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<LocalHospital />} label="Today's Surgeries" value="6" change="+2" color="#5e92f3" subtitle="3 cancer-related" />
@@ -106,7 +114,7 @@ const SurgeryManagementPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {SURGERIES.map((surgery, idx) => (
+                  {surgeries.map((surgery, idx) => (
                     <TableRow key={idx} sx={{ bgcolor: surgery.status === 'in_progress' ? '#e8f5e920' : 'transparent' }}>
                       <TableCell><Chip label={surgery.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 10 }} /></TableCell>
                       <TableCell>
@@ -142,7 +150,7 @@ const SurgeryManagementPage: React.FC = () => {
 
         {activeTab === 1 && (
           <Grid container spacing={2.5}>
-            {OR_STATUS.map((or, idx) => (
+            {orStatus.map((or, idx) => (
               <Grid item xs={12} sm={6} md={4} key={idx}>
                 <Card sx={{ p: 2.5, borderLeft: `4px solid ${orStatusColors[or.status]}` }}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
@@ -171,7 +179,7 @@ const SurgeryManagementPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Weekly Surgery Volume" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={WEEKLY_STATS}>
+                  <BarChart data={weeklyStats}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -188,13 +196,13 @@ const SurgeryManagementPage: React.FC = () => {
                 <SectionHeader title="Surgery Types" icon={<Assignment />} />
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
-                    <Pie data={TYPE_DISTRIBUTION} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${value}%`}>
-                      {TYPE_DISTRIBUTION.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    <Pie data={typeDistribution} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${value}%`}>
+                      {typeDistribution.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
                 </ResponsiveContainer>
-                {TYPE_DISTRIBUTION.map((item, i) => (
+                {typeDistribution.map((item, i) => (
                   <Stack key={i} direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: item.fill }} />
                     <Typography variant="caption">{item.name}: {item.value}%</Typography>
@@ -217,7 +225,7 @@ const SurgeryManagementPage: React.FC = () => {
                 <MenuItem value="smith">Dr. Smith</MenuItem>
               </TextField>
               <TextField select label="Operating Room" fullWidth defaultValue="">
-                {OR_STATUS.filter(or => or.status === 'Available').map(or => (
+                {orStatus.filter(or => or.status === 'Available').map(or => (
                   <MenuItem key={or.room} value={or.room}>{or.room}</MenuItem>
                 ))}
               </TextField>

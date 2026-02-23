@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, TextField, Switch,
   FormControlLabel, Divider, Dialog, DialogTitle, DialogContent,
   DialogActions, Alert, Avatar, List, ListItem, ListItemIcon,
-  ListItemText, ListItemSecondaryAction,
+  ListItemText, ListItemSecondaryAction, CircularProgress,
 } from '@mui/material';
 import {
   Settings, LocalHospital, People, Timer, Assignment,
@@ -15,48 +15,52 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { SectionHeader, StatusBadge } from '../../components/common/SharedComponents';
+import { hospitalsAPI, integrationAPI } from '../../services/api';
 
 const HospitalSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showDeptDialog, setShowDeptDialog] = useState(false);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [feeSchedule, setFeeSchedule] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const departments = [
-    { name: 'Oncology', head: 'Dr. Sarah Smith', beds: 20, staff: 15, status: 'active' },
-    { name: 'Cardiology', head: 'Dr. James Lee', beds: 15, staff: 12, status: 'active' },
-    { name: 'Neurology', head: 'Dr. Emily Chen', beds: 12, staff: 10, status: 'active' },
-    { name: 'Surgery', head: 'Dr. Robert Wilson', beds: 15, staff: 18, status: 'active' },
-    { name: 'Pathology', head: 'Dr. Lisa Park', beds: 0, staff: 8, status: 'active' },
-    { name: 'Emergency', head: 'Dr. Helen Wright (NP)', beds: 8, staff: 20, status: 'active' },
-    { name: 'Pediatrics', head: 'Dr. Alan Moore', beds: 10, staff: 8, status: 'active' },
-    { name: 'Radiology', head: 'Dr. Kevin Andrews', beds: 0, staff: 6, status: 'active' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [hospitalsRes, integrationsRes] = await Promise.all([
+        hospitalsAPI.list(),
+        integrationAPI.getIntegrations(),
+      ]);
+      const hospitalsData = hospitalsRes.data ?? hospitalsRes;
+      const integrationsData = integrationsRes.data ?? integrationsRes;
 
-  const integrations = [
-    { name: 'HL7 FHIR Interface', type: 'EMR', status: 'connected', lastSync: '2 min ago' },
-    { name: 'Lab Information System', type: 'LIS', status: 'connected', lastSync: '5 min ago' },
-    { name: 'PACS (Imaging)', type: 'RIS', status: 'connected', lastSync: '10 min ago' },
-    { name: 'Pharmacy System', type: 'Pharmacy', status: 'warning', lastSync: '1 hr ago' },
-    { name: 'Insurance Portal', type: 'Billing', status: 'connected', lastSync: '30 min ago' },
-    { name: 'AI Analytics Engine', type: 'AI/ML', status: 'connected', lastSync: 'Real-time' },
-    { name: 'SMS Gateway', type: 'Communication', status: 'connected', lastSync: 'Real-time' },
-    { name: 'External Lab Portal', type: 'LIS', status: 'disconnected', lastSync: 'N/A' },
-  ];
+      const hospitalList = Array.isArray(hospitalsData) ? hospitalsData : hospitalsData.hospitals ?? [];
+      setDepartments(hospitalList[0]?.departments ?? hospitalsData.departments ?? []);
+      setFeeSchedule(hospitalList[0]?.fee_schedule ?? hospitalsData.fee_schedule ?? hospitalsData.feeSchedule ?? []);
+      setIntegrations(Array.isArray(integrationsData) ? integrationsData : integrationsData.integrations ?? []);
+    } catch (err: any) {
+      console.error('Failed to load settings data:', err);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load settings data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const feeSchedule = [
-    { service: 'General Consultation', fee: '$150', category: 'Outpatient' },
-    { service: 'Specialist Consultation', fee: '$250', category: 'Outpatient' },
-    { service: 'Cancer Screening Package', fee: '$500', category: 'Screening' },
-    { service: 'Comprehensive Blood Panel', fee: '$350', category: 'Lab' },
-    { service: 'MRI Scan', fee: '$800', category: 'Imaging' },
-    { service: 'CT Scan', fee: '$600', category: 'Imaging' },
-    { service: 'Biopsy Procedure', fee: '$1,200', category: 'Procedure' },
-    { service: 'Chemotherapy Session', fee: '$2,500', category: 'Treatment' },
-    { service: 'Radiation Therapy', fee: '$3,000', category: 'Treatment' },
-    { service: 'ICU Per Day', fee: '$1,500', category: 'Inpatient' },
-  ];
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   return (
     <AppLayout title="Hospital Settings" subtitle="Configuration and management" navItems={hospitalNavItems} portalType="hospital">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (<>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
         <Tab label="General" icon={<Settings sx={{ fontSize: 16 }} />} iconPosition="start" />
         <Tab label="Departments" icon={<LocalHospital sx={{ fontSize: 16 }} />} iconPosition="start" />
@@ -247,6 +251,7 @@ const HospitalSettings: React.FC = () => {
           </Stack>
         </Card>
       )}
+      </>)}
 
       {/* Add Department Dialog */}
       <Dialog open={showDeptDialog} onClose={() => setShowDeptDialog(false)} maxWidth="sm" fullWidth>

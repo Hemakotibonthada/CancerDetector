@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Avatar, Rating,
+  MenuItem, Alert, Avatar, Rating, CircularProgress,
 } from '@mui/material';
 import {
   School, EmojiEvents, CheckCircle, Schedule, Person, TrendingUp,
@@ -15,35 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { adminNavItems } from './AdminDashboard';
-
-const COURSES = [
-  { id: 'TR-001', title: 'CancerGuard Platform Fundamentals', category: 'Onboarding', duration: '4 hours', modules: 8, enrolled: 125, completed: 98, rating: 4.7, status: 'active', mandatory: true, certification: true, level: 'Beginner', instructor: 'Dr. Sarah Johnson' },
-  { id: 'TR-002', title: 'AI-Powered Cancer Detection', category: 'Clinical AI', duration: '6 hours', modules: 12, enrolled: 85, completed: 62, rating: 4.9, status: 'active', mandatory: false, certification: true, level: 'Advanced', instructor: 'Dr. Michael Chen' },
-  { id: 'TR-003', title: 'HIPAA Compliance & Data Privacy', category: 'Compliance', duration: '3 hours', modules: 6, enrolled: 200, completed: 180, rating: 4.3, status: 'active', mandatory: true, certification: true, level: 'All Levels', instructor: 'Legal Team' },
-  { id: 'TR-004', title: 'Telemedicine Best Practices', category: 'Clinical', duration: '2 hours', modules: 5, enrolled: 65, completed: 45, rating: 4.5, status: 'active', mandatory: false, certification: false, level: 'Intermediate', instructor: 'Dr. Emily Park' },
-  { id: 'TR-005', title: 'Advanced Radiology & AI Analysis', category: 'Clinical AI', duration: '8 hours', modules: 15, enrolled: 40, completed: 18, rating: 4.8, status: 'active', mandatory: false, certification: true, level: 'Expert', instructor: 'Dr. Raj Patel' },
-  { id: 'TR-006', title: 'Cybersecurity Awareness', category: 'Security', duration: '2 hours', modules: 4, enrolled: 210, completed: 195, rating: 4.1, status: 'active', mandatory: true, certification: false, level: 'All Levels', instructor: 'Security Team' },
-];
-
-const CERTIFICATIONS = [
-  { name: 'CancerGuard Certified User', holders: 98, total: 125, color: '#5e92f3' },
-  { name: 'AI Cancer Detection Specialist', holders: 62, total: 85, color: '#ae52d4' },
-  { name: 'HIPAA Compliance Certified', holders: 180, total: 200, color: '#4caf50' },
-  { name: 'Advanced Radiology AI', holders: 18, total: 40, color: '#ff9800' },
-];
-
-const CATEGORY_DISTRIBUTION = [
-  { name: 'Onboarding', value: 1, fill: '#5e92f3' },
-  { name: 'Clinical AI', value: 2, fill: '#ae52d4' },
-  { name: 'Compliance', value: 1, fill: '#4caf50' },
-  { name: 'Clinical', value: 1, fill: '#ff9800' },
-  { name: 'Security', value: 1, fill: '#f44336' },
-];
-
-const COMPLETION_TREND = [
-  { month: 'Jul', completions: 35 }, { month: 'Aug', completions: 42 }, { month: 'Sep', completions: 55 },
-  { month: 'Oct', completions: 48 }, { month: 'Nov', completions: 65 }, { month: 'Dec', completions: 52 },
-];
+import { trainingAPI } from '../../services/api';
 
 const levelColors: Record<string, string> = {
   Beginner: '#4caf50', Intermediate: '#ff9800', Advanced: '#5e92f3', Expert: '#ae52d4', 'All Levels': '#607d8b',
@@ -52,17 +24,60 @@ const levelColors: Record<string, string> = {
 const TrainingCenterPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showCourseDialog, setShowCourseDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalEnrolled = COURSES.reduce((s, c) => s + c.enrolled, 0);
-  const totalCompleted = COURSES.reduce((s, c) => s + c.completed, 0);
-  const avgRating = COURSES.reduce((s, c) => s + c.rating, 0) / COURSES.length;
+  const [courses, setCourses] = useState<any[]>([]);
+  const [certifications, setCertifications] = useState<any[]>([]);
+  const [categoryDistribution, setCategoryDistribution] = useState<any[]>([]);
+  const [completionTrend, setCompletionTrend] = useState<any[]>([]);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [coursesRes, certsRes] = await Promise.all([
+        trainingAPI.getCourses(),
+        trainingAPI.getCertifications(),
+      ]);
+      const cd = coursesRes.data ?? coursesRes;
+      const cr = certsRes.data ?? certsRes;
+      const courseList = Array.isArray(cd) ? cd : (cd.courses ?? []);
+      setCourses(courseList);
+      setCertifications(Array.isArray(cr) ? cr : (cr.certifications ?? []));
+      setCategoryDistribution(cd.category_distribution ?? cd.categoryDistribution ?? []);
+      setCompletionTrend(cd.completion_trend ?? cd.completionTrend ?? []);
+    } catch {
+      setError('Failed to load training data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const totalEnrolled = courses.reduce((s: number, c: any) => s + (c.enrolled ?? 0), 0);
+  const totalCompleted = courses.reduce((s: number, c: any) => s + (c.completed ?? 0), 0);
+  const avgRating = courses.length > 0 ? courses.reduce((s: number, c: any) => s + (c.rating ?? 0), 0) / courses.length : 0;
+
+  if (loading) {
+    return (
+      <AppLayout title="Training Center" navItems={adminNavItems} portalType="admin" subtitle="Staff training, courses & certification management">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Training Center" navItems={adminNavItems} portalType="admin" subtitle="Staff training, courses & certification management">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<School />} label="Active Courses" value={COURSES.length.toString()} color="#5e92f3" subtitle="Available training" />
+            <StatCard icon={<School />} label="Active Courses" value={courses.length.toString()} color="#5e92f3" subtitle="Available training" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Group />} label="Total Enrolled" value={totalEnrolled.toString()} color="#4caf50" subtitle="Across all courses" />
@@ -89,7 +104,7 @@ const TrainingCenterPage: React.FC = () => {
               action={<Button startIcon={<School />} variant="contained" size="small" onClick={() => setShowCourseDialog(true)}>Create Course</Button>}
             />
             <Grid container spacing={2}>
-              {COURSES.map((course, idx) => (
+              {courses.map((course, idx) => (
                 <Grid item xs={12} md={6} key={idx}>
                   <Box sx={{ p: 2.5, border: '1px solid #f0f0f0', borderRadius: 3, '&:hover': { borderColor: '#5e92f3', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' } }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
@@ -141,7 +156,7 @@ const TrainingCenterPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Certification Programs" icon={<Verified />} />
                 <Grid container spacing={2}>
-                  {CERTIFICATIONS.map((cert, idx) => (
+                  {certifications.map((cert, idx) => (
                     <Grid item xs={12} md={6} key={idx}>
                       <Box sx={{ p: 2.5, bgcolor: '#f8fafc', borderRadius: 3, border: `1px solid ${cert.color}30` }}>
                         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -174,7 +189,7 @@ const TrainingCenterPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Monthly Completions" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={COMPLETION_TREND}>
+                  <BarChart data={completionTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -189,8 +204,8 @@ const TrainingCenterPage: React.FC = () => {
                 <SectionHeader title="Courses by Category" icon={<Assignment />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={CATEGORY_DISTRIBUTION} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name }: any) => name}>
-                      {CATEGORY_DISTRIBUTION.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={categoryDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name }: any) => name}>
+                      {categoryDistribution.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>

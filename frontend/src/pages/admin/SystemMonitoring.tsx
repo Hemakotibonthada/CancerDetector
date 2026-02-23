@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   LinearProgress, Alert, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Select, MenuItem, FormControl, InputLabel,
-  Switch, FormControlLabel, Avatar, Divider,
+  Switch, FormControlLabel, Avatar, Divider, CircularProgress,
 } from '@mui/material';
 import {
   Speed, Memory, Storage, Dns, CloudQueue, Timer,
@@ -18,67 +18,54 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { adminAPI } from '../../services/api';
 
 const SystemMonitoring: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [timeRange, setTimeRange] = useState('1h');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const serverMetrics = [
-    { time: '10:00', cpu: 22, memory: 45, disk: 38, network: 12 },
-    { time: '10:05', cpu: 28, memory: 46, disk: 38, network: 15 },
-    { time: '10:10', cpu: 35, memory: 48, disk: 38, network: 22 },
-    { time: '10:15', cpu: 42, memory: 52, disk: 39, network: 28 },
-    { time: '10:20', cpu: 38, memory: 50, disk: 39, network: 25 },
-    { time: '10:25', cpu: 30, memory: 49, disk: 39, network: 18 },
-    { time: '10:30', cpu: 25, memory: 47, disk: 39, network: 14 },
-    { time: '10:35', cpu: 45, memory: 55, disk: 40, network: 35 },
-    { time: '10:40', cpu: 55, memory: 58, disk: 40, network: 42 },
-    { time: '10:45', cpu: 48, memory: 56, disk: 40, network: 38 },
-    { time: '10:50', cpu: 33, memory: 51, disk: 40, network: 20 },
-    { time: '10:55', cpu: 28, memory: 48, disk: 40, network: 15 },
-  ];
+  const [serverMetrics, setServerMetrics] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [apiEndpoints, setApiEndpoints] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [cronJobs, setCronJobs] = useState<any[]>([]);
 
-  const services = [
-    { name: 'API Gateway', status: 'running', cpu: 15, memory: 512, uptime: '45d 12h', version: 'v3.2.1', instances: 3, port: 8000 },
-    { name: 'Web Frontend', status: 'running', cpu: 8, memory: 256, uptime: '45d 12h', version: 'v3.2.1', instances: 2, port: 3000 },
-    { name: 'AI/ML Engine', status: 'running', cpu: 67, memory: 4096, uptime: '12d 5h', version: 'v3.3.0', instances: 2, port: 8501 },
-    { name: 'PostgreSQL', status: 'running', cpu: 25, memory: 2048, uptime: '90d 3h', version: '15.4', instances: 1, port: 5432 },
-    { name: 'Redis Cache', status: 'running', cpu: 5, memory: 1024, uptime: '90d 3h', version: '7.2', instances: 1, port: 6379 },
-    { name: 'Notification Worker', status: 'degraded', cpu: 78, memory: 512, uptime: '3d 8h', version: 'v2.1.0', instances: 1, port: 8080 },
-    { name: 'Background Jobs', status: 'running', cpu: 12, memory: 256, uptime: '45d 12h', version: 'v2.5.0', instances: 1, port: 8081 },
-    { name: 'File Storage', status: 'running', cpu: 3, memory: 128, uptime: '90d 3h', version: 'v1.0', instances: 1, port: 9000 },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await adminAPI.systemHealth();
+      const d = res.data ?? res;
+      setServerMetrics(d.server_metrics ?? d.serverMetrics ?? []);
+      setServices(d.services ?? []);
+      setApiEndpoints(d.api_endpoints ?? d.apiEndpoints ?? []);
+      setAlerts(d.alerts ?? []);
+      setCronJobs(d.cron_jobs ?? d.cronJobs ?? []);
+    } catch {
+      setError('Failed to load system monitoring data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const apiEndpoints = [
-    { endpoint: '/api/auth/login', method: 'POST', avgTime: '45ms', p99: '120ms', rpm: 85, errors: 0 },
-    { endpoint: '/api/patients', method: 'GET', avgTime: '32ms', p99: '95ms', rpm: 120, errors: 0 },
-    { endpoint: '/api/cancer-detection/predict', method: 'POST', avgTime: '250ms', p99: '800ms', rpm: 15, errors: 1 },
-    { endpoint: '/api/health-records', method: 'GET', avgTime: '28ms', p99: '85ms', rpm: 95, errors: 0 },
-    { endpoint: '/api/blood-samples', method: 'POST', avgTime: '55ms', p99: '150ms', rpm: 35, errors: 0 },
-    { endpoint: '/api/appointments', method: 'GET', avgTime: '22ms', p99: '65ms', rpm: 60, errors: 0 },
-    { endpoint: '/api/notifications', method: 'GET', avgTime: '120ms', p99: '450ms', rpm: 200, errors: 3 },
-    { endpoint: '/api/analytics/dashboard', method: 'GET', avgTime: '180ms', p99: '650ms', rpm: 25, errors: 0 },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const alerts = [
-    { severity: 'warning', message: 'Notification Worker CPU usage above 75%', time: '5 min ago', acknowledged: false },
-    { severity: 'info', message: 'AI Model retraining completed successfully', time: '15 min ago', acknowledged: true },
-    { severity: 'warning', message: 'API endpoint /notifications P99 latency > 400ms', time: '20 min ago', acknowledged: false },
-    { severity: 'info', message: 'Database backup completed', time: '1 hr ago', acknowledged: true },
-    { severity: 'resolved', message: 'Disk usage alert resolved (was 85%, now 40%)', time: '2 hrs ago', acknowledged: true },
-  ];
-
-  const cronJobs = [
-    { name: 'Database Backup', schedule: 'Every 6 hours', lastRun: '1 hr ago', nextRun: '5 hrs', status: 'completed', duration: '12 min' },
-    { name: 'AI Model Evaluation', schedule: 'Daily at 2 AM', lastRun: '8 hrs ago', nextRun: '16 hrs', status: 'completed', duration: '45 min' },
-    { name: 'Cache Cleanup', schedule: 'Every 30 min', lastRun: '12 min ago', nextRun: '18 min', status: 'completed', duration: '2 sec' },
-    { name: 'Email Digest', schedule: 'Daily at 8 AM', lastRun: '2 hrs ago', nextRun: '22 hrs', status: 'completed', duration: '5 min' },
-    { name: 'Data Archival', schedule: 'Weekly Sunday', lastRun: '3 days ago', nextRun: '4 days', status: 'completed', duration: '2 hrs' },
-    { name: 'Health Check', schedule: 'Every 5 min', lastRun: '2 min ago', nextRun: '3 min', status: 'running', duration: '-' },
-  ];
+  if (loading) {
+    return (
+      <AppLayout title="System Monitoring" subtitle="Real-time system health & performance" navItems={adminNavItems} portalType="admin">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="System Monitoring" subtitle="Real-time system health & performance" navItems={adminNavItems} portalType="admin">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
       {services.some(s => s.status !== 'running') && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <strong>Service Alert:</strong> {services.filter(s => s.status !== 'running').map(s => s.name).join(', ')} - performance issues detected

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, TextField, Divider,
   Dialog, DialogTitle, DialogContent, DialogActions,
+  CircularProgress, Alert,
 } from '@mui/material';
 import {
   Assessment, Download, CalendarMonth, TrendingUp, PictureAsPdf,
@@ -17,60 +18,55 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge } from '../../components/common/SharedComponents';
+import { reportsAPI, analyticsAPI } from '../../services/api';
 
 const HospitalReports: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showCustomReport, setShowCustomReport] = useState(false);
+  const [dailyStats, setDailyStats] = useState<any[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
+  const [departmentStats, setDepartmentStats] = useState<any[]>([]);
+  const [savedReports, setSavedReports] = useState<any[]>([]);
+  const [diseasePrevalence, setDiseasePrevalence] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const dailyStats = [
-    { metric: 'Total Admissions', value: 28, change: '+12%', trend: 'up' },
-    { metric: 'Discharges', value: 22, change: '+5%', trend: 'up' },
-    { metric: 'Surgeries', value: 8, change: '-2%', trend: 'down' },
-    { metric: 'Lab Tests', value: 156, change: '+18%', trend: 'up' },
-    { metric: 'Outpatient Visits', value: 85, change: '+8%', trend: 'up' },
-    { metric: 'Emergency Cases', value: 12, change: '-15%', trend: 'down' },
-    { metric: 'Cancer Screenings', value: 34, change: '+22%', trend: 'up' },
-    { metric: 'AI Predictions', value: 89, change: '+35%', trend: 'up' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [overviewRes, trendsRes] = await Promise.all([
+        analyticsAPI.getOverview(),
+        analyticsAPI.getRiskTrends(),
+      ]);
+      const overview = overviewRes.data ?? overviewRes;
+      const trends = trendsRes.data ?? trendsRes;
 
-  const monthlyRevenue = [
-    { month: 'Jul', inpatient: 2.1, outpatient: 1.5, lab: 0.8, pharmacy: 0.4, total: 4.8 },
-    { month: 'Aug', inpatient: 2.3, outpatient: 1.6, lab: 0.9, pharmacy: 0.5, total: 5.3 },
-    { month: 'Sep', inpatient: 2.0, outpatient: 1.7, lab: 0.85, pharmacy: 0.45, total: 5.0 },
-    { month: 'Oct', inpatient: 2.5, outpatient: 1.8, lab: 0.95, pharmacy: 0.5, total: 5.75 },
-    { month: 'Nov', inpatient: 2.4, outpatient: 1.9, lab: 1.0, pharmacy: 0.55, total: 5.85 },
-    { month: 'Dec', inpatient: 2.6, outpatient: 2.0, lab: 1.1, pharmacy: 0.6, total: 6.3 },
-  ];
+      setDailyStats(overview.daily_stats ?? overview.dailyStats ?? []);
+      setMonthlyRevenue(overview.monthly_revenue ?? overview.monthlyRevenue ?? []);
+      setDepartmentStats(overview.department_stats ?? overview.departmentStats ?? []);
+      setSavedReports(overview.saved_reports ?? overview.savedReports ?? []);
+      setDiseasePrevalence(trends.disease_prevalence ?? trends.diseasePrevalence ?? []);
+    } catch (err: any) {
+      console.error('Failed to load reports data:', err);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load reports data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const departmentStats = [
-    { dept: 'Oncology', patients: 145, revenue: '$1.2M', occupancy: '85%', satisfaction: 4.5 },
-    { dept: 'Cardiology', patients: 120, revenue: '$980K', occupancy: '78%', satisfaction: 4.6 },
-    { dept: 'Surgery', patients: 95, revenue: '$1.5M', occupancy: '72%', satisfaction: 4.3 },
-    { dept: 'Emergency', patients: 210, revenue: '$650K', occupancy: '65%', satisfaction: 4.1 },
-    { dept: 'Neurology', patients: 78, revenue: '$720K', occupancy: '70%', satisfaction: 4.7 },
-    { dept: 'Pathology', patients: 0, revenue: '$450K', occupancy: '-', satisfaction: 4.8 },
-  ];
-
-  const savedReports = [
-    { name: 'Monthly Executive Summary', type: 'PDF', created: '2024-01-01', schedule: 'Monthly', status: 'active' },
-    { name: 'Weekly Census Report', type: 'Excel', created: '2024-01-07', schedule: 'Weekly', status: 'active' },
-    { name: 'Q4 Financial Report', type: 'PDF', created: '2023-12-31', schedule: 'Quarterly', status: 'completed' },
-    { name: 'Cancer Screening Report', type: 'PDF', created: '2024-01-05', schedule: 'Monthly', status: 'active' },
-    { name: 'Staff Performance Review', type: 'Excel', created: '2024-01-01', schedule: 'Monthly', status: 'active' },
-    { name: 'AI Model Accuracy Report', type: 'PDF', created: '2024-01-03', schedule: 'Weekly', status: 'active' },
-  ];
-
-  const diseasePrevalence = [
-    { name: 'Breast Cancer', value: 25, color: '#e91e63' },
-    { name: 'Lung Cancer', value: 20, color: '#2196f3' },
-    { name: 'Colorectal', value: 18, color: '#4caf50' },
-    { name: 'Prostate', value: 15, color: '#ff9800' },
-    { name: 'Skin Cancer', value: 12, color: '#9c27b0' },
-    { name: 'Other', value: 10, color: '#607d8b' },
-  ];
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   return (
     <AppLayout title="Reports" subtitle="Hospital analytics and reporting" navItems={hospitalNavItems} portalType="hospital">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (<>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Assessment />} label="Reports Generated" value={24} color="#1565c0" change="+8" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Schedule />} label="Scheduled" value={6} color="#4caf50" /></Grid>
@@ -260,6 +256,7 @@ const HospitalReports: React.FC = () => {
           </Card>
         </>
       )}
+      </>)}
 
       {/* Custom Report Dialog */}
       <Dialog open={showCustomReport} onClose={() => setShowCustomReport(false)} maxWidth="sm" fullWidth>

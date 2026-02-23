@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
-  LinearProgress, Avatar, Divider, Alert,
+  LinearProgress, Avatar, Divider, Alert, CircularProgress,
 } from '@mui/material';
 import {
   Dashboard, People, LocalHospital, Security, Psychology,
@@ -18,6 +18,7 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, StatusBadge, GlassCard, SectionHeader } from '../../components/common/SharedComponents';
 import { NavItem } from '../../components/common/AppLayout';
+import { adminAPI } from '../../services/api';
 
 export const adminNavItems: NavItem[] = [
   { icon: <Dashboard />, label: 'Dashboard', path: '/admin', section: 'Overview' },
@@ -46,45 +47,42 @@ export const adminNavItems: NavItem[] = [
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [platformStats, setPlatformStats] = useState<any[]>([]);
+  const [systemHealth, setSystemHealth] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [userDistribution, setUserDistribution] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const platformStats = [
-    { month: 'Jul', users: 3200, hospitals: 12, predictions: 4500, revenue: 125000 },
-    { month: 'Aug', users: 3800, hospitals: 14, predictions: 5200, revenue: 142000 },
-    { month: 'Sep', users: 4200, hospitals: 15, predictions: 5800, revenue: 158000 },
-    { month: 'Oct', users: 4800, hospitals: 18, predictions: 6500, revenue: 175000 },
-    { month: 'Nov', users: 5500, hospitals: 20, predictions: 7200, revenue: 192000 },
-    { month: 'Dec', users: 6200, hospitals: 22, predictions: 8100, revenue: 215000 },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [dashRes, healthRes] = await Promise.all([
+        adminAPI.getDashboard(),
+        adminAPI.systemHealth(),
+      ]);
+      const dash = dashRes.data ?? dashRes;
+      const health = healthRes.data ?? healthRes;
+      setPlatformStats(dash.platformStats ?? dash.platform_stats ?? []);
+      setSystemHealth(health.services ?? health.system_health ?? []);
+      setRecentActivity(dash.recentActivity ?? dash.recent_activity ?? []);
+      setUserDistribution(dash.userDistribution ?? dash.user_distribution ?? []);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const systemHealth = [
-    { service: 'API Server', status: 'healthy', uptime: 99.99, responseTime: '45ms', load: 23 },
-    { service: 'Database', status: 'healthy', uptime: 99.95, responseTime: '12ms', load: 45 },
-    { service: 'AI Engine', status: 'healthy', uptime: 99.90, responseTime: '250ms', load: 67 },
-    { service: 'Storage', status: 'healthy', uptime: 99.99, responseTime: '8ms', load: 38 },
-    { service: 'Auth Service', status: 'healthy', uptime: 99.99, responseTime: '25ms', load: 12 },
-    { service: 'Notification Service', status: 'warning', uptime: 99.85, responseTime: '120ms', load: 78 },
-  ];
-
-  const recentActivity = [
-    { action: 'New hospital registered', entity: 'Metro Health Center', time: '5 min ago', type: 'hospital', user: 'System' },
-    { action: 'AI model retrained', entity: 'Ensemble NeuralNet v3.3', time: '15 min ago', type: 'ai', user: 'AutoML' },
-    { action: 'User account locked', entity: 'user@example.com', time: '22 min ago', type: 'security', user: 'Security Bot' },
-    { action: 'System backup completed', entity: 'Full Backup', time: '1 hr ago', type: 'system', user: 'CronJob' },
-    { action: 'New report generated', entity: 'Q4 Platform Report', time: '2 hrs ago', type: 'report', user: 'Admin' },
-    { action: 'Database migration', entity: 'Migration v52', time: '3 hrs ago', type: 'system', user: 'DevOps' },
-    { action: 'HIPAA audit passed', entity: 'Annual Compliance', time: '1 day ago', type: 'compliance', user: 'Auditor' },
-    { action: 'Model accuracy alert', entity: 'SVM accuracy < 90%', time: '1 day ago', type: 'ai', user: 'Monitor' },
-  ];
-
-  const userDistribution = [
-    { name: 'Patients', value: 4800, color: '#1565c0' },
-    { name: 'Doctors', value: 350, color: '#4caf50' },
-    { name: 'Hospital Staff', value: 680, color: '#ff9800' },
-    { name: 'Admins', value: 15, color: '#9c27b0' },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Admin Dashboard" subtitle="Platform administration & monitoring" navItems={adminNavItems} portalType="admin">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : <>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {systemHealth.some(s => s.status !== 'healthy') && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <strong>System Alert:</strong> {systemHealth.filter(s => s.status !== 'healthy').map(s => s.service).join(', ')} - Performance degradation detected
@@ -211,6 +209,7 @@ const AdminDashboard: React.FC = () => {
           </Stack>
         </Card>
       )}
+      </>}
     </AppLayout>
   );
 };

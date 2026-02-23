@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   IconButton, Avatar, Divider, Alert, Switch, FormControlLabel,
-  LinearProgress, Slider, Rating,
+  LinearProgress, Slider, Rating, CircularProgress,
 } from '@mui/material';
 import {
   ReportProblem, Add, Psychology, LocalHospital, TrendingUp,
@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { StatCard, MetricGauge, SectionHeader } from '../../components/common/SharedComponents';
+import { healthRecordsAPI } from '../../services/api';
 
 const SymptomsPage: React.FC = () => {
   const { user } = useAuth();
@@ -20,38 +21,47 @@ const SymptomsPage: React.FC = () => {
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [selectedBodyPart, setSelectedBodyPart] = useState('');
   const [severity, setSeverity] = useState(3);
-
-  const recentSymptoms = [
-    { id: '1', name: 'Headache', severity: 4, date: 'Feb 20, 2026', duration: '2 hours', frequency: 'Occasional', bodyPart: 'Head', notes: 'Mild tension headache after work', aiFlag: false },
-    { id: '2', name: 'Fatigue', severity: 6, date: 'Feb 19, 2026', duration: 'All day', frequency: 'Frequent', bodyPart: 'General', notes: 'Unusual tiredness, adequate sleep', aiFlag: true },
-    { id: '3', name: 'Lower back pain', severity: 3, date: 'Feb 18, 2026', duration: '4 hours', frequency: 'Occasional', bodyPart: 'Back', notes: 'After sitting long hours', aiFlag: false },
-    { id: '4', name: 'Night sweats', severity: 5, date: 'Feb 16, 2026', duration: 'Night', frequency: 'Twice this week', bodyPart: 'General', notes: 'Woke up sweating, room temp normal', aiFlag: true },
-    { id: '5', name: 'Bruising easily', severity: 4, date: 'Feb 14, 2026', duration: 'Ongoing', frequency: 'New symptom', bodyPart: 'Skin', notes: 'Noticed bruises without known injury', aiFlag: true },
-  ];
-
-  const cancerWarnings = [
-    { symptom: 'Unexplained weight loss', present: false, desc: 'Losing weight without trying' },
-    { symptom: 'Persistent fatigue', present: true, desc: 'Tiredness that doesn\'t improve with rest' },
-    { symptom: 'Unexplained pain', present: false, desc: 'Pain without a known cause' },
-    { symptom: 'Skin changes', present: false, desc: 'New moles or changes in existing ones' },
-    { symptom: 'Night sweats', present: true, desc: 'Excessive sweating during sleep' },
-    { symptom: 'Unexplained bleeding', present: false, desc: 'Bleeding without trauma' },
-    { symptom: 'Persistent cough', present: false, desc: 'Cough lasting more than 3 weeks' },
-    { symptom: 'Changes in bowel habits', present: false, desc: 'Persistent change in bowel function' },
-    { symptom: 'Difficulty swallowing', present: false, desc: 'Progressive difficulty eating/drinking' },
-    { symptom: 'Unexplained lumps', present: false, desc: 'New lumps or swelling anywhere' },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [recentSymptoms, setRecentSymptoms] = useState<any[]>([]);
+  const [cancerWarnings, setCancerWarnings] = useState<any[]>([]);
+  const [aiInsights, setAiInsights] = useState<any[]>([]);
 
   const bodyParts = ['Head', 'Neck', 'Chest', 'Abdomen', 'Back', 'Arms', 'Legs', 'Skin', 'General'];
 
-  const aiInsights = [
-    { level: 'warning', title: 'Fatigue + Night Sweats Pattern', message: 'The combination of persistent fatigue and night sweats should be evaluated. Consider scheduling a blood test to check for underlying conditions.' },
-    { level: 'info', title: 'Easy Bruising Noted', message: 'New onset of easy bruising may indicate platelet or clotting issues. Your next blood test should include a complete blood count (CBC).' },
-    { level: 'success', title: 'Headache Pattern Normal', message: 'Your tension headaches appear to be stress-related with no concerning features. Continue maintaining good posture and taking breaks.' },
-  ];
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await healthRecordsAPI.getMyRecords({ type: 'symptom' }).catch(() => null);
+      if (res?.data) {
+        const records = Array.isArray(res.data) ? res.data : (res.data.records ?? res.data.symptoms ?? []);
+        setRecentSymptoms(records.map((s: any) => ({
+          id: s.id ?? '', name: s.title ?? s.symptom_name ?? s.name ?? '',
+          severity: s.severity ?? 3, date: s.date ?? s.created_at ?? '',
+          duration: s.duration ?? '', frequency: s.frequency ?? '',
+          bodyPart: s.body_part ?? s.bodyPart ?? 'General',
+          notes: s.notes ?? s.description ?? '', aiFlag: s.ai_flag ?? s.aiFlag ?? false,
+        })));
+        if (res.data.cancer_warnings) setCancerWarnings(res.data.cancer_warnings);
+        if (res.data.ai_insights) setAiInsights(res.data.ai_insights);
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load symptoms');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Symptom Tracker" subtitle="Log symptoms and get AI-powered health insights" navItems={patientNavItems} portalType="patient">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (<>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<ReportProblem />} label="Logged This Month" value={recentSymptoms.length} color="#f57c00" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="AI Flagged" value={recentSymptoms.filter(s => s.aiFlag).length} color="#c62828" /></Grid>
@@ -237,6 +247,7 @@ const SymptomsPage: React.FC = () => {
           <Button variant="contained" onClick={() => setShowLogDialog(false)}>Log Symptom</Button>
         </DialogActions>
       </Dialog>
+      </>)}
     </AppLayout>
   );
 };

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Avatar, Stepper, Step, StepLabel,
+  MenuItem, Alert, Avatar, Stepper, Step, StepLabel, CircularProgress,
 } from '@mui/material';
 import {
   Science, Person, TrendingUp, Assignment, CheckCircle, Schedule,
@@ -14,47 +14,84 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
-
-const TRIALS = [
-  { id: 'CT-2024-001', title: 'Immunotherapy + Targeted Therapy for NSCLC', phase: 'Phase III', status: 'recruiting', sponsor: 'NCI', pi: 'Dr. Patel', enrolled: 45, target: 120, startDate: '2024-01-15', endDate: '2026-06-30', cancer: 'Lung', primaryEndpoint: 'Overall Survival', arms: ['Immunotherapy + Targeted', 'Standard Chemo'], enrollment_rate: 85 },
-  { id: 'CT-2024-002', title: 'CAR-T Cell Therapy for Relapsed B-Cell Lymphoma', phase: 'Phase II', status: 'recruiting', sponsor: 'Internal', pi: 'Dr. Kim', enrolled: 18, target: 50, startDate: '2024-03-01', endDate: '2025-12-31', cancer: 'Lymphoma', primaryEndpoint: 'Complete Response Rate', arms: ['CAR-T High Dose', 'CAR-T Low Dose'], enrollment_rate: 72 },
-  { id: 'CT-2024-003', title: 'Liquid Biopsy for Early Breast Cancer Detection', phase: 'Phase I', status: 'enrolling', sponsor: 'BioTech Inc', pi: 'Dr. Chen', enrolled: 12, target: 30, startDate: '2024-06-01', endDate: '2025-09-30', cancer: 'Breast', primaryEndpoint: 'Sensitivity & Specificity', arms: ['Liquid Biopsy + Standard', 'Standard Only'], enrollment_rate: 60 },
-  { id: 'CT-2024-004', title: 'AI-Guided Radiation Dosing Optimization', phase: 'Phase II', status: 'active', sponsor: 'RadOnc Corp', pi: 'Dr. Kim', enrolled: 35, target: 35, startDate: '2023-09-01', endDate: '2025-03-31', cancer: 'Various', primaryEndpoint: 'Toxicity Reduction', arms: ['AI-Guided', 'Standard Protocol'], enrollment_rate: 100 },
-  { id: 'CT-2024-005', title: 'Neoadjuvant Pembrolizumab for Colorectal Cancer', phase: 'Phase III', status: 'pending', sponsor: 'Pharma Corp', pi: 'Dr. Patel', enrolled: 0, target: 200, startDate: '2025-01-15', endDate: '2028-01-15', cancer: 'Colorectal', primaryEndpoint: 'Pathological Complete Response', arms: ['Neoadjuvant Pembro', 'Adjuvant Pembro', 'Control'], enrollment_rate: 0 },
-];
-
-const ENROLLMENT_TREND = [
-  { month: 'Jul', enrolled: 8 }, { month: 'Aug', enrolled: 12 }, { month: 'Sep', enrolled: 15 },
-  { month: 'Oct', enrolled: 10 }, { month: 'Nov', enrolled: 18 }, { month: 'Dec', enrolled: 7 },
-];
-
-const PHASE_DISTRIBUTION = [
-  { name: 'Phase I', value: 1, fill: '#ff9800' },
-  { name: 'Phase II', value: 2, fill: '#5e92f3' },
-  { name: 'Phase III', value: 2, fill: '#4caf50' },
-];
-
-const CANCER_TYPES = [
-  { name: 'Lung', value: 1, fill: '#5e92f3' },
-  { name: 'Lymphoma', value: 1, fill: '#ae52d4' },
-  { name: 'Breast', value: 1, fill: '#e91e63' },
-  { name: 'Various', value: 1, fill: '#ff9800' },
-  { name: 'Colorectal', value: 1, fill: '#4caf50' },
-];
+import { clinicalTrialsAPI } from '../../services/api';
 
 const phaseSteps = ['Phase I', 'Phase II', 'Phase III', 'Phase IV'];
+const phaseColors = ['#ff9800', '#5e92f3', '#4caf50', '#9c27b0'];
+const cancerColors: Record<string, string> = { Lung: '#5e92f3', Lymphoma: '#ae52d4', Breast: '#e91e63', Various: '#ff9800', Colorectal: '#4caf50' };
 
 const ClinicalTrialsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [selectedTrial, setSelectedTrial] = useState<typeof TRIALS[0] | null>(null);
+  const [selectedTrial, setSelectedTrial] = useState<any | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [trials, setTrials] = useState<any[]>([]);
+  const [enrollmentTrend, setEnrollmentTrend] = useState<any[]>([]);
+  const [phaseDistribution, setPhaseDistribution] = useState<any[]>([]);
+  const [cancerTypes, setCancerTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const activeTrials = TRIALS.filter(t => t.status === 'recruiting' || t.status === 'active' || t.status === 'enrolling');
-  const totalEnrolled = TRIALS.reduce((s, t) => s + t.enrolled, 0);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [trialsRes] = await Promise.all([
+        clinicalTrialsAPI.list().catch(() => ({ data: [] })),
+      ]);
+      const trialsData = trialsRes.data || [];
+      setTrials(trialsData);
+
+      // Derive enrollment trend from trials data
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const trendMap: Record<string, number> = {};
+      months.forEach(m => { trendMap[m] = 0; });
+      trialsData.forEach((t: any) => {
+        const enrolled = t.enrolled ?? t.enrollment ?? 0;
+        const startDate = t.startDate ?? t.start_date;
+        if (startDate) {
+          const mIdx = new Date(startDate).getMonth();
+          trendMap[months[mIdx]] += enrolled;
+        }
+      });
+      const trend = months.map(m => ({ month: m, enrolled: trendMap[m] })).filter(m => m.enrolled > 0);
+      setEnrollmentTrend(trend.length > 0 ? trend : [{ month: 'N/A', enrolled: 0 }]);
+
+      // Derive phase distribution
+      const phaseCounts: Record<string, number> = {};
+      trialsData.forEach((t: any) => {
+        const phase = t.phase ?? 'Unknown';
+        phaseCounts[phase] = (phaseCounts[phase] || 0) + 1;
+      });
+      setPhaseDistribution(Object.entries(phaseCounts).map(([name, value]) => ({
+        name, value, fill: phaseColors[phaseSteps.indexOf(name)] ?? '#999',
+      })));
+
+      // Derive cancer types distribution
+      const cancerCounts: Record<string, number> = {};
+      trialsData.forEach((t: any) => {
+        const cancer = t.cancer ?? t.cancer_type ?? 'Unknown';
+        cancerCounts[cancer] = (cancerCounts[cancer] || 0) + 1;
+      });
+      setCancerTypes(Object.entries(cancerCounts).map(([name, value]) => ({
+        name, value, fill: cancerColors[name] ?? '#' + Math.floor(Math.random()*16777215).toString(16),
+      })));
+
+      setError('');
+    } catch {
+      setError('Failed to load clinical trials data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const activeTrials = trials.filter(t => t.status === 'recruiting' || t.status === 'active' || t.status === 'enrolling');
+  const totalEnrolled = trials.reduce((s, t) => s + (t.enrolled ?? t.enrollment ?? 0), 0);
 
   return (
     <AppLayout title="Clinical Trials" navItems={hospitalNavItems} portalType="hospital" subtitle="Research trial management & enrollment tracking">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Science />} label="Active Trials" value={activeTrials.length.toString()} color="#5e92f3" subtitle="Currently running" />
@@ -70,6 +107,9 @@ const ClinicalTrialsPage: React.FC = () => {
           </Grid>
         </Grid>
 
+        {loading && <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>}
+        {!loading && (<>
+
         <Card sx={{ mb: 3 }}>
           <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
             <Tab icon={<Assignment />} label="Trials" iconPosition="start" />
@@ -84,7 +124,7 @@ const ClinicalTrialsPage: React.FC = () => {
               action={<Button startIcon={<Science />} variant="contained" size="small" onClick={() => setShowCreateDialog(true)}>New Trial</Button>}
             />
             <Stack spacing={2}>
-              {TRIALS.map((trial, idx) => (
+              {trials.map((trial, idx) => (
                 <Box key={idx} sx={{ p: 2.5, border: '1px solid #f0f0f0', borderRadius: 3, cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc', borderColor: '#5e92f3' } }}
                   onClick={() => setSelectedTrial(trial)}>
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1.5 }}>
@@ -97,7 +137,7 @@ const ClinicalTrialsPage: React.FC = () => {
                       <Typography fontWeight={700} fontSize={14}>{trial.title}</Typography>
                       <Typography variant="caption" color="text.secondary">PI: {trial.pi} • Sponsor: {trial.sponsor} • {trial.cancer}</Typography>
                     </Box>
-                    <MetricGauge value={trial.enrollment_rate} size={60} color={trial.enrollment_rate >= 80 ? '#4caf50' : trial.enrollment_rate >= 50 ? '#ff9800' : '#f44336'} />
+                    <MetricGauge value={trial.enrollment_rate ?? (trial.target ? Math.round(((trial.enrolled ?? 0) / trial.target) * 100) : 0)} size={60} color={(trial.enrollment_rate ?? 0) >= 80 ? '#4caf50' : (trial.enrollment_rate ?? 0) >= 50 ? '#ff9800' : '#f44336'} />
                   </Stack>
                   <Stack direction="row" spacing={3} alignItems="center">
                     <Box sx={{ flex: 1 }}>
@@ -125,7 +165,7 @@ const ClinicalTrialsPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Monthly Enrollment Trends" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={ENROLLMENT_TREND}>
+                  <BarChart data={enrollmentTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -181,8 +221,8 @@ const ClinicalTrialsPage: React.FC = () => {
                 <SectionHeader title="Trials by Phase" icon={<Timeline />} />
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={PHASE_DISTRIBUTION} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
-                      {PHASE_DISTRIBUTION.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={phaseDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
+                      {phaseDistribution.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -194,8 +234,8 @@ const ClinicalTrialsPage: React.FC = () => {
                 <SectionHeader title="Trials by Cancer Type" icon={<MedicalServices />} />
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={CANCER_TYPES} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name }: any) => name}>
-                      {CANCER_TYPES.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={cancerTypes} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name }: any) => name}>
+                      {cancerTypes.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -204,6 +244,7 @@ const ClinicalTrialsPage: React.FC = () => {
             </Grid>
           </Grid>
         )}
+        </>)}
 
         {/* Trial Detail Dialog */}
         <Dialog open={!!selectedTrial} onClose={() => setSelectedTrial(null)} maxWidth="md" fullWidth>
@@ -231,7 +272,7 @@ const ClinicalTrialsPage: React.FC = () => {
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant="body2" sx={{ mb: 0.5 }}><strong>Enrollment:</strong> {selectedTrial.enrolled}/{selectedTrial.target}</Typography>
-                    <LinearProgress variant="determinate" value={(selectedTrial.enrolled / selectedTrial.target) * 100} sx={{ height: 10, borderRadius: 5 }} />
+                    <LinearProgress variant="determinate" value={((selectedTrial.enrolled ?? 0) / (selectedTrial.target || 1)) * 100} sx={{ height: 10, borderRadius: 5 }} />
                   </Grid>
                 </Grid>
               </Stack>

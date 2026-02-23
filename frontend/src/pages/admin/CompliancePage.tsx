@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Switch, FormControlLabel, Accordion, AccordionSummary,
+  MenuItem, Alert, CircularProgress, Switch, FormControlLabel, Accordion, AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
 import {
@@ -16,41 +16,53 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { adminNavItems } from './AdminDashboard';
-
-const COMPLIANCE_ITEMS = [
-  { id: 'HIPAA-001', regulation: 'HIPAA', category: 'Privacy', requirement: 'Patient Data Encryption', status: 'compliant', lastAudit: '2024-12-01', nextAudit: '2025-03-01', risk: 'Low', details: 'AES-256 encryption at rest and in transit. All endpoints verified.' },
-  { id: 'HIPAA-002', regulation: 'HIPAA', category: 'Security', requirement: 'Access Control & Authentication', status: 'compliant', lastAudit: '2024-11-15', nextAudit: '2025-02-15', risk: 'Low', details: 'MFA enabled for all users. Role-based access controls implemented.' },
-  { id: 'HIPAA-003', regulation: 'HIPAA', category: 'Breach', requirement: 'Breach Notification Procedures', status: 'compliant', lastAudit: '2024-10-20', nextAudit: '2025-01-20', risk: 'Medium', details: 'Procedures documented. Last drill: Oct 2024. Response time: 2 hours.' },
-  { id: 'FDA-001', regulation: 'FDA 21 CFR Part 11', category: 'Electronic Records', requirement: 'Electronic Signatures', status: 'partial', lastAudit: '2024-11-01', nextAudit: '2025-02-01', risk: 'Medium', details: 'Digital signatures implemented. Audit trail needs enhancement.' },
-  { id: 'GDPR-001', regulation: 'GDPR', category: 'Data Rights', requirement: 'Right to Erasure', status: 'compliant', lastAudit: '2024-12-05', nextAudit: '2025-03-05', risk: 'Low', details: 'Data deletion workflows automated. Average processing: 24 hours.' },
-  { id: 'GDPR-002', regulation: 'GDPR', category: 'Consent', requirement: 'Consent Management', status: 'compliant', lastAudit: '2024-11-20', nextAudit: '2025-02-20', risk: 'Low', details: 'Granular consent collection. Opt-out mechanism functional.' },
-  { id: 'SOC2-001', regulation: 'SOC 2', category: 'Availability', requirement: 'System Uptime SLA', status: 'compliant', lastAudit: '2024-12-10', nextAudit: '2025-03-10', risk: 'Low', details: '99.97% uptime achieved. Target: 99.9%.' },
-  { id: 'SOC2-002', regulation: 'SOC 2', category: 'Confidentiality', requirement: 'Data Classification', status: 'non_compliant', lastAudit: '2024-09-15', nextAudit: '2025-01-15', risk: 'High', details: 'Classification policy incomplete. 30% of data assets unclassified.' },
-];
-
-const COMPLIANCE_SCORE_TREND = [
-  { month: 'Jul', score: 82 }, { month: 'Aug', score: 85 }, { month: 'Sep', score: 87 },
-  { month: 'Oct', score: 89 }, { month: 'Nov', score: 91 }, { month: 'Dec', score: 92 },
-];
-
-const REGULATION_DISTRIBUTION = [
-  { name: 'HIPAA', value: 3, fill: '#5e92f3' },
-  { name: 'FDA', value: 1, fill: '#ff9800' },
-  { name: 'GDPR', value: 2, fill: '#ae52d4' },
-  { name: 'SOC 2', value: 2, fill: '#4caf50' },
-];
+import { complianceAPI } from '../../services/api';
 
 const CompliancePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showAuditDialog, setShowAuditDialog] = useState(false);
+  const [complianceItems, setComplianceItems] = useState<any[]>([]);
+  const [complianceScoreTrend, setComplianceScoreTrend] = useState<any[]>([]);
+  const [regulationDistribution, setRegulationDistribution] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const compliant = COMPLIANCE_ITEMS.filter(c => c.status === 'compliant').length;
-  const nonCompliant = COMPLIANCE_ITEMS.filter(c => c.status === 'non_compliant').length;
-  const overallScore = Math.round((compliant / COMPLIANCE_ITEMS.length) * 100);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [recordsRes, hipaaRes] = await Promise.all([
+        complianceAPI.getRecords(),
+        complianceAPI.getHIPAAStatus(),
+      ]);
+      setComplianceItems(recordsRes.data?.compliance_items ?? recordsRes.data?.complianceItems ?? recordsRes.data ?? []);
+      setComplianceScoreTrend(hipaaRes.data?.compliance_score_trend ?? hipaaRes.data?.complianceScoreTrend ?? []);
+      setRegulationDistribution(hipaaRes.data?.regulation_distribution ?? hipaaRes.data?.regulationDistribution ?? []);
+    } catch {
+      setError('Failed to load compliance data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const compliant = complianceItems.filter(c => c.status === 'compliant').length;
+  const nonCompliant = complianceItems.filter(c => c.status === 'non_compliant').length;
+  const overallScore = complianceItems.length > 0 ? Math.round((compliant / complianceItems.length) * 100) : 0;
+
+  if (loading) {
+    return (
+      <AppLayout title="Compliance" navItems={adminNavItems} portalType="admin" subtitle="Regulatory compliance & audit management">
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Compliance" navItems={adminNavItems} portalType="admin" subtitle="Regulatory compliance & audit management">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {nonCompliant > 0 && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
             {nonCompliant} compliance item(s) require immediate remediation!
@@ -62,7 +74,7 @@ const CompliancePage: React.FC = () => {
             <StatCard icon={<Shield />} label="Compliance Score" value={`${overallScore}%`} change="+3%" color="#4caf50" subtitle="Overall rating" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CheckCircle />} label="Compliant" value={compliant.toString()} color="#4caf50" subtitle={`of ${COMPLIANCE_ITEMS.length} requirements`} />
+            <StatCard icon={<CheckCircle />} label="Compliant" value={compliant.toString()} color="#4caf50" subtitle={`of ${complianceItems.length} requirements`} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Error />} label="Non-Compliant" value={nonCompliant.toString()} color="#f44336" subtitle="Action required" />
@@ -90,8 +102,8 @@ const CompliancePage: React.FC = () => {
                 <AccordionSummary expandIcon={<ExpandMore />}>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Chip label={reg} size="small" sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 700 }} />
-                    <Typography fontWeight={600} fontSize={14}>{COMPLIANCE_ITEMS.filter(c => c.regulation === reg).length} Requirements</Typography>
-                    {COMPLIANCE_ITEMS.filter(c => c.regulation === reg && c.status !== 'compliant').length > 0 && (
+                    <Typography fontWeight={600} fontSize={14}>{complianceItems.filter(c => c.regulation === reg).length} Requirements</Typography>
+                    {complianceItems.filter(c => c.regulation === reg && c.status !== 'compliant').length > 0 && (
                       <Warning sx={{ color: '#ff9800', fontSize: 18 }} />
                     )}
                   </Stack>
@@ -111,7 +123,7 @@ const CompliancePage: React.FC = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {COMPLIANCE_ITEMS.filter(c => c.regulation === reg).map((item, idx) => (
+                        {complianceItems.filter(c => c.regulation === reg).map((item, idx) => (
                           <TableRow key={idx}>
                             <TableCell><Chip label={item.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 9 }} /></TableCell>
                             <TableCell>
@@ -161,7 +173,7 @@ const CompliancePage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {COMPLIANCE_ITEMS.sort((a, b) => a.nextAudit.localeCompare(b.nextAudit)).map((item, idx) => (
+                  {[...complianceItems].sort((a, b) => a.nextAudit.localeCompare(b.nextAudit)).map((item, idx) => (
                     <TableRow key={idx}>
                       <TableCell><Typography fontSize={12} fontWeight={600}>{item.nextAudit}</Typography></TableCell>
                       <TableCell><Chip label={item.regulation} size="small" variant="outlined" sx={{ fontSize: 10 }} /></TableCell>
@@ -188,7 +200,7 @@ const CompliancePage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Compliance Score Trend" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={COMPLIANCE_SCORE_TREND}>
+                  <LineChart data={complianceScoreTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis domain={[70, 100]} />
@@ -203,8 +215,8 @@ const CompliancePage: React.FC = () => {
                 <SectionHeader title="By Regulation" icon={<Policy />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={REGULATION_DISTRIBUTION} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
-                      {REGULATION_DISTRIBUTION.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={regulationDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name, value }: any) => `${name}: ${value}`}>
+                      {regulationDistribution.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>

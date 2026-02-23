@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Avatar, Divider, IconButton, Alert, LinearProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress,
 } from '@mui/material';
 import {
   Dashboard, People, LocalHospital, CalendarMonth, Science,
@@ -14,6 +15,7 @@ import {
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RTooltip, PieChart, Pie, Cell } from 'recharts';
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, MetricGauge, SectionHeader, StatusBadge } from '../../components/common/SharedComponents';
+import { hospitalsAPI, analyticsAPI } from '../../services/api';
 
 export const hospitalNavItems = [
   { section: 'Overview', icon: <Dashboard />, label: 'Dashboard', path: '/hospital/dashboard' },
@@ -52,58 +54,50 @@ export const hospitalNavItems = [
 
 const HospitalDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [patientStats, setPatientStats] = useState<any[]>([]);
+  const [departmentStats, setDepartmentStats] = useState<any[]>([]);
+  const [riskPatients, setRiskPatients] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [appointmentTypes, setAppointmentTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const patientStats = [
-    { day: 'Mon', admissions: 12, discharges: 8, outpatient: 45 },
-    { day: 'Tue', admissions: 15, discharges: 10, outpatient: 52 },
-    { day: 'Wed', admissions: 8, discharges: 12, outpatient: 38 },
-    { day: 'Thu', admissions: 20, discharges: 14, outpatient: 60 },
-    { day: 'Fri', admissions: 18, discharges: 16, outpatient: 55 },
-    { day: 'Sat', admissions: 6, discharges: 5, outpatient: 20 },
-    { day: 'Sun', admissions: 4, discharges: 3, outpatient: 12 },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [overviewRes] = await Promise.all([
+        analyticsAPI.getOverview(),
+      ]);
+      const overview = overviewRes.data ?? overviewRes;
 
-  const departmentStats = [
-    { name: 'Oncology', patients: 45, beds: 60, occupancy: 75, color: '#c62828' },
-    { name: 'Cardiology', patients: 38, beds: 50, occupancy: 76, color: '#1565c0' },
-    { name: 'Neurology', patients: 22, beds: 40, occupancy: 55, color: '#7b1fa2' },
-    { name: 'Surgery', patients: 30, beds: 45, occupancy: 67, color: '#2e7d32' },
-    { name: 'ICU', patients: 18, beds: 20, occupancy: 90, color: '#f57c00' },
-    { name: 'Pediatrics', patients: 15, beds: 30, occupancy: 50, color: '#00897b' },
-  ];
+      setPatientStats(overview.patient_stats ?? overview.patientStats ?? []);
+      setDepartmentStats(overview.department_stats ?? overview.departmentStats ?? []);
+      setRiskPatients(overview.risk_patients ?? overview.riskPatients ?? []);
+      setRecentActivities(overview.recent_activities ?? overview.recentActivities ?? []);
+      setRevenueData(overview.revenue_data ?? overview.revenueData ?? []);
+      setAppointmentTypes(overview.appointment_types ?? overview.appointmentTypes ?? []);
+    } catch (err: any) {
+      console.error('Failed to load dashboard data:', err);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const riskPatients = [
-    { id: 'P001', name: 'John Davis', age: 65, risk: 82, cancer: 'Lung', status: 'Critical', ward: 'Oncology', admitDate: 'Feb 15', doctor: 'Dr. Smith' },
-    { id: 'P002', name: 'Mary Johnson', age: 58, risk: 75, cancer: 'Breast', status: 'Monitoring', ward: 'Oncology', admitDate: 'Feb 18', doctor: 'Dr. Lee' },
-    { id: 'P003', name: 'Robert Brown', age: 72, risk: 68, cancer: 'Prostate', status: 'Stable', ward: 'Surgery', admitDate: 'Feb 20', doctor: 'Dr. Chen' },
-    { id: 'P004', name: 'Susan Wilson', age: 45, risk: 45, cancer: 'Screening', status: 'Follow-up', ward: 'Outpatient', admitDate: 'Feb 22', doctor: 'Dr. Park' },
-  ];
-
-  const recentActivities = [
-    { action: 'Patient admitted', detail: 'John Davis - Oncology Ward', time: '10 min ago', type: 'admission' },
-    { action: 'Lab results ready', detail: 'Blood panel for Mary Johnson', time: '25 min ago', type: 'lab' },
-    { action: 'Surgery completed', detail: 'Biopsy - Robert Brown', time: '1 hour ago', type: 'surgery' },
-    { action: 'AI Risk Alert', detail: 'High risk detected for Patient P089', time: '2 hours ago', type: 'alert' },
-    { action: 'Doctor scheduled', detail: 'Dr. Lee assigned to Ward B', time: '3 hours ago', type: 'staff' },
-    { action: 'Bed assigned', detail: 'ICU Bed #12 - Emergency admission', time: '4 hours ago', type: 'bed' },
-  ];
-
-  const revenueData = [
-    { month: 'Sep', revenue: 1200000 }, { month: 'Oct', revenue: 1350000 },
-    { month: 'Nov', revenue: 1180000 }, { month: 'Dec', revenue: 1420000 },
-    { month: 'Jan', revenue: 1500000 }, { month: 'Feb', revenue: 1380000 },
-  ];
-
-  const appointmentTypes = [
-    { name: 'Screening', value: 35, color: '#1565c0' },
-    { name: 'Follow-up', value: 28, color: '#4caf50' },
-    { name: 'Consultation', value: 20, color: '#f57c00' },
-    { name: 'Emergency', value: 12, color: '#c62828' },
-    { name: 'Telemedicine', value: 5, color: '#7b1fa2' },
-  ];
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   return (
     <AppLayout title="Hospital Dashboard" subtitle="Cancer Research Center - Overview" navItems={hospitalNavItems} portalType="hospital">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : (<>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {/* Key Metrics */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={4} md={2}><StatCard icon={<People />} label="Total Patients" value="1,248" color="#1565c0" change={+5.2} /></Grid>
@@ -304,6 +298,7 @@ const HospitalDashboard: React.FC = () => {
           </Stack>
         </Card>
       )}
+      </>)}
     </AppLayout>
   );
 };

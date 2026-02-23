@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
-  LinearProgress, Alert, Divider, Table, TableBody, TableCell,
+  LinearProgress, CircularProgress, Alert, Divider, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Avatar, Select, MenuItem,
   FormControl, InputLabel, Tooltip,
 } from '@mui/material';
@@ -19,66 +19,50 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, GlassCard, SectionHeader } from '../../components/common/SharedComponents';
+import { analyticsAPI } from '../../services/api';
 
 const AIAnalytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [timeRange, setTimeRange] = useState('30d');
+  const [riskDistribution, setRiskDistribution] = useState<any[]>([]);
+  const [predictionAccuracy, setPredictionAccuracy] = useState<any[]>([]);
+  const [cancerTypeDetection, setCancerTypeDetection] = useState<any[]>([]);
+  const [modelPerformance, setModelPerformance] = useState<any[]>([]);
+  const [populationHealth, setPopulationHealth] = useState<any[]>([]);
+  const [featureImportance, setFeatureImportance] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const riskDistribution = [
-    { name: 'Low Risk', value: 45, color: '#4caf50' },
-    { name: 'Moderate', value: 28, color: '#ff9800' },
-    { name: 'High Risk', value: 18, color: '#f44336' },
-    { name: 'Critical', value: 9, color: '#9c27b0' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [overviewRes, trendsRes] = await Promise.all([
+        analyticsAPI.getOverview().catch(() => ({ data: {} })),
+        analyticsAPI.getRiskTrends().catch(() => ({ data: [] })),
+      ]);
+      const overview = overviewRes.data || {};
+      const trends = trendsRes.data || [];
+      setRiskDistribution(overview.risk_distribution ?? overview.riskDistribution ?? []);
+      setPredictionAccuracy(Array.isArray(trends) ? trends : trends.prediction_accuracy ?? trends.predictionAccuracy ?? []);
+      setCancerTypeDetection(overview.cancer_type_detection ?? overview.cancerTypeDetection ?? []);
+      setModelPerformance(overview.model_performance ?? overview.modelPerformance ?? []);
+      setPopulationHealth(overview.population_health ?? overview.populationHealth ?? []);
+      setFeatureImportance(overview.feature_importance ?? overview.featureImportance ?? []);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const predictionAccuracy = [
-    { month: 'Jul', accuracy: 91.2, sensitivity: 88.5, specificity: 93.1 },
-    { month: 'Aug', accuracy: 92.5, sensitivity: 89.8, specificity: 94.0 },
-    { month: 'Sep', accuracy: 93.1, sensitivity: 90.2, specificity: 95.2 },
-    { month: 'Oct', accuracy: 93.8, sensitivity: 91.5, specificity: 95.8 },
-    { month: 'Nov', accuracy: 94.2, sensitivity: 92.0, specificity: 96.1 },
-    { month: 'Dec', accuracy: 94.7, sensitivity: 92.8, specificity: 96.5 },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const cancerTypeDetection = [
-    { type: 'Breast', detected: 45, falsePos: 3, falseNeg: 1, accuracy: 95.8, trend: '+2.3%' },
-    { type: 'Lung', detected: 32, falsePos: 4, falseNeg: 2, accuracy: 93.2, trend: '+1.8%' },
-    { type: 'Colorectal', detected: 28, falsePos: 2, falseNeg: 1, accuracy: 96.1, trend: '+3.1%' },
-    { type: 'Prostate', detected: 22, falsePos: 3, falseNeg: 2, accuracy: 91.5, trend: '+1.2%' },
-    { type: 'Skin', detected: 18, falsePos: 1, falseNeg: 1, accuracy: 97.2, trend: '+0.8%' },
-    { type: 'Leukemia', detected: 12, falsePos: 2, falseNeg: 1, accuracy: 92.8, trend: '+2.1%' },
-  ];
-
-  const modelPerformance = [
-    { name: 'Ensemble Neural Network', version: 'v3.2.1', accuracy: 94.7, auc: 0.968, f1: 0.942, status: 'production', lastTrained: '2 days ago' },
-    { name: 'Random Forest Classifier', version: 'v2.8.0', accuracy: 91.3, auc: 0.945, f1: 0.908, status: 'production', lastTrained: '5 days ago' },
-    { name: 'Gradient Boosting', version: 'v2.5.3', accuracy: 92.1, auc: 0.952, f1: 0.917, status: 'production', lastTrained: '3 days ago' },
-    { name: 'Deep Learning CNN', version: 'v1.4.0', accuracy: 93.5, auc: 0.961, f1: 0.931, status: 'staging', lastTrained: '1 day ago' },
-    { name: 'SVM Classifier', version: 'v2.1.0', accuracy: 89.8, auc: 0.931, f1: 0.893, status: 'deprecated', lastTrained: '30 days ago' },
-  ];
-
-  const populationHealth = [
-    { ageGroup: '18-30', patients: 120, highRisk: 5, screened: 95, detected: 2 },
-    { ageGroup: '31-40', patients: 250, highRisk: 18, screened: 210, detected: 8 },
-    { ageGroup: '41-50', patients: 380, highRisk: 45, screened: 340, detected: 22 },
-    { ageGroup: '51-60', patients: 420, highRisk: 78, screened: 390, detected: 38 },
-    { ageGroup: '61-70', patients: 310, highRisk: 92, screened: 295, detected: 45 },
-    { ageGroup: '71+', patients: 180, highRisk: 68, screened: 165, detected: 35 },
-  ];
-
-  const featureImportance = [
-    { feature: 'Blood Biomarkers', importance: 92 },
-    { feature: 'Family History', importance: 85 },
-    { feature: 'Age & Demographics', importance: 78 },
-    { feature: 'Genetic Markers', importance: 75 },
-    { feature: 'Lifestyle Factors', importance: 68 },
-    { feature: 'Previous Screenings', importance: 62 },
-    { feature: 'Vital Signs Trends', importance: 55 },
-    { feature: 'Environmental', importance: 42 },
-  ];
+  if (loading) return <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>;
 
   return (
     <AppLayout title="AI & Analytics" subtitle="AI-powered predictions and insights" navItems={hospitalNavItems} portalType="hospital">
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="Model Accuracy" value="94.7%" color="#1565c0" change="+1.2%" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Groups />} label="Patients Screened" value="1,660" color="#4caf50" change="+15%" /></Grid>

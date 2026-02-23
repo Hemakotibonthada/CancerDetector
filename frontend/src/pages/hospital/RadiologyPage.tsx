@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, IconButton,
+  MenuItem, Alert, IconButton, CircularProgress,
 } from '@mui/material';
 import {
   CameraAlt, Science, Psychology, CheckCircle, Warning, Schedule,
@@ -15,33 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
-
-const IMAGING_STUDIES = [
-  { id: 'IMG-001', patient: 'Alice Thompson', modality: 'Mammography', body_part: 'Breast', status: 'completed', ordered: '2024-12-16', radiologist: 'Dr. Patel', ai_status: 'completed', ai_confidence: 94, ai_findings: 'Suspicious mass detected in left breast, 1.2cm. BI-RADS 4.', priority: 'Urgent', screening: true },
-  { id: 'IMG-002', patient: 'Bob Williams', modality: 'CT', body_part: 'Abdomen', status: 'completed', ordered: '2024-12-17', radiologist: 'Dr. Patel', ai_status: 'completed', ai_confidence: 87, ai_findings: 'Post-surgical changes noted. No new lesions.', priority: 'Routine', screening: false },
-  { id: 'IMG-003', patient: 'Carol Davis', modality: 'MRI', body_part: 'Brain', status: 'in_progress', ordered: '2024-12-18', radiologist: 'Dr. Kim', ai_status: 'analyzing', ai_confidence: 0, ai_findings: '', priority: 'Urgent', screening: false },
-  { id: 'IMG-004', patient: 'David Lee', modality: 'PET', body_part: 'Whole Body', status: 'scheduled', ordered: '2024-12-18', radiologist: '', ai_status: 'pending', ai_confidence: 0, ai_findings: '', priority: 'Routine', screening: true },
-  { id: 'IMG-005', patient: 'Eva Martinez', modality: 'Ultrasound', body_part: 'Thyroid', status: 'completed', ordered: '2024-12-15', radiologist: 'Dr. Patel', ai_status: 'completed', ai_confidence: 91, ai_findings: 'Small nodule 0.8cm, likely benign. Follow-up in 6 months.', priority: 'Routine', screening: true },
-  { id: 'IMG-006', patient: 'Frank Chen', modality: 'X-Ray', body_part: 'Chest', status: 'reported', ordered: '2024-12-17', radiologist: 'Dr. Kim', ai_status: 'completed', ai_confidence: 96, ai_findings: 'Clear lung fields. No suspicious lesions.', priority: 'Routine', screening: false },
-];
-
-const MODALITY_STATS = [
-  { name: 'CT', value: 30, fill: '#5e92f3' },
-  { name: 'MRI', value: 25, fill: '#ae52d4' },
-  { name: 'X-Ray', value: 20, fill: '#4caf50' },
-  { name: 'Ultrasound', value: 12, fill: '#ff9800' },
-  { name: 'PET', value: 8, fill: '#f44336' },
-  { name: 'Mammography', value: 5, fill: '#e91e63' },
-];
-
-const AI_ACCURACY_TREND = [
-  { month: 'Jul', accuracy: 88, studies: 120 },
-  { month: 'Aug', accuracy: 90, studies: 135 },
-  { month: 'Sep', accuracy: 91, studies: 128 },
-  { month: 'Oct', accuracy: 93, studies: 145 },
-  { month: 'Nov', accuracy: 94, studies: 152 },
-  { month: 'Dec', accuracy: 95, studies: 98 },
-];
+import { radiologyAPI } from '../../services/api';
 
 const modalityIcons: Record<string, string> = {
   CT: '🔬', MRI: '🧲', 'X-Ray': '📷', Ultrasound: '🔊', PET: '☢️', Mammography: '🎯',
@@ -50,17 +24,51 @@ const modalityIcons: Record<string, string> = {
 const RadiologyPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
-  const [selectedStudy, setSelectedStudy] = useState<typeof IMAGING_STUDIES[0] | null>(null);
+  const [selectedStudy, setSelectedStudy] = useState<any>(null);
+  const [imagingStudies, setImagingStudies] = useState<any[]>([]);
+  const [modalityStats, setModalityStats] = useState<any[]>([]);
+  const [aiAccuracyTrend, setAiAccuracyTrend] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const completedStudies = IMAGING_STUDIES.filter(s => s.status === 'completed' || s.status === 'reported');
-  const aiAnalyzed = IMAGING_STUDIES.filter(s => s.ai_status === 'completed');
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const studiesRes = await radiologyAPI.getStudies();
+      const studies = studiesRes.data ?? studiesRes;
+      setImagingStudies(Array.isArray(studies) ? studies : studies.studies ?? []);
+      setModalityStats(studies.modality_stats ?? studies.modalityStats ?? []);
+      setAiAccuracyTrend(studies.ai_accuracy_trend ?? studies.aiAccuracyTrend ?? []);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load radiology data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const completedStudies = imagingStudies.filter(s => s.status === 'completed' || s.status === 'reported');
+  const aiAnalyzed = imagingStudies.filter(s => s.ai_status === 'completed');
+
+  if (loading) {
+    return (
+      <AppLayout title="Radiology" navItems={hospitalNavItems} portalType="hospital" subtitle="Imaging management & AI-powered analysis">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Radiology" navItems={hospitalNavItems} portalType="hospital" subtitle="Imaging management & AI-powered analysis">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CameraAlt />} label="Today's Studies" value={IMAGING_STUDIES.length.toString()} change="+3" color="#5e92f3" subtitle="All modalities" />
+            <StatCard icon={<CameraAlt />} label="Today's Studies" value={imagingStudies.length.toString()} change="+3" color="#5e92f3" subtitle="All modalities" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Psychology />} label="AI Analyzed" value={aiAnalyzed.length.toString()} color="#ae52d4" subtitle={`${Math.round(aiAnalyzed.reduce((s, i) => s + i.ai_confidence, 0) / aiAnalyzed.length)}% avg confidence`} />
@@ -101,7 +109,7 @@ const RadiologyPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {IMAGING_STUDIES.map((study, idx) => (
+                  {imagingStudies.map((study, idx) => (
                     <TableRow key={idx} sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc' } }} onClick={() => setSelectedStudy(study)}>
                       <TableCell><Chip label={study.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 10 }} /></TableCell>
                       <TableCell>
@@ -152,7 +160,7 @@ const RadiologyPage: React.FC = () => {
             <Grid item xs={12}>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="AI-Analyzed Results" subtitle="Automated findings powered by deep learning" icon={<Psychology />} />
-                {IMAGING_STUDIES.filter(s => s.ai_status === 'completed').map((study, idx) => (
+                {imagingStudies.filter(s => s.ai_status === 'completed').map((study, idx) => (
                   <Box key={idx} sx={{ mb: 2, p: 2.5, bgcolor: study.ai_findings.includes('Suspicious') ? '#fff5f5' : '#f8fafc', borderRadius: 3, border: `1px solid ${study.ai_findings.includes('Suspicious') ? '#ffcdd2' : '#f0f0f0'}` }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                       <Stack direction="row" spacing={2} alignItems="center">
@@ -190,8 +198,8 @@ const RadiologyPage: React.FC = () => {
                 <SectionHeader title="Studies by Modality" icon={<CameraAlt />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={MODALITY_STATS} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
-                      {MODALITY_STATS.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    <Pie data={modalityStats} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
+                      {modalityStats.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -202,7 +210,7 @@ const RadiologyPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="AI Analysis Accuracy" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={AI_ACCURACY_TREND}>
+                  <LineChart data={aiAccuracyTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis domain={[85, 100]} />

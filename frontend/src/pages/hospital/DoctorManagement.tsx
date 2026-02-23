@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
   InputAdornment, Avatar, Divider, Dialog, DialogTitle,
   DialogContent, DialogActions, IconButton, Alert, LinearProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, Rating, Tabs, Tab,
+  CircularProgress,
 } from '@mui/material';
 import {
   MedicalServices, Search, Add, PersonAdd, Star, AccessTime,
@@ -14,36 +15,69 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, SectionHeader, StatusBadge } from '../../components/common/SharedComponents';
+import { workforceAPI } from '../../services/api';
 
 const DoctorManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [onCallSchedule, setOnCallSchedule] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const doctors = [
-    { id: 'D-001', name: 'Dr. Sarah Smith', specialization: 'Oncology', department: 'Oncology', experience: 15, rating: 4.9, patients: 45, status: 'on_duty', phone: '+1-555-2001', email: 'sarah.smith@hospital.org', shift: 'Morning (8AM-4PM)', onCall: false, surgeries: 12, consultations: 156, avatar: 'SS' },
-    { id: 'D-002', name: 'Dr. James Lee', specialization: 'Cardiology', department: 'Cardiology', experience: 12, rating: 4.8, patients: 38, status: 'on_duty', phone: '+1-555-2002', email: 'james.lee@hospital.org', shift: 'Morning (8AM-4PM)', onCall: true, surgeries: 8, consultations: 234, avatar: 'JL' },
-    { id: 'D-003', name: 'Dr. Emily Chen', specialization: 'Neurosurgery', department: 'Neurology', experience: 20, rating: 4.7, patients: 22, status: 'in_surgery', phone: '+1-555-2003', email: 'emily.chen@hospital.org', shift: 'Morning (8AM-4PM)', onCall: false, surgeries: 25, consultations: 89, avatar: 'EC' },
-    { id: 'D-004', name: 'Dr. Robert Wilson', specialization: 'General Surgery', department: 'Surgery', experience: 18, rating: 4.6, patients: 30, status: 'off_duty', phone: '+1-555-2004', email: 'robert.wilson@hospital.org', shift: 'Night (8PM-8AM)', onCall: false, surgeries: 35, consultations: 120, avatar: 'RW' },
-    { id: 'D-005', name: 'Dr. Lisa Park', specialization: 'Pathology', department: 'Lab', experience: 10, rating: 4.9, patients: 0, status: 'on_duty', phone: '+1-555-2005', email: 'lisa.park@hospital.org', shift: 'Morning (8AM-4PM)', onCall: false, surgeries: 0, consultations: 445, avatar: 'LP' },
-    { id: 'D-006', name: 'Dr. Mark Johnson', specialization: 'Radiation Oncology', department: 'Oncology', experience: 8, rating: 4.5, patients: 28, status: 'on_leave', phone: '+1-555-2006', email: 'mark.johnson@hospital.org', shift: '-', onCall: false, surgeries: 5, consultations: 178, avatar: 'MJ' },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [staffRes, shiftsRes] = await Promise.all([
+        workforceAPI.getStaff().catch(() => ({ data: [] })),
+        workforceAPI.getShifts().catch(() => ({ data: [] })),
+      ]);
+      const staffData = staffRes.data || [];
+      setDoctors(staffData.map((s: any) => ({
+        id: s.id ?? s.staff_id ?? '',
+        name: s.name ?? s.full_name ?? `${s.first_name ?? ''} ${s.last_name ?? ''}`.trim(),
+        specialization: s.specialization ?? s.specialty ?? '',
+        department: s.department ?? '',
+        experience: s.experience ?? s.years_of_experience ?? 0,
+        rating: s.rating ?? 0,
+        patients: s.patients ?? s.active_patients ?? 0,
+        status: s.status ?? 'off_duty',
+        phone: s.phone ?? s.phone_number ?? '',
+        email: s.email ?? '',
+        shift: s.shift ?? s.current_shift ?? '-',
+        onCall: s.onCall ?? s.on_call ?? false,
+        surgeries: s.surgeries ?? s.total_surgeries ?? 0,
+        consultations: s.consultations ?? s.total_consultations ?? 0,
+        avatar: s.avatar ?? (s.name ?? s.full_name ?? '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+      })));
 
-  const onCallSchedule = [
-    { day: 'Mon', doctors: ['Dr. Smith', 'Dr. Lee'], department: 'Oncology, Cardiology' },
-    { day: 'Tue', doctors: ['Dr. Chen', 'Dr. Wilson'], department: 'Neurology, Surgery' },
-    { day: 'Wed', doctors: ['Dr. Park', 'Dr. Smith'], department: 'Lab, Oncology' },
-    { day: 'Thu', doctors: ['Dr. Lee', 'Dr. Chen'], department: 'Cardiology, Neurology' },
-    { day: 'Fri', doctors: ['Dr. Wilson', 'Dr. Park'], department: 'Surgery, Lab' },
-    { day: 'Sat', doctors: ['Dr. Smith'], department: 'Oncology' },
-    { day: 'Sun', doctors: ['Dr. Lee'], department: 'Cardiology' },
-  ];
+      const shiftsData = shiftsRes.data || [];
+      if (shiftsData.length > 0) {
+        setOnCallSchedule(shiftsData.map((s: any) => ({
+          day: s.day ?? s.day_of_week ?? '',
+          doctors: s.doctors ?? s.assigned_doctors ?? [],
+          department: s.department ?? s.departments ?? '',
+        })));
+      }
+      setError('');
+    } catch {
+      setError('Failed to load doctor data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const filtered = doctors.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.specialization.toLowerCase().includes(searchQuery.toLowerCase()));
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const filtered = doctors.filter(d => (d.name ?? '').toLowerCase().includes(searchQuery.toLowerCase()) || (d.specialization ?? '').toLowerCase().includes(searchQuery.toLowerCase()));
+
+  if (loading) return <AppLayout title="Doctor Management" subtitle="Manage hospital medical staff" navItems={hospitalNavItems} portalType="hospital"><Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box></AppLayout>;
 
   return (
     <AppLayout title="Doctor Management" subtitle="Manage hospital medical staff" navItems={hospitalNavItems} portalType="hospital">
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<MedicalServices />} label="Total Doctors" value={doctors.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Groups />} label="On Duty" value={doctors.filter(d => d.status === 'on_duty' || d.status === 'in_surgery').length} color="#4caf50" /></Grid>

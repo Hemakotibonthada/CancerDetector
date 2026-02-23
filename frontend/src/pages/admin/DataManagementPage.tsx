@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
-  LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
+  LinearProgress, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   MenuItem, Alert, Switch, FormControlLabel,
 } from '@mui/material';
@@ -15,48 +15,51 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { adminNavItems } from './AdminDashboard';
-
-const BACKUPS = [
-  { id: 'BK-001', type: 'Full', size: '45.2 GB', status: 'completed', started: '2024-12-18 02:00', completed: '2024-12-18 03:45', retention: '90 days', location: 'Primary Cloud', encrypted: true },
-  { id: 'BK-002', type: 'Incremental', size: '2.8 GB', status: 'completed', started: '2024-12-18 06:00', completed: '2024-12-18 06:15', retention: '30 days', location: 'Primary Cloud', encrypted: true },
-  { id: 'BK-003', type: 'Full', size: '44.8 GB', status: 'completed', started: '2024-12-17 02:00', completed: '2024-12-17 03:40', retention: '90 days', location: 'Secondary DR', encrypted: true },
-  { id: 'BK-004', type: 'Differential', size: '8.5 GB', status: 'completed', started: '2024-12-17 14:00', completed: '2024-12-17 14:30', retention: '30 days', location: 'Primary Cloud', encrypted: true },
-  { id: 'BK-005', type: 'Full', size: '43.9 GB', status: 'in_progress', started: '2024-12-18 14:00', completed: '', retention: '90 days', location: 'DR Site', encrypted: true },
-];
-
-const STORAGE_BREAKDOWN = [
-  { name: 'Patient Records', value: 35, fill: '#5e92f3' },
-  { name: 'Imaging (DICOM)', value: 30, fill: '#ae52d4' },
-  { name: 'Lab Results', value: 15, fill: '#4caf50' },
-  { name: 'System Logs', value: 10, fill: '#ff9800' },
-  { name: 'Analytics Data', value: 10, fill: '#f44336' },
-];
-
-const STORAGE_TREND = [
-  { month: 'Jul', used: 120, capacity: 200 }, { month: 'Aug', used: 128, capacity: 200 },
-  { month: 'Sep', used: 135, capacity: 200 }, { month: 'Oct', used: 142, capacity: 200 },
-  { month: 'Nov', used: 150, capacity: 250 }, { month: 'Dec', used: 158, capacity: 250 },
-];
-
-const RETENTION_POLICIES = [
-  { type: 'Patient Health Records', retention: '10 years', regulation: 'HIPAA', autoDelete: false, encrypted: true, compressed: true },
-  { type: 'Imaging Studies (DICOM)', retention: '7 years', regulation: 'State Law', autoDelete: false, encrypted: true, compressed: true },
-  { type: 'Lab Results', retention: '10 years', regulation: 'CLIA', autoDelete: false, encrypted: true, compressed: true },
-  { type: 'Audit Logs', retention: '6 years', regulation: 'SOC 2', autoDelete: true, encrypted: true, compressed: false },
-  { type: 'System Logs', retention: '1 year', regulation: 'Internal', autoDelete: true, encrypted: false, compressed: true },
-  { type: 'Temporary / Session', retention: '30 days', regulation: 'Internal', autoDelete: true, encrypted: false, compressed: false },
-];
+import { dataManagementAPI } from '../../services/api';
 
 const DataManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [backups, setBackups] = useState<any[]>([]);
+  const [storageBreakdown, setStorageBreakdown] = useState<any[]>([]);
+  const [storageTrend, setStorageTrend] = useState<any[]>([]);
+  const [retentionPolicies, setRetentionPolicies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const totalGB = 158;
   const capacityGB = 250;
 
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [backupsRes, storageRes, retentionRes] = await Promise.all([
+        dataManagementAPI.getBackups(),
+        dataManagementAPI.getStorageStats(),
+        dataManagementAPI.getRetentionPolicies(),
+      ]);
+      setBackups(backupsRes.data?.backups ?? backupsRes.data ?? []);
+      setStorageBreakdown(storageRes.data?.breakdown ?? storageRes.data?.storage_breakdown ?? []);
+      setStorageTrend(storageRes.data?.trend ?? storageRes.data?.storage_trend ?? []);
+      setRetentionPolicies(retentionRes.data?.policies ?? retentionRes.data ?? []);
+    } catch (err) {
+      setError('Failed to load data management information');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
   return (
     <AppLayout title="Data Management" navItems={adminNavItems} portalType="admin" subtitle="Backup, storage & data governance">
       <Box sx={{ p: 3 }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+        ) : (
+          <>
+        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Storage />} label="Storage Used" value={`${totalGB} GB`} color="#5e92f3" subtitle={`of ${capacityGB} GB capacity`} />
@@ -65,7 +68,7 @@ const DataManagementPage: React.FC = () => {
             <StatCard icon={<CloudDone />} label="Last Backup" value="6:15 AM" change="Success" color="#4caf50" subtitle="Incremental, 2.8 GB" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<BackupTable />} label="Total Backups" value={BACKUPS.length.toString()} color="#ff9800" subtitle="This week" />
+            <StatCard icon={<BackupTable />} label="Total Backups" value={backups.length.toString()} color="#ff9800" subtitle="This week" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<DataUsage />} label="Storage Usage" value={`${Math.round((totalGB / capacityGB) * 100)}%`} color={totalGB / capacityGB > 0.8 ? '#f44336' : '#4caf50'} subtitle={totalGB / capacityGB > 0.8 ? 'Consider upgrading' : 'Healthy'} />
@@ -101,7 +104,7 @@ const DataManagementPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {BACKUPS.map((bk, idx) => (
+                  {backups.map((bk, idx) => (
                     <TableRow key={idx}>
                       <TableCell><Chip label={bk.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 10 }} /></TableCell>
                       <TableCell>
@@ -148,8 +151,8 @@ const DataManagementPage: React.FC = () => {
                 <SectionHeader title="Storage Breakdown" icon={<DataUsage />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={STORAGE_BREAKDOWN} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
-                      {STORAGE_BREAKDOWN.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={storageBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
+                      {storageBreakdown.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -160,7 +163,7 @@ const DataManagementPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Storage Growth Trend" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={STORAGE_TREND}>
+                  <AreaChart data={storageTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
@@ -208,7 +211,7 @@ const DataManagementPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {RETENTION_POLICIES.map((p, idx) => (
+                  {retentionPolicies.map((p, idx) => (
                     <TableRow key={idx}>
                       <TableCell><Typography fontWeight={600} fontSize={13}>{p.type}</Typography></TableCell>
                       <TableCell><Chip label={p.retention} size="small" variant="outlined" sx={{ fontWeight: 600, fontSize: 11 }} /></TableCell>
@@ -222,6 +225,9 @@ const DataManagementPage: React.FC = () => {
               </Table>
             </TableContainer>
           </Card>
+        )}
+
+        </>
         )}
 
         {/* Backup Dialog */}

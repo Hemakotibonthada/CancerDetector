@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  LinearProgress, Avatar, Select, MenuItem, FormControl, InputLabel,
+  LinearProgress, CircularProgress, Avatar, Select, MenuItem, FormControl, InputLabel,
+  Alert,
 } from '@mui/material';
 import {
   Analytics, TrendingUp, People, LocalHospital, Science,
@@ -17,70 +18,52 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, SectionHeader } from '../../components/common/SharedComponents';
+import { analyticsAPI } from '../../services/api';
 
 const PlatformAnalytics: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [period, setPeriod] = useState('30d');
+  const [userGrowth, setUserGrowth] = useState<any[]>([]);
+  const [featureAdoption, setFeatureAdoption] = useState<any[]>([]);
+  const [geoDistribution, setGeoDistribution] = useState<any[]>([]);
+  const [dailyActive, setDailyActive] = useState<any[]>([]);
+  const [deviceBreakdown, setDeviceBreakdown] = useState<any[]>([]);
+  const [kpis, setKpis] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const userGrowth = [
-    { month: 'Jul', patients: 2400, doctors: 180, staff: 320, hospitals: 8 },
-    { month: 'Aug', patients: 3100, doctors: 210, staff: 380, hospitals: 10 },
-    { month: 'Sep', patients: 3800, doctors: 245, staff: 420, hospitals: 12 },
-    { month: 'Oct', patients: 4500, doctors: 275, staff: 480, hospitals: 14 },
-    { month: 'Nov', patients: 5200, doctors: 310, staff: 540, hospitals: 16 },
-    { month: 'Dec', patients: 6100, doctors: 350, staff: 620, hospitals: 18 },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [overviewRes, trendsRes] = await Promise.all([
+        analyticsAPI.getOverview(),
+        analyticsAPI.getRiskTrends(),
+      ]);
+      const overview = overviewRes.data ?? {};
+      const trends = trendsRes.data ?? {};
+      setUserGrowth(overview.user_growth ?? trends.user_growth ?? []);
+      setFeatureAdoption(overview.feature_adoption ?? []);
+      setGeoDistribution(overview.geo_distribution ?? []);
+      setDailyActive(trends.daily_active ?? overview.daily_active ?? []);
+      setDeviceBreakdown(overview.device_breakdown ?? []);
+      setKpis(overview.kpis ?? []);
+    } catch (err) {
+      setError('Failed to load analytics data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const featureAdoption = [
-    { feature: 'Cancer Risk Assessment', usage: 92, users: 5612 },
-    { feature: 'Blood Test Analysis', usage: 87, users: 5307 },
-    { feature: 'AI Health Score', usage: 85, users: 5185 },
-    { feature: 'Smartwatch Integration', usage: 68, users: 4148 },
-    { feature: 'Appointment Booking', usage: 78, users: 4758 },
-    { feature: 'Telemedicine', usage: 55, users: 3355 },
-    { feature: 'Health Goals', usage: 45, users: 2745 },
-    { feature: 'Symptom Tracker', usage: 62, users: 3782 },
-    { feature: 'Medication Manager', usage: 72, users: 4392 },
-    { feature: 'Health Records', usage: 80, users: 4880 },
-  ];
-
-  const geoDistribution = [
-    { region: 'North America', patients: 2800, hospitals: 8, color: '#1565c0' },
-    { region: 'Europe', patients: 1500, hospitals: 4, color: '#4caf50' },
-    { region: 'Asia Pacific', patients: 1200, hospitals: 3, color: '#ff9800' },
-    { region: 'Middle East', patients: 400, hospitals: 2, color: '#9c27b0' },
-    { region: 'South America', patients: 200, hospitals: 1, color: '#00bcd4' },
-  ];
-
-  const dailyActive = [
-    { day: 'Mon', dau: 3200, sessions: 8500, avgTime: 12.5 },
-    { day: 'Tue', dau: 3500, sessions: 9200, avgTime: 13.2 },
-    { day: 'Wed', dau: 3400, sessions: 8800, avgTime: 11.8 },
-    { day: 'Thu', dau: 3100, sessions: 7900, avgTime: 12.0 },
-    { day: 'Fri', dau: 2900, sessions: 7200, avgTime: 10.5 },
-    { day: 'Sat', dau: 1800, sessions: 4500, avgTime: 8.2 },
-    { day: 'Sun', dau: 1500, sessions: 3800, avgTime: 7.5 },
-  ];
-
-  const deviceBreakdown = [
-    { name: 'Desktop', value: 45, color: '#1565c0', icon: <DesktopWindows /> },
-    { name: 'Mobile', value: 40, color: '#4caf50', icon: <PhoneAndroid /> },
-    { name: 'Tablet', value: 15, color: '#ff9800', icon: <Tablet /> },
-  ];
-
-  const kpis = [
-    { name: 'Monthly Active Users', current: 5200, target: 6000, trend: +12 },
-    { name: 'Patient Engagement Rate', current: 78, target: 85, trend: +5 },
-    { name: 'Screening Completion', current: 85, target: 90, trend: +3 },
-    { name: 'AI Detection Accuracy', current: 94.7, target: 95, trend: +1.2 },
-    { name: 'Platform Uptime', current: 99.95, target: 99.99, trend: 0 },
-    { name: 'NPS Score', current: 72, target: 80, trend: +4 },
-    { name: 'Support Ticket Resolution', current: 92, target: 95, trend: +2 },
-    { name: 'Data Processing Time', current: 250, target: 200, trend: -15 },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Platform Analytics" subtitle="Comprehensive platform insights" navItems={adminNavItems} portalType="admin">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : (
+        <>
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Users" value="7,070" color="#1565c0" change="+12%" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Hospitals" value="18" color="#4caf50" change="+2" /></Grid>
@@ -263,6 +246,8 @@ const PlatformAnalytics: React.FC = () => {
             </Grid>
           ))}
         </Grid>
+      )}
+      </>
       )}
     </AppLayout>
   );

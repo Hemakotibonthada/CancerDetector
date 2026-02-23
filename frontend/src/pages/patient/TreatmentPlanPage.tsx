@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Alert, Stepper, Step, StepLabel, StepContent, Divider,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress,
 } from '@mui/material';
 import {
   MedicalServices, Science, Timeline, Vaccines, LocalHospital,
@@ -15,51 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
-
-const TREATMENT_PLAN = {
-  cancer_type: 'Breast Cancer',
-  stage: 'Stage IIA',
-  plan_type: 'Combined',
-  doctor: 'Dr. Emily Roberts',
-  hospital: 'National Cancer Center',
-  success_rate: 87,
-  start_date: '2024-10-01',
-  end_date: '2025-06-30',
-  phases: [
-    { name: 'Neoadjuvant Chemotherapy', type: 'Chemotherapy', start: '2024-10-01', end: '2024-12-15', status: 'completed', progress: 100, cycles: '4/4 cycles completed', notes: 'AC-T regimen. Good response noted on imaging.' },
-    { name: 'Surgery', type: 'Surgery', start: '2025-01-10', end: '2025-01-10', status: 'in_progress', progress: 0, cycles: 'Lumpectomy + Sentinel Node', notes: 'Scheduled with Dr. Roberts. Pre-op assessment complete.' },
-    { name: 'Radiation Therapy', type: 'Radiation', start: '2025-02-15', end: '2025-04-01', status: 'pending', progress: 0, cycles: '30 sessions planned', notes: 'Whole breast radiation with boost.' },
-    { name: 'Adjuvant Hormone Therapy', type: 'Hormone', start: '2025-04-15', end: '2030-04-15', status: 'pending', progress: 0, cycles: '5 years', notes: 'Tamoxifen or Aromatase Inhibitor based on menopausal status.' },
-  ],
-};
-
-const SIDE_EFFECTS_DATA = [
-  { effect: 'Fatigue', severity: 7, week: 'W1-12' },
-  { effect: 'Nausea', severity: 5, week: 'W1-8' },
-  { effect: 'Hair Loss', severity: 8, week: 'W3-16' },
-  { effect: 'Neuropathy', severity: 4, week: 'W6-12' },
-  { effect: 'Pain', severity: 3, week: 'W1-4' },
-  { effect: 'Appetite Loss', severity: 6, week: 'W1-12' },
-];
-
-const RESPONSE_TRACKING = [
-  { month: 'Oct', tumor_size: 3.2, marker: 45, response: 'Baseline' },
-  { month: 'Nov', tumor_size: 2.5, marker: 38, response: 'Partial' },
-  { month: 'Dec', tumor_size: 1.8, marker: 25, response: 'Good' },
-  { month: 'Jan', tumor_size: 1.2, marker: 18, response: 'Excellent' },
-];
-
-const CLINICAL_TRIALS = [
-  { id: 'NCT-2024-001', title: 'Immunotherapy + Standard Chemo for HER2+ Breast Cancer', phase: 'III', status: 'Recruiting', match: 92, sponsor: 'National Cancer Institute' },
-  { id: 'NCT-2024-002', title: 'Novel Targeted Therapy for Triple-Negative Breast Cancer', phase: 'II', status: 'Recruiting', match: 78, sponsor: 'BioPharm Research' },
-  { id: 'NCT-2024-003', title: 'AI-Guided Precision Radiation Dose Optimization', phase: 'II', status: 'Active', match: 85, sponsor: 'University Medical Center' },
-  { id: 'NCT-2024-004', title: 'Combination CDK4/6 Inhibitor Study', phase: 'III', status: 'Recruiting', match: 70, sponsor: 'Pharma Corp' },
-];
-
-const SECOND_OPINIONS = [
-  { id: '1', date: '2024-11-20', original: 'Lumpectomy recommended', reviewer: 'Dr. James Miller', hospital: 'Mayo Clinic', status: 'Completed', agreement: 95, recommendation: 'Agrees with lumpectomy. Suggests adding sentinel node biopsy.' },
-  { id: '2', date: '2024-11-15', original: 'AC-T chemotherapy', reviewer: 'AI Analysis Engine', hospital: 'CancerGuard AI', status: 'Completed', agreement: 88, recommendation: 'AI agrees with AC-T regimen. Notes: dose-dense schedule may improve outcomes by 12%.' },
-];
+import { treatmentAPI, secondOpinionAPI } from '../../services/api';
 
 const phaseColors: Record<string, string> = {
   completed: '#4caf50', in_progress: '#5e92f3', pending: '#9e9e9e',
@@ -71,9 +28,73 @@ const phaseIcons: Record<string, React.ReactNode> = {
 const TreatmentPlanPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showSecondOpinionDialog, setShowSecondOpinionDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [treatmentPlan, setTreatmentPlan] = useState<any>({ cancer_type: '', stage: '', plan_type: '', doctor: '', hospital: '', success_rate: 0, start_date: '', end_date: '', phases: [] });
+  const [sideEffectsData, setSideEffectsData] = useState<any[]>([]);
+  const [responseTracking, setResponseTracking] = useState<any[]>([]);
+  const [clinicalTrials, setClinicalTrials] = useState<any[]>([]);
+  const [secondOpinions, setSecondOpinions] = useState<any[]>([]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [plansRes, trialsRes, opinionsRes] = await Promise.all([
+        treatmentAPI.getPlans().catch(() => null),
+        treatmentAPI.getClinicalTrials('all').catch(() => null),
+        secondOpinionAPI.getRequests().catch(() => null),
+      ]);
+
+      if (plansRes?.data) {
+        const plans = Array.isArray(plansRes.data) ? plansRes.data : (plansRes.data.plans ?? [plansRes.data]);
+        if (plans.length > 0) {
+          const p = plans[0];
+          setTreatmentPlan({
+            cancer_type: p.cancer_type ?? '', stage: p.stage ?? '', plan_type: p.plan_type ?? p.treatment_type ?? '',
+            doctor: p.doctor ?? p.physician ?? '', hospital: p.hospital ?? '',
+            success_rate: p.success_rate ?? 0, start_date: p.start_date ?? '', end_date: p.end_date ?? '',
+            phases: (p.phases ?? p.treatment_phases ?? []).map((ph: any) => ({
+              name: ph.name ?? '', type: ph.type ?? ph.treatment_type ?? '', start: ph.start ?? ph.start_date ?? '',
+              end: ph.end ?? ph.end_date ?? '', status: ph.status ?? 'pending', progress: ph.progress ?? 0,
+              cycles: ph.cycles ?? '', notes: ph.notes ?? '',
+            })),
+          });
+          if (p.side_effects) setSideEffectsData(p.side_effects);
+          if (p.response_tracking) setResponseTracking(p.response_tracking);
+        }
+      }
+      if (trialsRes?.data) {
+        const trials = Array.isArray(trialsRes.data) ? trialsRes.data : (trialsRes.data.trials ?? []);
+        setClinicalTrials(trials.map((t: any) => ({
+          id: t.id ?? t.trial_id ?? '', title: t.title ?? '', phase: t.phase ?? '',
+          status: t.status ?? '', match: t.match_score ?? t.match ?? 0, sponsor: t.sponsor ?? '',
+        })));
+      }
+      if (opinionsRes?.data) {
+        const opinions = Array.isArray(opinionsRes.data) ? opinionsRes.data : (opinionsRes.data.requests ?? []);
+        setSecondOpinions(opinions.map((o: any) => ({
+          id: o.id ?? '', date: o.date ?? o.created_at ?? '', original: o.original_diagnosis ?? o.original ?? '',
+          reviewer: o.reviewer ?? '', hospital: o.hospital ?? '', status: o.status ?? '',
+          agreement: o.agreement ?? o.agreement_percentage ?? 0, recommendation: o.recommendation ?? '',
+        })));
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load treatment plan');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Treatment Plan" navItems={patientNavItems} portalType="patient" subtitle="Your personalized treatment journey">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (
       <Box sx={{ p: 3 }}>
         {/* Overview Banner */}
         <GlassCard gradient="linear-gradient(135deg, #1565c020, #5e92f310)" sx={{ mb: 3, p: 3 }}>
@@ -82,18 +103,18 @@ const TreatmentPlanPage: React.FC = () => {
               <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                 <Avatar sx={{ width: 56, height: 56, bgcolor: '#1565c0' }}><MedicalServices /></Avatar>
                 <Box>
-                  <Typography variant="h5" fontWeight={800}>{TREATMENT_PLAN.cancer_type} — {TREATMENT_PLAN.stage}</Typography>
-                  <Typography variant="body2" color="text.secondary">{TREATMENT_PLAN.plan_type} Treatment Plan • {TREATMENT_PLAN.doctor} • {TREATMENT_PLAN.hospital}</Typography>
+                  <Typography variant="h5" fontWeight={800}>{treatmentPlan.cancer_type} — {treatmentPlan.stage}</Typography>
+                  <Typography variant="body2" color="text.secondary">{treatmentPlan.plan_type} Treatment Plan • {treatmentPlan.doctor} • {treatmentPlan.hospital}</Typography>
                 </Box>
               </Stack>
               <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
                 <Chip icon={<CheckCircle />} label="Phase 1 Complete" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 600 }} />
                 <Chip icon={<Schedule />} label="Phase 2 In Progress" sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600 }} />
-                <Chip label={`${TREATMENT_PLAN.start_date} → ${TREATMENT_PLAN.end_date}`} variant="outlined" />
+                <Chip label={`${treatmentPlan.start_date} → ${treatmentPlan.end_date}`} variant="outlined" />
               </Stack>
             </Grid>
             <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
-              <MetricGauge value={TREATMENT_PLAN.success_rate} color="#4caf50" size={140} />
+              <MetricGauge value={treatmentPlan.success_rate} color="#4caf50" size={140} />
               <Typography variant="body2" fontWeight={600} sx={{ mt: 1 }}>Predicted Success Rate</Typography>
             </Grid>
           </Grid>
@@ -114,7 +135,7 @@ const TreatmentPlanPage: React.FC = () => {
           <Card sx={{ p: 3 }}>
             <SectionHeader title="Treatment Journey" subtitle="Step-by-step progress through your treatment plan" icon={<Timeline />} />
             <Stepper orientation="vertical" activeStep={1}>
-              {TREATMENT_PLAN.phases.map((phase, idx) => (
+              {treatmentPlan.phases.map((phase: any, idx: number) => (
                 <Step key={idx} completed={phase.status === 'completed'} active={phase.status === 'in_progress'}>
                   <StepLabel StepIconComponent={() => (
                     <Avatar sx={{ width: 40, height: 40, bgcolor: `${phaseColors[phase.status]}20`, color: phaseColors[phase.status] }}>
@@ -152,7 +173,7 @@ const TreatmentPlanPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Tumor Response Over Time" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={350}>
-                  <LineChart data={RESPONSE_TRACKING}>
+                  <LineChart data={responseTracking}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis yAxisId="left" label={{ value: 'Tumor Size (cm)', angle: -90, position: 'insideLeft' }} />
@@ -196,13 +217,13 @@ const TreatmentPlanPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Side Effects Severity" icon={<Warning />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={SIDE_EFFECTS_DATA} layout="vertical">
+                  <BarChart data={sideEffectsData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" domain={[0, 10]} />
                     <YAxis type="category" dataKey="effect" width={100} />
                     <RTooltip />
                     <Bar dataKey="severity" fill="#ff9800" radius={[0, 4, 4, 0]} name="Severity (1-10)">
-                      {SIDE_EFFECTS_DATA.map((entry, idx) => (
+                      {sideEffectsData.map((entry, idx) => (
                         <Cell key={idx} fill={entry.severity >= 7 ? '#f44336' : entry.severity >= 5 ? '#ff9800' : '#4caf50'} />
                       ))}
                     </Bar>
@@ -256,7 +277,7 @@ const TreatmentPlanPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {CLINICAL_TRIALS.map((trial, idx) => (
+                  {clinicalTrials.map((trial, idx) => (
                     <TableRow key={idx}>
                       <TableCell><Chip label={trial.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 11 }} /></TableCell>
                       <TableCell>
@@ -286,7 +307,7 @@ const TreatmentPlanPage: React.FC = () => {
             <SectionHeader title="Second Opinions" subtitle="Expert & AI-powered diagnosis verification" icon={<Visibility />}
               action={<Button startIcon={<Science />} variant="contained" size="small" onClick={() => setShowSecondOpinionDialog(true)}>Request Second Opinion</Button>}
             />
-            {SECOND_OPINIONS.map((opinion, idx) => (
+            {secondOpinions.map((opinion, idx) => (
               <Box key={idx} sx={{ mb: 2.5, p: 2.5, bgcolor: '#f8fafc', borderRadius: 3, border: '1px solid #f0f0f0' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
                   <Stack direction="row" spacing={2} alignItems="center">
@@ -322,7 +343,7 @@ const TreatmentPlanPage: React.FC = () => {
                 <MenuItem value="ai">AI Analysis</MenuItem>
                 <MenuItem value="both">Both Expert + AI</MenuItem>
               </TextField>
-              <TextField label="Current Diagnosis" fullWidth defaultValue={`${TREATMENT_PLAN.cancer_type} - ${TREATMENT_PLAN.stage}`} />
+              <TextField label="Current Diagnosis" fullWidth defaultValue={`${treatmentPlan.cancer_type} - ${treatmentPlan.stage}`} />
               <TextField label="Specific Questions" multiline rows={3} fullWidth placeholder="What aspects would you like reviewed?" />
               <TextField select label="Urgency" fullWidth defaultValue="routine">
                 <MenuItem value="routine">Routine (5-7 days)</MenuItem>
@@ -337,6 +358,7 @@ const TreatmentPlanPage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      )}
     </AppLayout>
   );
 };

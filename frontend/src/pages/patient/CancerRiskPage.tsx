@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   LinearProgress, TextField, InputAdornment, IconButton, Select, MenuItem,
   FormControl, InputLabel, Divider, Alert, Badge, Tooltip, Dialog,
   DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Pagination,
+  TableContainer, TableHead, TableRow, Pagination, CircularProgress,
 } from '@mui/material';
 import {
   Assessment as AssessIcon, TrendingUp, TrendingDown, Warning as WarningIcon,
@@ -25,67 +25,114 @@ import { cancerDetectionAPI } from '../../services/api';
 const CancerRiskPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedCancer, setSelectedCancer] = useState<any>(null);
 
-  const riskScore = 15.3;
-  const riskLevel = 'low';
-  const modelConfidence = 94.7;
-  const riskColor = '#8bc34a';
+  const [riskScore, setRiskScore] = useState(0);
+  const [riskLevel, setRiskLevel] = useState('low');
+  const [modelConfidence, setModelConfidence] = useState(0);
+  const [cancerTypeRisks, setCancerTypeRisks] = useState<any[]>([]);
+  const [riskFactors, setRiskFactors] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [assessmentHistory, setAssessmentHistory] = useState<any[]>([]);
 
-  const cancerTypeRisks = [
-    { type: 'Lung Cancer', risk: 8.2, level: 'very_low', change: -2.1, factors: ['Non-smoker', 'Good air quality'], icon: '🫁' },
-    { type: 'Breast Cancer', risk: 12.5, level: 'low', change: -0.5, factors: ['Regular screening', 'No family history'], icon: '🎀' },
-    { type: 'Colorectal Cancer', risk: 18.4, level: 'moderate', change: 1.2, factors: ['Low fiber diet', 'Sedentary lifestyle'], icon: '🔬' },
-    { type: 'Prostate Cancer', risk: 22.1, level: 'moderate', change: 0.8, factors: ['Age factor', 'PSA elevated'], icon: '🩺' },
-    { type: 'Skin Cancer', risk: 11.3, level: 'low', change: -1.5, factors: ['Sunscreen use', 'Regular checks'], icon: '☀️' },
-    { type: 'Liver Cancer', risk: 6.7, level: 'very_low', change: -0.3, factors: ['Normal liver function', 'Low alcohol'], icon: '🫀' },
-    { type: 'Pancreatic Cancer', risk: 5.1, level: 'very_low', change: 0.0, factors: ['No family history', 'Normal glucose'], icon: '🏥' },
-    { type: 'Leukemia', risk: 3.8, level: 'very_low', change: -0.2, factors: ['Normal blood counts', 'No exposure'], icon: '🩸' },
-    { type: 'Thyroid Cancer', risk: 7.9, level: 'very_low', change: 0.1, factors: ['Normal TSH', 'No nodules'], icon: '🦋' },
-    { type: 'Bladder Cancer', risk: 9.4, level: 'low', change: -0.7, factors: ['Non-smoker', 'Good hydration'], icon: '💧' },
-  ];
+  const getRiskColor = (level: string) => {
+    if (level === 'very_low') return '#4caf50';
+    if (level === 'low') return '#8bc34a';
+    if (level === 'moderate') return '#ff9800';
+    return '#f44336';
+  };
+  const riskColor = getRiskColor(riskLevel);
 
-  const riskFactors = [
-    { name: 'Age (45+)', impact: 'moderate', modifiable: false, score: 35, category: 'demographic', detail: 'Age is a non-modifiable risk factor. Risk increases after 45.' },
-    { name: 'Physical Activity', impact: 'low', modifiable: true, score: 20, category: 'lifestyle', detail: '30 mins of daily exercise reduces cancer risk by 20-30%.' },
-    { name: 'Diet Quality', impact: 'moderate', modifiable: true, score: 45, category: 'lifestyle', detail: 'Increase fiber, fruits, and vegetables intake.' },
-    { name: 'Smoking Status', impact: 'very_low', modifiable: true, score: 5, category: 'lifestyle', detail: 'Non-smoker. Continue to avoid tobacco products.' },
-    { name: 'Alcohol Consumption', impact: 'low', modifiable: true, score: 15, category: 'lifestyle', detail: 'Moderate alcohol use. Consider reducing intake.' },
-    { name: 'BMI', impact: 'low', modifiable: true, score: 22, category: 'health', detail: 'BMI 24.5 - Within normal range. Maintain healthy weight.' },
-    { name: 'Family History', impact: 'moderate', modifiable: false, score: 40, category: 'genetic', detail: 'Father had prostate cancer at age 68.' },
-    { name: 'Genetic Markers', impact: 'low', modifiable: false, score: 12, category: 'genetic', detail: 'No high-risk genetic mutations detected (BRCA1/2 negative).' },
-    { name: 'Sun Exposure', impact: 'low', modifiable: true, score: 18, category: 'lifestyle', detail: 'Regular sunscreen use. Avoid peak UV hours.' },
-    { name: 'Blood Biomarkers', impact: 'low', modifiable: false, score: 15, category: 'health', detail: 'All tumor markers within normal range.' },
-    { name: 'Sleep Quality', impact: 'low', modifiable: true, score: 10, category: 'lifestyle', detail: 'Good sleep pattern. 7+ hours per night.' },
-    { name: 'Stress Level', impact: 'moderate', modifiable: true, score: 35, category: 'lifestyle', detail: 'Moderate stress detected. Consider stress management.' },
-  ];
+  const iconMap: Record<string, string> = {
+    lung: '🫁', breast: '🎀', colorectal: '🔬', prostate: '🩺', skin: '☀️',
+    liver: '🫀', pancreatic: '🏥', leukemia: '🩸', thyroid: '🦋', bladder: '💧',
+  };
 
-  const recommendations = [
-    { title: 'Increase Daily Fiber Intake', desc: 'Add 10g more fiber daily through vegetables and whole grains. This can reduce colorectal cancer risk by 10%.', priority: 'high', category: 'diet', impact: '-3.2% risk' },
-    { title: 'Schedule Colonoscopy', desc: 'Your colonoscopy screening is overdue. Schedule within the next 30 days for early detection.', priority: 'high', category: 'screening', impact: 'Early detection' },
-    { title: 'Increase Physical Activity', desc: 'Add 20 minutes of moderate exercise 3 times per week. Walking, cycling, or swimming recommended.', priority: 'medium', category: 'exercise', impact: '-2.8% risk' },
-    { title: 'Monitor PSA Levels', desc: 'PSA slightly elevated at 3.8 ng/mL. Retest in 3 months for trending analysis.', priority: 'medium', category: 'monitoring', impact: 'Track trend' },
-    { title: 'Reduce Processed Meat', desc: 'Limit processed meat to less than 2 servings per week to reduce colorectal cancer risk.', priority: 'medium', category: 'diet', impact: '-2.1% risk' },
-    { title: 'Stress Management', desc: 'Practice mindfulness meditation for 15 minutes daily. Consider yoga or deep breathing exercises.', priority: 'low', category: 'wellness', impact: '-1.5% risk' },
-    { title: 'Annual Skin Check', desc: 'Schedule annual dermatology appointment for full-body skin cancer screening.', priority: 'low', category: 'screening', impact: 'Early detection' },
-    { title: 'Maintain Vitamin D', desc: 'Continue Vitamin D supplementation (2000 IU daily). Adequate levels may reduce cancer risk.', priority: 'low', category: 'supplement', impact: '-1.0% risk' },
-  ];
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [riskRes, historyRes] = await Promise.all([
+        cancerDetectionAPI.predictRisk('me').catch(() => null),
+        cancerDetectionAPI.getRiskHistory('me').catch(() => null),
+      ]);
 
-  const assessmentHistory = [
-    { date: 'Feb 22, 2026', score: 15.3, level: 'low', change: -0.8, confidence: 94.7, sources: 5 },
-    { date: 'Jan 15, 2026', score: 16.1, level: 'low', change: -1.2, confidence: 93.8, sources: 5 },
-    { date: 'Dec 10, 2025', score: 17.3, level: 'low', change: -0.5, confidence: 92.1, sources: 4 },
-    { date: 'Nov 05, 2025', score: 17.8, level: 'low', change: 0.3, confidence: 91.5, sources: 4 },
-    { date: 'Oct 01, 2025', score: 17.5, level: 'low', change: -2.1, confidence: 90.2, sources: 3 },
-    { date: 'Sep 01, 2025', score: 19.6, level: 'moderate', change: -1.4, confidence: 88.5, sources: 3 },
-  ];
+      if (riskRes?.data) {
+        const d = riskRes.data;
+        setRiskScore(d.overall_risk_score ?? d.risk_score ?? 0);
+        setRiskLevel(d.risk_level ?? 'low');
+        setModelConfidence(d.model_confidence ?? d.confidence ?? 0);
+
+        if (Array.isArray(d.cancer_type_risks)) {
+          setCancerTypeRisks(d.cancer_type_risks.map((c: any) => ({
+            type: c.cancer_type ?? c.type ?? 'Unknown',
+            risk: c.risk_score ?? c.risk ?? 0,
+            level: c.risk_level ?? c.level ?? 'low',
+            change: c.change ?? 0,
+            factors: c.factors ?? c.contributing_factors ?? [],
+            icon: iconMap[String(c.cancer_type ?? c.type ?? '').toLowerCase().split(' ')[0]] ?? '🔬',
+          })));
+        }
+
+        if (Array.isArray(d.risk_factors)) {
+          setRiskFactors(d.risk_factors.map((f: any) => ({
+            name: f.name ?? f.factor_name ?? '',
+            impact: f.impact ?? f.impact_level ?? 'low',
+            modifiable: f.modifiable ?? f.is_modifiable ?? false,
+            score: f.score ?? f.risk_score ?? 0,
+            category: f.category ?? 'general',
+            detail: f.detail ?? f.description ?? '',
+          })));
+        }
+
+        if (Array.isArray(d.recommendations)) {
+          setRecommendations(d.recommendations.map((r: any) => ({
+            title: r.title ?? r.recommendation ?? '',
+            desc: r.description ?? r.desc ?? '',
+            priority: r.priority ?? 'medium',
+            category: r.category ?? 'general',
+            impact: r.impact ?? '',
+          })));
+        }
+      }
+
+      if (historyRes?.data) {
+        const items = Array.isArray(historyRes.data) ? historyRes.data : (historyRes.data.assessments ?? historyRes.data.history ?? []);
+        setAssessmentHistory(items.map((h: any) => ({
+          date: h.date ?? h.assessment_date ?? h.created_at ?? '',
+          score: h.risk_score ?? h.score ?? 0,
+          level: h.risk_level ?? h.level ?? 'low',
+          change: h.change ?? 0,
+          confidence: h.confidence ?? h.model_confidence ?? 0,
+          sources: h.data_sources ?? h.sources ?? 0,
+        })));
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load risk data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Cancer Risk Assessment" subtitle="AI-powered comprehensive risk analysis" navItems={patientNavItems} portalType="patient">
-      {/* Top Overview Cards */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ mb: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : riskScore === 0 && cancerTypeRisks.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>No Risk Assessment Yet</Typography>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>Run your first risk assessment to get personalized cancer risk analysis.</Typography>
+          <Button variant="contained" startIcon={<RefreshIcon />} onClick={loadData}>Run Assessment</Button>
+        </Card>
+      ) : (<>
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={4}>
           <Card sx={{ p: 3, background: `linear-gradient(135deg, ${riskColor}15, ${riskColor}05)`, border: `2px solid ${riskColor}30`, textAlign: 'center' }}>
@@ -325,6 +372,8 @@ const CancerRiskPage: React.FC = () => {
           </TableContainer>
         </Card>
       )}
+
+      </>)}
 
       {/* Cancer Detail Dialog */}
       <Dialog open={showDetailDialog} onClose={() => setShowDetailDialog(false)} maxWidth="sm" fullWidth>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs,
-  LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
+  LinearProgress, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   MenuItem, Alert, Switch, FormControlLabel, IconButton,
 } from '@mui/material';
@@ -15,35 +15,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { adminNavItems } from './AdminDashboard';
-
-const INTEGRATIONS = [
-  { id: 'INT-001', name: 'Epic EHR', type: 'EHR', status: 'connected', lastSync: '2024-12-18 14:30', syncFreq: '15 min', records: 12500, uptime: 99.9, apiKey: 'ek_live_****8a3f', enabled: true },
-  { id: 'INT-002', name: 'Cerner Health', type: 'EHR', status: 'connected', lastSync: '2024-12-18 14:25', syncFreq: '30 min', records: 8200, uptime: 99.7, apiKey: 'ch_live_****5b2e', enabled: true },
-  { id: 'INT-003', name: 'HL7 FHIR Bridge', type: 'Interoperability', status: 'connected', lastSync: '2024-12-18 14:00', syncFreq: 'Real-time', records: 45000, uptime: 99.8, apiKey: 'fhir_****9d1c', enabled: true },
-  { id: 'INT-004', name: 'Philips PACS', type: 'Imaging', status: 'connected', lastSync: '2024-12-18 13:45', syncFreq: '5 min', records: 5600, uptime: 99.5, apiKey: 'pacs_****3e7f', enabled: true },
-  { id: 'INT-005', name: 'Lab Corp API', type: 'Laboratory', status: 'error', lastSync: '2024-12-18 08:30', syncFreq: '1 hour', records: 3200, uptime: 95.2, apiKey: 'lc_live_****1a4d', enabled: true },
-  { id: 'INT-006', name: 'Twilio (SMS/Voice)', type: 'Communication', status: 'connected', lastSync: '2024-12-18 14:35', syncFreq: 'Real-time', records: 0, uptime: 99.9, apiKey: 'tw_****6c8b', enabled: true },
-  { id: 'INT-007', name: 'Stripe Payments', type: 'Payment', status: 'connected', lastSync: '2024-12-18 14:20', syncFreq: 'Real-time', records: 0, uptime: 99.9, apiKey: 'sk_live_****2f5a', enabled: true },
-  { id: 'INT-008', name: 'Salesforce CRM', type: 'CRM', status: 'disconnected', lastSync: '2024-12-15 10:00', syncFreq: '1 hour', records: 1800, uptime: 0, apiKey: 'sf_****7g3h', enabled: false },
-];
-
-const API_CALLS_TREND = [
-  { day: 'Mon', calls: 15200, errors: 45 },
-  { day: 'Tue', calls: 18500, errors: 32 },
-  { day: 'Wed', calls: 16800, errors: 28 },
-  { day: 'Thu', calls: 20100, errors: 51 },
-  { day: 'Fri', calls: 17500, errors: 38 },
-];
-
-const TYPE_DISTRIBUTION = [
-  { name: 'EHR', value: 2, fill: '#5e92f3' },
-  { name: 'Interoperability', value: 1, fill: '#ae52d4' },
-  { name: 'Imaging', value: 1, fill: '#4caf50' },
-  { name: 'Laboratory', value: 1, fill: '#ff9800' },
-  { name: 'Communication', value: 1, fill: '#f44336' },
-  { name: 'Payment', value: 1, fill: '#e91e63' },
-  { name: 'CRM', value: 1, fill: '#00bcd4' },
-];
+import { integrationAPI } from '../../services/api';
 
 const statusColors: Record<string, string> = { connected: '#4caf50', error: '#f44336', disconnected: '#9e9e9e' };
 const statusIcons: Record<string, React.ReactNode> = { connected: <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />, error: <Error sx={{ fontSize: 16, color: '#f44336' }} />, disconnected: <PowerSettingsNew sx={{ fontSize: 16, color: '#9e9e9e' }} /> };
@@ -51,14 +23,41 @@ const statusIcons: Record<string, React.ReactNode> = { connected: <CheckCircle s
 const IntegrationHubPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [apiCallsTrend, setApiCallsTrend] = useState<any[]>([]);
+  const [typeDistribution, setTypeDistribution] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const connected = INTEGRATIONS.filter(i => i.status === 'connected').length;
-  const errors = INTEGRATIONS.filter(i => i.status === 'error').length;
-  const totalRecords = INTEGRATIONS.reduce((s, i) => s + i.records, 0);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await integrationAPI.getIntegrations();
+      setIntegrations(res.data?.integrations ?? res.data ?? []);
+      setApiCallsTrend(res.data?.api_calls_trend ?? []);
+      setTypeDistribution(res.data?.type_distribution ?? []);
+    } catch (err) {
+      setError('Failed to load integrations');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const connected = integrations.filter(i => i.status === 'connected').length;
+  const errors = integrations.filter(i => i.status === 'error').length;
+  const totalRecords = integrations.reduce((s, i) => s + (i.records ?? 0), 0);
 
   return (
     <AppLayout title="Integrations" navItems={adminNavItems} portalType="admin" subtitle="Third-party integration & API management hub">
       <Box sx={{ p: 3 }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+        ) : (
+          <>
+        {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         {errors > 0 && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
             {errors} integration(s) have errors and require attention!
@@ -67,7 +66,7 @@ const IntegrationHubPage: React.FC = () => {
 
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Hub />} label="Total Integrations" value={INTEGRATIONS.length.toString()} color="#5e92f3" subtitle="Configured" />
+            <StatCard icon={<Hub />} label="Total Integrations" value={integrations.length.toString()} color="#5e92f3" subtitle="Configured" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<CheckCircle />} label="Connected" value={connected.toString()} color="#4caf50" subtitle="Healthy connections" />
@@ -94,7 +93,7 @@ const IntegrationHubPage: React.FC = () => {
               action={<Button startIcon={<Cable />} variant="contained" size="small" onClick={() => setShowAddDialog(true)}>Add Integration</Button>}
             />
             <Grid container spacing={2}>
-              {INTEGRATIONS.map((integ, idx) => (
+              {integrations.map((integ, idx) => (
                 <Grid item xs={12} md={6} key={idx}>
                   <Box sx={{
                     p: 2.5, borderRadius: 3, border: `1px solid ${integ.status === 'error' ? '#ffcdd2' : integ.status === 'disconnected' ? '#e0e0e0' : '#c8e6c9'}`,
@@ -161,7 +160,7 @@ const IntegrationHubPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {INTEGRATIONS.map((integ, idx) => (
+                  {integrations.map((integ, idx) => (
                     <TableRow key={idx}>
                       <TableCell><Typography fontWeight={600} fontSize={13}>{integ.name}</Typography></TableCell>
                       <TableCell><Chip label={integ.type} size="small" variant="outlined" sx={{ fontSize: 10 }} /></TableCell>
@@ -195,7 +194,7 @@ const IntegrationHubPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="API Call Volume" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={API_CALLS_TREND}>
+                  <BarChart data={apiCallsTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -212,8 +211,8 @@ const IntegrationHubPage: React.FC = () => {
                 <SectionHeader title="Integration Types" icon={<Hub />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={TYPE_DISTRIBUTION} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name }: any) => name}>
-                      {TYPE_DISTRIBUTION.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={typeDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" label={({ name }: any) => name}>
+                      {typeDistribution.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -221,6 +220,9 @@ const IntegrationHubPage: React.FC = () => {
               </Card>
             </Grid>
           </Grid>
+        )}
+
+        </>
         )}
 
         {/* Add Integration Dialog */}

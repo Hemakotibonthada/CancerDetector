@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Dialog, DialogTitle, DialogContent, DialogActions, LinearProgress,
   IconButton, TextField, Select, MenuItem, FormControl, InputLabel,
-  Alert, Divider, Tooltip,
+  Alert, Divider, Tooltip, CircularProgress,
 } from '@mui/material';
 import {
   Biotech as BiotechIcon, Science, TrendingUp, TrendingDown,
@@ -15,39 +15,87 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { SectionHeader, StatusBadge, StatCard, MetricGauge, ProgressCard } from '../../components/common/SharedComponents';
+import { bloodSamplesAPI } from '../../services/api';
 
 const BloodTestsPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [selectedSample, setSelectedSample] = useState<any>(null);
   const [showBiomarkerDialog, setShowBiomarkerDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [bloodSamples, setBloodSamples] = useState<any[]>([]);
+  const [biomarkers, setBiomarkers] = useState<any[]>([]);
+  const [dialogBiomarkers, setDialogBiomarkers] = useState<any[]>([]);
 
-  const bloodSamples = [
-    { id: '1', sample_number: 'BS-2026-001', test_type: 'Complete Blood Count', collection_date: '2026-02-20', status: 'completed', total_tests: 15, normal: 13, abnormal: 2, critical: 0, ai_analyzed: true, ai_risk: 'low', lab: 'City Lab Corp' },
-    { id: '2', sample_number: 'BS-2026-002', test_type: 'Tumor Marker Panel', collection_date: '2026-02-15', status: 'completed', total_tests: 8, normal: 7, abnormal: 1, critical: 0, ai_analyzed: true, ai_risk: 'moderate', lab: 'Cancer Research Lab' },
-    { id: '3', sample_number: 'BS-2026-003', test_type: 'Metabolic Panel', collection_date: '2026-02-10', status: 'completed', total_tests: 14, normal: 14, abnormal: 0, critical: 0, ai_analyzed: true, ai_risk: 'very_low', lab: 'City Lab Corp' },
-    { id: '4', sample_number: 'BS-2026-004', test_type: 'Lipid Panel', collection_date: '2026-02-05', status: 'processing', total_tests: 6, normal: 0, abnormal: 0, critical: 0, ai_analyzed: false, ai_risk: 'pending', lab: 'QuickTest Labs' },
-    { id: '5', sample_number: 'BS-2025-012', test_type: 'Inflammatory Markers', collection_date: '2025-12-18', status: 'completed', total_tests: 5, normal: 4, abnormal: 1, critical: 0, ai_analyzed: true, ai_risk: 'low', lab: 'City Lab Corp' },
-  ];
+  const loadBloodSamples = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await bloodSamplesAPI.getMySamples();
+      const items = Array.isArray(res.data) ? res.data : (res.data?.items || res.data?.samples || []);
+      
+      setBloodSamples(items.map((s: any) => ({
+        id: s.id,
+        sample_number: s.sample_number || s.id?.slice(0, 8),
+        test_type: (s.test_type || 'blood_test').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        collection_date: new Date(s.collection_date).toLocaleDateString(),
+        status: s.sample_status || s.status || 'completed',
+        total_tests: s.total_tests || 0,
+        normal: s.normal_results || 0,
+        abnormal: s.abnormal_results || 0,
+        critical: s.critical_results || 0,
+        ai_analyzed: s.ai_analyzed || false,
+        ai_risk: s.ai_risk_level || (s.ai_analyzed ? 'low' : 'pending'),
+        lab: s.lab_name || 'Lab',
+      })));
 
-  const biomarkers = [
-    { name: 'WBC Count', value: 7.2, unit: 'K/uL', min: 4.0, max: 11.0, category: 'CBC', status: 'normal', trend: 'stable' },
-    { name: 'RBC Count', value: 4.8, unit: 'M/uL', min: 4.2, max: 5.8, category: 'CBC', status: 'normal', trend: 'stable' },
-    { name: 'Hemoglobin', value: 14.2, unit: 'g/dL', min: 12.0, max: 17.5, category: 'CBC', status: 'normal', trend: 'up' },
-    { name: 'Platelets', value: 245, unit: 'K/uL', min: 150, max: 400, category: 'CBC', status: 'normal', trend: 'stable' },
-    { name: 'PSA', value: 3.8, unit: 'ng/mL', min: 0, max: 4.0, category: 'Tumor Marker', status: 'borderline', trend: 'up' },
-    { name: 'CEA', value: 2.1, unit: 'ng/mL', min: 0, max: 3.0, category: 'Tumor Marker', status: 'normal', trend: 'down' },
-    { name: 'AFP', value: 5.2, unit: 'ng/mL', min: 0, max: 10, category: 'Tumor Marker', status: 'normal', trend: 'stable' },
-    { name: 'CA-125', value: 18, unit: 'U/mL', min: 0, max: 35, category: 'Tumor Marker', status: 'normal', trend: 'down' },
-    { name: 'CA 19-9', value: 12, unit: 'U/mL', min: 0, max: 37, category: 'Tumor Marker', status: 'normal', trend: 'stable' },
-    { name: 'CRP', value: 4.5, unit: 'mg/L', min: 0, max: 3.0, category: 'Inflammatory', status: 'abnormal', trend: 'up' },
-    { name: 'ESR', value: 18, unit: 'mm/hr', min: 0, max: 20, category: 'Inflammatory', status: 'normal', trend: 'stable' },
-    { name: 'Glucose', value: 102, unit: 'mg/dL', min: 70, max: 100, category: 'Metabolic', status: 'borderline', trend: 'up' },
-    { name: 'Creatinine', value: 1.0, unit: 'mg/dL', min: 0.7, max: 1.3, category: 'Metabolic', status: 'normal', trend: 'stable' },
-    { name: 'ALT', value: 28, unit: 'U/L', min: 7, max: 56, category: 'Liver', status: 'normal', trend: 'stable' },
-    { name: 'Vitamin D', value: 38, unit: 'ng/mL', min: 30, max: 100, category: 'Vitamin', status: 'normal', trend: 'up' },
-    { name: 'Iron', value: 85, unit: 'ug/dL', min: 60, max: 170, category: 'Mineral', status: 'normal', trend: 'stable' },
-  ];
+      // Load biomarkers from the first sample if available
+      if (items.length > 0) {
+        try {
+          const bmRes = await bloodSamplesAPI.getBiomarkers(items[0].id);
+          const bmItems = Array.isArray(bmRes.data) ? bmRes.data : (bmRes.data?.items || bmRes.data?.biomarkers || []);
+          const mapped = bmItems.map((b: any) => ({
+            name: b.biomarker_name || b.name,
+            value: b.value,
+            unit: b.unit,
+            min: b.reference_low || 0,
+            max: b.reference_high || 100,
+            category: (b.category || 'other').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            status: b.result_flag || 'normal',
+            trend: b.trend_direction || 'stable',
+          }));
+          setBiomarkers(mapped);
+        } catch (e) { /* biomarkers optional */ }
+      }
+    } catch (err: any) {
+      console.error('Failed to load blood samples:', err);
+      setError(err?.response?.data?.detail || 'Failed to load blood samples');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadBloodSamples(); }, [loadBloodSamples]);
+
+  const handleViewSample = async (sample: any) => {
+    setSelectedSample(sample);
+    setShowBiomarkerDialog(true);
+    try {
+      const bmRes = await bloodSamplesAPI.getBiomarkers(sample.id);
+      const bmItems = Array.isArray(bmRes.data) ? bmRes.data : (bmRes.data?.items || bmRes.data?.biomarkers || []);
+      setDialogBiomarkers(bmItems.map((b: any) => ({
+        name: b.biomarker_name || b.name,
+        value: b.value,
+        unit: b.unit,
+        min: b.reference_low || 0,
+        max: b.reference_high || 100,
+        category: (b.category || 'other').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        status: b.result_flag || 'normal',
+        trend: b.trend_direction || 'stable',
+      })));
+    } catch { setDialogBiomarkers([]); }
+  };
 
   const getMarkerColor = (status: string) => {
     if (status === 'normal') return '#4caf50';
@@ -58,12 +106,14 @@ const BloodTestsPage: React.FC = () => {
 
   return (
     <AppLayout title="Blood Tests & Biomarkers" subtitle="Comprehensive blood analysis dashboard" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : <>
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<BiotechIcon />} label="Total Samples" value={bloodSamples.length} color="#00897b" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Normal Results" value={38} color="#4caf50" change={5} /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Abnormal Values" value={4} color="#f44336" change={-1} /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="AI Analyzed" value={4} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Normal Results" value={bloodSamples.reduce((s, b) => s + b.normal, 0)} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Abnormal Values" value={bloodSamples.reduce((s, b) => s + b.abnormal, 0)} color="#f44336" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="AI Analyzed" value={bloodSamples.filter(b => b.ai_analyzed).length} color="#1565c0" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
@@ -90,6 +140,7 @@ const BloodTestsPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
+                {bloodSamples.length === 0 ? <TableRow><TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}><Typography color="text.secondary">No blood samples found</Typography></TableCell></TableRow> : null}
                 {bloodSamples.map((sample) => (
                   <TableRow key={sample.id} hover>
                     <TableCell sx={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600 }}>{sample.sample_number}</TableCell>
@@ -106,7 +157,7 @@ const BloodTestsPage: React.FC = () => {
                     <TableCell><StatusBadge status={sample.status} /></TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={0.5}>
-                        <IconButton size="small" onClick={() => { setSelectedSample(sample); setShowBiomarkerDialog(true); }}><Visibility sx={{ fontSize: 18 }} /></IconButton>
+                        <IconButton size="small" onClick={() => handleViewSample(sample)}><Visibility sx={{ fontSize: 18 }} /></IconButton>
                         <IconButton size="small"><Download sx={{ fontSize: 18 }} /></IconButton>
                       </Stack>
                     </TableCell>
@@ -210,6 +261,8 @@ const BloodTestsPage: React.FC = () => {
         </Card>
       )}
 
+      </>}
+
       {/* Biomarker Detail Dialog */}
       <Dialog open={showBiomarkerDialog} onClose={() => setShowBiomarkerDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>Sample Details - {selectedSample?.sample_number}</DialogTitle>
@@ -234,7 +287,7 @@ const BloodTestsPage: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {biomarkers.slice(0, 8).map((m, i) => (
+                    {dialogBiomarkers.map((m, i) => (
                       <TableRow key={i}>
                         <TableCell sx={{ fontWeight: 500 }}>{m.name}</TableCell>
                         <TableCell sx={{ fontWeight: 700, color: getMarkerColor(m.status) }}>{m.value}</TableCell>

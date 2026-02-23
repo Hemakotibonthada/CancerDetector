@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  MenuItem, Alert, Badge,
+  MenuItem, Alert, Badge, CircularProgress,
 } from '@mui/material';
 import {
   LocalHospital, Warning, Timer, Person, Favorite, Speed,
@@ -15,39 +15,75 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
+import { emergencyAPI } from '../../services/api';
 
 const triageColors: Record<string, string> = {
   'Immediate': '#d32f2f', 'Emergency': '#f57c00', 'Urgent': '#fbc02d', 'Semi-Urgent': '#4caf50', 'Non-Urgent': '#2196f3',
 };
 const triageLevels = ['Immediate', 'Emergency', 'Urgent', 'Semi-Urgent', 'Non-Urgent'];
 
-const EMERGENCY_CASES = [
-  { id: 'ER-001', patient: 'John Mason', age: 62, triage: 'Immediate', chief: 'Severe chest pain, history of lung cancer', vitals: { hr: 122, bp: '85/55', spo2: 88, temp: 38.2 }, time: '10:45 AM', status: 'treatment', assigned: 'Dr. Rivera', bed: 'Bay 1' },
-  { id: 'ER-002', patient: 'Sarah Lin', age: 45, triage: 'Emergency', chief: 'Post-chemo seizure, altered consciousness', vitals: { hr: 98, bp: '150/95', spo2: 94, temp: 37.8 }, time: '11:20 AM', status: 'stabilizing', assigned: 'Dr. Kumar', bed: 'Bay 3' },
-  { id: 'ER-003', patient: 'Michael Ray', age: 55, triage: 'Urgent', chief: 'Severe abdominal pain, post-surgery day 5', vitals: { hr: 88, bp: '110/70', spo2: 97, temp: 38.5 }, time: '11:45 AM', status: 'evaluation', assigned: 'Dr. Chen', bed: 'Bay 5' },
-  { id: 'ER-004', patient: 'Lisa Park', age: 38, triage: 'Urgent', chief: 'Chemotherapy reaction, skin rash, tachycardia', vitals: { hr: 105, bp: '100/65', spo2: 95, temp: 37.5 }, time: '12:15 PM', status: 'treatment', assigned: 'Dr. Rivera', bed: 'Bay 7' },
-  { id: 'ER-005', patient: 'Robert Grey', age: 71, triage: 'Emergency', chief: 'GI bleeding, on anticoagulants for cancer treatment', vitals: { hr: 110, bp: '90/60', spo2: 92, temp: 37.0 }, time: '12:30 PM', status: 'stabilizing', assigned: 'Dr. Kumar', bed: 'Bay 2' },
-  { id: 'ER-006', patient: 'Anna White', age: 48, triage: 'Semi-Urgent', chief: 'Post-radiation nausea, dehydration', vitals: { hr: 78, bp: '115/75', spo2: 98, temp: 37.1 }, time: '1:00 PM', status: 'waiting', assigned: '', bed: '' },
-];
-
-const TRIAGE_DISTRIBUTION = [
-  { name: 'Immediate', count: 1, fill: '#d32f2f' },
-  { name: 'Emergency', count: 2, fill: '#f57c00' },
-  { name: 'Urgent', count: 2, fill: '#fbc02d' },
-  { name: 'Semi-Urgent', count: 1, fill: '#4caf50' },
-];
-
-const HOURLY_ARRIVALS = [
-  { hour: '6AM', arrivals: 2 }, { hour: '7AM', arrivals: 3 }, { hour: '8AM', arrivals: 5 },
-  { hour: '9AM', arrivals: 7 }, { hour: '10AM', arrivals: 8 }, { hour: '11AM', arrivals: 6 },
-  { hour: '12PM', arrivals: 4 }, { hour: '1PM', arrivals: 5 }, { hour: '2PM', arrivals: 3 },
-];
-
 const EmergencyDashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showTriageDialog, setShowTriageDialog] = useState(false);
+  const [emergencyCases, setEmergencyCases] = useState<any[]>([]);
+  const [triageDistribution, setTriageDistribution] = useState<any[]>([]);
+  const [hourlyArrivals, setHourlyArrivals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const criticalCount = EMERGENCY_CASES.filter(c => c.triage === 'Immediate' || c.triage === 'Emergency').length;
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [casesRes, dashRes] = await Promise.all([
+        emergencyAPI.getCases().catch(() => ({ data: [] })),
+        emergencyAPI.getDashboard().catch(() => ({ data: {} })),
+      ]);
+      const casesData = casesRes.data || [];
+      setEmergencyCases(casesData.map((c: any) => ({
+        id: c.id ?? c.case_id ?? '',
+        patient: c.patient ?? c.patient_name ?? '',
+        age: c.age ?? 0,
+        triage: c.triage ?? c.triage_level ?? 'Non-Urgent',
+        chief: c.chief ?? c.chief_complaint ?? '',
+        vitals: c.vitals ?? { hr: 0, bp: 'N/A', spo2: 0, temp: 0 },
+        time: c.time ?? c.arrival_time ?? '',
+        status: c.status ?? 'waiting',
+        assigned: c.assigned ?? c.assigned_doctor ?? '',
+        bed: c.bed ?? c.bed_number ?? '',
+      })));
+
+      const dashData = dashRes.data || {};
+      if (dashData.triage_distribution) {
+        setTriageDistribution(dashData.triage_distribution);
+      } else {
+        // Derive from cases
+        const triageCounts: Record<string, number> = {};
+        casesData.forEach((c: any) => {
+          const triage = c.triage ?? c.triage_level ?? 'Unknown';
+          triageCounts[triage] = (triageCounts[triage] || 0) + 1;
+        });
+        setTriageDistribution(Object.entries(triageCounts).map(([name, count]) => ({
+          name, count, fill: triageColors[name] ?? '#999',
+        })));
+      }
+
+      if (dashData.hourly_arrivals) {
+        setHourlyArrivals(dashData.hourly_arrivals);
+      } else {
+        setHourlyArrivals([{ hour: 'N/A', arrivals: 0 }]);
+      }
+
+      setError('');
+    } catch {
+      setError('Failed to load emergency data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const criticalCount = emergencyCases.filter(c => c.triage === 'Immediate' || c.triage === 'Emergency').length;
 
   const getVitalColor = (type: string, value: number) => {
     if (type === 'hr') return value > 100 ? '#f44336' : value < 60 ? '#ff9800' : '#4caf50';
@@ -59,6 +95,7 @@ const EmergencyDashboardPage: React.FC = () => {
   return (
     <AppLayout title="Emergency" navItems={hospitalNavItems} portalType="hospital" subtitle="Oncology emergency & triage management">
       <Box sx={{ p: 3 }}>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {criticalCount > 0 && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: 3, fontWeight: 600 }} icon={<PriorityHigh />}>
             {criticalCount} critical patient(s) require immediate attention!
@@ -67,7 +104,7 @@ const EmergencyDashboardPage: React.FC = () => {
 
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<LocalHospital />} label="Active Cases" value={EMERGENCY_CASES.length.toString()} color="#f44336" subtitle="In emergency dept" />
+            <StatCard icon={<LocalHospital />} label="Active Cases" value={emergencyCases.length.toString()} color="#f44336" subtitle="In emergency dept" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Warning />} label="Critical" value={criticalCount.toString()} color="#d32f2f" subtitle="Immediate attention" />
@@ -80,6 +117,8 @@ const EmergencyDashboardPage: React.FC = () => {
           </Grid>
         </Grid>
 
+        {loading && <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>}
+        {!loading && (<>
         <Card sx={{ mb: 3 }}>
           <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
             <Tab icon={<MedicalServices />} label="Active Cases" iconPosition="start" />
@@ -108,7 +147,7 @@ const EmergencyDashboardPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {EMERGENCY_CASES.map((c, idx) => (
+                  {emergencyCases.map((c, idx) => (
                     <TableRow key={idx} sx={{
                       animation: c.triage === 'Immediate' ? 'pulse 2s infinite' : 'none',
                       bgcolor: c.triage === 'Immediate' ? '#fff5f5' : c.triage === 'Emergency' ? '#fff8e1' : 'transparent',
@@ -142,7 +181,7 @@ const EmergencyDashboardPage: React.FC = () => {
 
         {activeTab === 1 && (
           <Grid container spacing={2.5}>
-            {EMERGENCY_CASES.filter(c => c.status !== 'waiting').map((c, idx) => (
+            {emergencyCases.filter(c => c.status !== 'waiting').map((c, idx) => (
               <Grid item xs={12} md={6} key={idx}>
                 <Card sx={{ p: 2.5, border: `2px solid ${triageColors[c.triage]}30`, borderRadius: 3 }}>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -183,8 +222,8 @@ const EmergencyDashboardPage: React.FC = () => {
                 <SectionHeader title="Triage Distribution" icon={<Assignment />} />
                 <ResponsiveContainer width="100%" height={280}>
                   <PieChart>
-                    <Pie data={TRIAGE_DISTRIBUTION} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="count" label={({ name, count }: any) => `${name}: ${count}`}>
-                      {TRIAGE_DISTRIBUTION.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                    <Pie data={triageDistribution} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="count" label={({ name, count }: any) => `${name}: ${count}`}>
+                      {triageDistribution.map((e, i) => <Cell key={i} fill={e.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -195,7 +234,7 @@ const EmergencyDashboardPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Hourly Arrivals" icon={<TrendingUp />} />
                 <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={HOURLY_ARRIVALS}>
+                  <AreaChart data={hourlyArrivals}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="hour" />
                     <YAxis />
@@ -207,6 +246,7 @@ const EmergencyDashboardPage: React.FC = () => {
             </Grid>
           </Grid>
         )}
+        </>)}
 
         {/* Triage Dialog */}
         <Dialog open={showTriageDialog} onClose={() => setShowTriageDialog(false)} maxWidth="sm" fullWidth>

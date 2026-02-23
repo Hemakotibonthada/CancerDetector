@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tab, Tabs, Avatar,
   LinearProgress, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, IconButton, Tooltip, Alert, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, Divider,
+  DialogActions, TextField, MenuItem, Divider, CircularProgress,
 } from '@mui/material';
 import {
   Biotech, Science, TrendingUp, Warning, CheckCircle, Info,
@@ -16,53 +16,59 @@ import { PieChart, Pie, Cell, RadarChart, Radar, PolarGrid,
 import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
-
-const GENETIC_MARKERS = [
-  { gene: 'BRCA1', variant: 'c.5266dupC', risk_level: 'high', cancer_type: 'Breast/Ovarian', description: 'Increased risk for breast and ovarian cancer', prevalence: 0.12 },
-  { gene: 'BRCA2', variant: 'Normal', risk_level: 'low', cancer_type: 'Breast/Ovarian', description: 'No pathogenic variants detected', prevalence: 0.11 },
-  { gene: 'TP53', variant: 'Normal', risk_level: 'low', cancer_type: 'Li-Fraumeni', description: 'Normal tumor suppressor function', prevalence: 0.001 },
-  { gene: 'APC', variant: 'c.3920T>A', risk_level: 'moderate', cancer_type: 'Colorectal', description: 'Variant of uncertain significance', prevalence: 0.05 },
-  { gene: 'MLH1', variant: 'Normal', risk_level: 'low', cancer_type: 'Lynch Syndrome', description: 'No mismatch repair deficiency', prevalence: 0.03 },
-  { gene: 'KRAS', variant: 'Normal', risk_level: 'low', cancer_type: 'Pancreatic/Lung', description: 'No activating mutations', prevalence: 0.25 },
-  { gene: 'EGFR', variant: 'Normal', risk_level: 'low', cancer_type: 'Lung', description: 'Normal epidermal growth factor receptor', prevalence: 0.15 },
-  { gene: 'PALB2', variant: 'c.172_175del', risk_level: 'moderate', cancer_type: 'Breast', description: 'Moderate increased risk', prevalence: 0.01 },
-];
-
-const PHARMACOGENOMICS = [
-  { drug: 'Tamoxifen', gene: 'CYP2D6', metabolism: 'Normal', recommendation: 'Standard dosing recommended' },
-  { drug: '5-Fluorouracil', gene: 'DPYD', metabolism: 'Intermediate', recommendation: 'Consider 25-50% dose reduction' },
-  { drug: 'Irinotecan', gene: 'UGT1A1', metabolism: 'Poor', recommendation: 'Significant dose reduction required' },
-  { drug: 'Capecitabine', gene: 'DPYD', metabolism: 'Intermediate', recommendation: 'Monitor closely, possible dose adjustment' },
-  { drug: 'Cisplatin', gene: 'TPMT', metabolism: 'Normal', recommendation: 'Standard dosing recommended' },
-  { drug: 'Mercaptopurine', gene: 'TPMT', metabolism: 'Rapid', recommendation: 'Standard or increased dosing may be needed' },
-];
-
-const ANCESTRY = [
-  { name: 'European', value: 45, fill: '#5e92f3' },
-  { name: 'South Asian', value: 30, fill: '#4ebaaa' },
-  { name: 'East Asian', value: 12, fill: '#ae52d4' },
-  { name: 'African', value: 8, fill: '#ff9800' },
-  { name: 'Other', value: 5, fill: '#9e9e9e' },
-];
-
-const CANCER_RISK_RADAR = [
-  { cancer: 'Breast', risk: 35, average: 12 },
-  { cancer: 'Colorectal', risk: 18, average: 5 },
-  { cancer: 'Lung', risk: 8, average: 6 },
-  { cancer: 'Ovarian', risk: 22, average: 2 },
-  { cancer: 'Pancreatic', risk: 5, average: 2 },
-  { cancer: 'Prostate', risk: 10, average: 12 },
-  { cancer: 'Skin', risk: 12, average: 8 },
-];
+import { geneticsAPI } from '../../services/api';
 
 const riskColors: Record<string, string> = { low: '#4caf50', moderate: '#ff9800', high: '#f44336' };
 
 const GeneticProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [geneticMarkers, setGeneticMarkers] = useState<any[]>([]);
+  const [pharmacogenomics, setPharmacogenomics] = useState<any[]>([]);
+  const [ancestry, setAncestry] = useState<any[]>([]);
+  const [cancerRiskRadar, setCancerRiskRadar] = useState<any[]>([]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [profileRes, markersRes, pharmaRes] = await Promise.all([
+        geneticsAPI.getProfile().catch(() => null),
+        geneticsAPI.getMarkers().catch(() => null),
+        geneticsAPI.getPharmacogenomics().catch(() => null),
+      ]);
+
+      if (profileRes?.data) {
+        const p = profileRes.data;
+        if (Array.isArray(p.ancestry)) setAncestry(p.ancestry.map((a: any) => ({ name: a.name ?? a.region ?? '', value: a.value ?? a.percentage ?? 0, fill: a.fill ?? a.color ?? '#5e92f3' })));
+        if (Array.isArray(p.cancer_risk_radar ?? p.cancer_risks)) setCancerRiskRadar((p.cancer_risk_radar ?? p.cancer_risks).map((c: any) => ({ cancer: c.cancer ?? c.cancer_type ?? '', risk: c.risk ?? 0, average: c.average ?? c.population_average ?? 0 })));
+      }
+      if (markersRes?.data) {
+        const markers = Array.isArray(markersRes.data) ? markersRes.data : (markersRes.data.markers ?? []);
+        setGeneticMarkers(markers.map((m: any) => ({ gene: m.gene ?? m.gene_name ?? '', variant: m.variant ?? '', risk_level: m.risk_level ?? 'low', cancer_type: m.cancer_type ?? '', description: m.description ?? '', prevalence: m.prevalence ?? 0 })));
+      }
+      if (pharmaRes?.data) {
+        const pharma = Array.isArray(pharmaRes.data) ? pharmaRes.data : (pharmaRes.data.pharmacogenomics ?? []);
+        setPharmacogenomics(pharma.map((p: any) => ({ drug: p.drug ?? p.drug_name ?? '', gene: p.gene ?? '', metabolism: p.metabolism ?? p.metabolizer_status ?? '', recommendation: p.recommendation ?? '' })));
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to load genetic data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <AppLayout title="Genetic Profile" navItems={patientNavItems} portalType="patient" subtitle="DNA analysis & hereditary cancer risk">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : error ? (
+        <Alert severity="error" sx={{ m: 3 }} action={<Button onClick={loadData}>Retry</Button>}>{error}</Alert>
+      ) : (
       <Box sx={{ p: 3 }}>
         {/* Top Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
@@ -121,7 +127,7 @@ const GeneticProfilePage: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {GENETIC_MARKERS.map((marker, idx) => (
+                      {geneticMarkers.map((marker, idx) => (
                         <TableRow key={idx} sx={{ bgcolor: marker.risk_level === 'high' ? '#fff5f5' : marker.risk_level === 'moderate' ? '#fffbf0' : 'transparent' }}>
                           <TableCell>
                             <Stack direction="row" spacing={1} alignItems="center">
@@ -158,7 +164,7 @@ const GeneticProfilePage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Cancer Risk Radar" subtitle="Your genetic risk vs population average" icon={<Assessment />} />
                 <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart data={CANCER_RISK_RADAR}>
+                  <RadarChart data={cancerRiskRadar}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="cancer" tick={{ fontSize: 12 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 40]} />
@@ -173,7 +179,7 @@ const GeneticProfilePage: React.FC = () => {
             <Grid item xs={12} md={5}>
               <Card sx={{ p: 3, mb: 2.5 }}>
                 <SectionHeader title="Highest Risk Factors" icon={<Warning />} />
-                {CANCER_RISK_RADAR.sort((a, b) => b.risk - a.risk).slice(0, 4).map((item, idx) => (
+                {cancerRiskRadar.sort((a, b) => b.risk - a.risk).slice(0, 4).map((item, idx) => (
                   <Box key={idx} sx={{ mb: 2 }}>
                     <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
                       <Typography variant="body2" fontWeight={600}>{item.cancer} Cancer</Typography>
@@ -215,7 +221,7 @@ const GeneticProfilePage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {PHARMACOGENOMICS.map((item, idx) => (
+                  {pharmacogenomics.map((item, idx) => (
                     <TableRow key={idx} sx={{ bgcolor: item.metabolism === 'Poor' ? '#fff5f5' : item.metabolism === 'Intermediate' ? '#fffbf0' : 'transparent' }}>
                       <TableCell><Typography fontWeight={600}>{item.drug}</Typography></TableCell>
                       <TableCell><Chip label={item.gene} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} /></TableCell>
@@ -243,8 +249,8 @@ const GeneticProfilePage: React.FC = () => {
                 <SectionHeader title="Ancestry Composition" subtitle="Based on genetic analysis" icon={<FamilyRestroom />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={ANCESTRY} cx="50%" cy="50%" innerRadius={60} outerRadius={110} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
-                      {ANCESTRY.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    <Pie data={ancestry} cx="50%" cy="50%" innerRadius={60} outerRadius={110} dataKey="value" label={({ name, value }: any) => `${name}: ${value}%`}>
+                      {ancestry.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </Pie>
                     <RTooltip />
                   </PieChart>
@@ -304,6 +310,7 @@ const GeneticProfilePage: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      )}
     </AppLayout>
   );
 };

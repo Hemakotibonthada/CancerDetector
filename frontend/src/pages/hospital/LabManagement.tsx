@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
   InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Select, MenuItem, FormControl, InputLabel, Tabs, Tab, Avatar,
   LinearProgress, Alert, Stepper, Step, StepLabel, IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Science, Search, Add, Biotech, Assignment, CheckCircle,
@@ -14,50 +15,87 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge } from '../../components/common/SharedComponents';
+import { bloodSamplesAPI } from '../../services/api';
+
+const sampleTrackingSteps = [
+  { step: 'Order Placed', completed: true },
+  { step: 'Sample Collected', completed: true },
+  { step: 'Processing', completed: true },
+  { step: 'Analysis', completed: false },
+  { step: 'Review', completed: false },
+  { step: 'Results Ready', completed: false },
+];
 
 const LabManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showNewOrder, setShowNewOrder] = useState(false);
+  const [labOrders, setLabOrders] = useState<any[]>([]);
+  const [equipment, setEquipment] = useState<any[]>([]);
+  const [qcResults, setQcResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const labOrders = [
-    { id: 'LAB-5001', patient: 'Alice Johnson', patientId: 'P-1234', doctor: 'Dr. Smith', type: 'Complete Blood Count', priority: 'routine', status: 'completed', collected: '09:15 AM', result: 'Normal', turnaroundTime: '2h 15m', department: 'Hematology', tech: 'Carlos R.', critical: false },
-    { id: 'LAB-5002', patient: 'Bob Williams', patientId: 'P-2345', doctor: 'Dr. Lee', type: 'Tumor Markers Panel', priority: 'urgent', status: 'in_progress', collected: '10:30 AM', result: 'Pending', turnaroundTime: '-', department: 'Oncology', tech: 'Lisa P.', critical: false },
-    { id: 'LAB-5003', patient: 'Carmen Davis', patientId: 'P-3456', doctor: 'Dr. Chen', type: 'CSF Analysis', priority: 'stat', status: 'pending_collection', collected: '-', result: '-', turnaroundTime: '-', department: 'Neurology', tech: '-', critical: true },
-    { id: 'LAB-5004', patient: 'David Martinez', patientId: 'P-4567', doctor: 'Dr. Smith', type: 'Biopsy - Breast Tissue', priority: 'urgent', status: 'pending_review', collected: 'Yesterday', result: 'Abnormal', turnaroundTime: '24h', department: 'Pathology', tech: 'Lisa P.', critical: true },
-    { id: 'LAB-5005', patient: 'Elena Foster', patientId: 'P-5678', doctor: 'Dr. Wilson', type: 'Lipid Panel', priority: 'routine', status: 'completed', collected: '08:45 AM', result: 'Normal', turnaroundTime: '3h', department: 'Chemistry', tech: 'Carlos R.', critical: false },
-    { id: 'LAB-5006', patient: 'Frank Green', patientId: 'P-6789', doctor: 'Dr. Park', type: 'Urinalysis', priority: 'routine', status: 'in_progress', collected: '11:00 AM', result: 'Pending', turnaroundTime: '-', department: 'Clinical', tech: 'James W.', critical: false },
-    { id: 'LAB-5007', patient: 'Grace Kim', patientId: 'P-7890', doctor: 'Dr. Lee', type: 'Cardiac Enzymes', priority: 'stat', status: 'completed', collected: '07:00 AM', result: 'Abnormal', turnaroundTime: '45m', department: 'Chemistry', tech: 'Carlos R.', critical: true },
-    { id: 'LAB-5008', patient: 'Henry Liu', patientId: 'P-8901', doctor: 'Dr. Smith', type: 'Genetic Testing - BRCA', priority: 'routine', status: 'sent_external', collected: '3 days ago', result: 'Pending', turnaroundTime: '5-7 days', department: 'Genetics', tech: '-', critical: false },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const samplesRes = await bloodSamplesAPI.getMySamples();
+      const samples = samplesRes.data ?? samplesRes ?? [];
+      const rows = (Array.isArray(samples) ? samples : []).map((s: any, idx: number) => ({
+        id: s.id ?? s.sample_id ?? `LAB-${5001 + idx}`,
+        patient: s.patient_name ?? s.patient ?? 'Unknown',
+        patientId: s.patient_id ?? '-',
+        doctor: s.doctor ?? s.ordering_doctor ?? '-',
+        type: s.test_type ?? s.type ?? 'Lab Test',
+        priority: s.priority ?? 'routine',
+        status: s.status ?? 'pending',
+        collected: s.collected_at ?? s.collected ?? '-',
+        result: s.result ?? 'Pending',
+        turnaroundTime: s.turnaround_time ?? '-',
+        department: s.department ?? '-',
+        tech: s.technician ?? s.tech ?? '-',
+        critical: s.critical ?? s.is_critical ?? false,
+      }));
+      setLabOrders(rows);
+      setEquipment([
+        { name: 'Hematology Analyzer', model: 'Sysmex XN-1000', status: 'operational', lastCal: '2 hrs ago', tests: 89, uptime: 99.2 },
+        { name: 'Chemistry Analyzer', model: 'Roche Cobas 6000', status: 'operational', lastCal: '4 hrs ago', tests: 156, uptime: 98.5 },
+        { name: 'Immunoassay System', model: 'Abbott Architect', status: 'maintenance', lastCal: 'In progress', tests: 0, uptime: 95.1 },
+        { name: 'Blood Gas Analyzer', model: 'Radiometer ABL90', status: 'operational', lastCal: '1 hr ago', tests: 34, uptime: 99.8 },
+        { name: 'Coagulation Analyzer', model: 'Stago STA-R', status: 'operational', lastCal: '6 hrs ago', tests: 45, uptime: 97.3 },
+      ]);
+      setQcResults([
+        { test: 'CBC QC Level 1', result: 'Pass', shift: 'Morning', tech: 'Carlos R.', time: '06:30 AM' },
+        { test: 'CBC QC Level 2', result: 'Pass', shift: 'Morning', tech: 'Carlos R.', time: '06:35 AM' },
+        { test: 'Chemistry QC Normal', result: 'Pass', shift: 'Morning', tech: 'Lisa P.', time: '06:45 AM' },
+        { test: 'Chemistry QC Abnormal', result: 'Flag', shift: 'Morning', tech: 'Lisa P.', time: '06:50 AM' },
+        { test: 'Coag QC Level 1', result: 'Pass', shift: 'Morning', tech: 'James W.', time: '07:00 AM' },
+      ]);
+    } catch (err: any) {
+      console.error('Failed to load lab data:', err);
+      setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load lab data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const sampleTracking = [
-    { step: 'Order Placed', completed: true },
-    { step: 'Sample Collected', completed: true },
-    { step: 'Processing', completed: true },
-    { step: 'Analysis', completed: false },
-    { step: 'Review', completed: false },
-    { step: 'Results Ready', completed: false },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const equipment = [
-    { name: 'Hematology Analyzer', model: 'Sysmex XN-1000', status: 'operational', lastCal: '2 hrs ago', tests: 89, uptime: 99.2 },
-    { name: 'Chemistry Analyzer', model: 'Roche Cobas 6000', status: 'operational', lastCal: '4 hrs ago', tests: 156, uptime: 98.5 },
-    { name: 'Immunoassay System', model: 'Abbott Architect', status: 'maintenance', lastCal: 'In progress', tests: 0, uptime: 95.1 },
-    { name: 'Blood Gas Analyzer', model: 'Radiometer ABL90', status: 'operational', lastCal: '1 hr ago', tests: 34, uptime: 99.8 },
-    { name: 'Coagulation Analyzer', model: 'Stago STA-R', status: 'operational', lastCal: '6 hrs ago', tests: 45, uptime: 97.3 },
-  ];
-
-  const qcResults = [
-    { test: 'CBC QC Level 1', result: 'Pass', shift: 'Morning', tech: 'Carlos R.', time: '06:30 AM' },
-    { test: 'CBC QC Level 2', result: 'Pass', shift: 'Morning', tech: 'Carlos R.', time: '06:35 AM' },
-    { test: 'Chemistry QC Normal', result: 'Pass', shift: 'Morning', tech: 'Lisa P.', time: '06:45 AM' },
-    { test: 'Chemistry QC Abnormal', result: 'Flag', shift: 'Morning', tech: 'Lisa P.', time: '06:50 AM' },
-    { test: 'Coag QC Level 1', result: 'Pass', shift: 'Morning', tech: 'James W.', time: '07:00 AM' },
-  ];
+  if (loading) {
+    return (
+      <AppLayout title="Lab Management" subtitle="Laboratory orders, tracking & results" navItems={hospitalNavItems} portalType="hospital">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <CircularProgress />
+        </Box>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout title="Lab Management" subtitle="Laboratory orders, tracking & results" navItems={hospitalNavItems} portalType="hospital">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+
       {labOrders.some(o => o.critical && o.status !== 'completed') && (
         <Alert severity="error" sx={{ mb: 2 }} icon={<Warning />}>
           <strong>Critical Results Pending:</strong> {labOrders.filter(o => o.critical && o.status !== 'completed').length} critical lab result(s) require immediate attention
@@ -144,7 +182,7 @@ const LabManagement: React.FC = () => {
                   <Chip label={o.priority.toUpperCase()} size="small" color={o.priority === 'stat' ? 'error' : o.priority === 'urgent' ? 'warning' : 'default'} sx={{ fontSize: 10, fontWeight: 700 }} />
                 </Stack>
                 <Stepper activeStep={o.status === 'pending_collection' ? 0 : o.status === 'in_progress' ? 2 : o.status === 'pending_review' ? 4 : 1} alternativeLabel>
-                  {sampleTracking.map((s) => (
+                  {sampleTrackingSteps.map((s) => (
                     <Step key={s.step}><StepLabel sx={{ '& .MuiStepLabel-label': { fontSize: 9 } }}>{s.step}</StepLabel></Step>
                   ))}
                 </Stepper>

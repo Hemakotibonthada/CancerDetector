@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, TextField,
   InputAdornment, Avatar, Divider, Rating, Alert, Dialog,
-  DialogTitle, DialogContent, DialogActions, Tabs, Tab,
+  DialogTitle, DialogContent, DialogActions, Tabs, Tab, CircularProgress,
 } from '@mui/material';
 import {
   LocalHospital, Search, LocationOn, Star, Phone, Email,
@@ -13,29 +13,52 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { StatCard } from '../../components/common/SharedComponents';
+import { hospitalsAPI } from '../../services/api';
 
 const HospitalsPage: React.FC = () => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [selectedHospital, setSelectedHospital] = useState<any>(null);
+  const [hospitals, setHospitals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const hospitals = [
-    { id: '1', name: 'Cancer Research Center', type: 'Specialty Cancer Center', address: '123 Medical Blvd, Suite 200, Medical City', distance: 2.3, rating: 4.8, reviews: 234, phone: '+1 (555) 100-2000', email: 'info@crc.org', hours: 'Mon-Fri 8AM-6PM', emergency: true, departments: ['Oncology', 'Radiology', 'Pathology', 'Surgery'], doctors: 45, beds: 200, accredited: true, insurance: ['BlueCross', 'Aetna', 'UnitedHealth'], favorite: true },
-    { id: '2', name: 'City General Hospital', type: 'General Hospital', address: '456 Health Street, Medical City', distance: 3.1, rating: 4.5, reviews: 567, phone: '+1 (555) 200-3000', email: 'info@cgh.org', hours: '24/7', emergency: true, departments: ['General Medicine', 'Cardiology', 'Neurology', 'Orthopedics', 'Oncology'], doctors: 120, beds: 500, accredited: true, insurance: ['All major insurances'], favorite: false },
-    { id: '3', name: 'Community Health Center', type: 'Community Clinic', address: '789 Wellness Ave, Medical City', distance: 1.5, rating: 4.3, reviews: 123, phone: '+1 (555) 300-4000', email: 'info@chc.org', hours: 'Mon-Sat 9AM-5PM', emergency: false, departments: ['Primary Care', 'Lab Services', 'Vaccination'], doctors: 15, beds: 30, accredited: true, insurance: ['BlueCross', 'Medicaid'], favorite: false },
-    { id: '4', name: 'University Medical Center', type: 'Teaching Hospital', address: '321 Academic Drive, University District', distance: 5.8, rating: 4.9, reviews: 890, phone: '+1 (555) 400-5000', email: 'info@umc.edu', hours: '24/7', emergency: true, departments: ['All Specialties', 'Research', 'Clinical Trials'], doctors: 300, beds: 800, accredited: true, insurance: ['All major insurances'], favorite: true },
-    { id: '5', name: 'Skin & Dermatology Clinic', type: 'Specialty Clinic', address: '654 Park Road, Medical City', distance: 4.2, rating: 4.6, reviews: 78, phone: '+1 (555) 500-6000', email: 'info@sdc.org', hours: 'Mon-Fri 9AM-4PM', emergency: false, departments: ['Dermatology', 'Cosmetic Surgery', 'Skin Cancer'], doctors: 8, beds: 0, accredited: true, insurance: ['BlueCross', 'Cigna'], favorite: false },
-    { id: '6', name: 'Heart & Vascular Institute', type: 'Specialty Center', address: '987 Cardiac Lane, Medical City', distance: 6.1, rating: 4.7, reviews: 345, phone: '+1 (555) 600-7000', email: 'info@hvi.org', hours: 'Mon-Fri 7AM-7PM', emergency: true, departments: ['Cardiology', 'Cardiac Surgery', 'Vascular'], doctors: 35, beds: 150, accredited: true, insurance: ['BlueCross', 'Aetna', 'UnitedHealth'], favorite: false },
-  ];
+  const loadHospitals = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await hospitalsAPI.list();
+      const data = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      setHospitals(data.map((h: any) => ({
+        id: h.id, name: h.name || '', type: h.hospital_type || h.type || 'General Hospital',
+        address: h.address || '', distance: h.distance || 0, rating: h.rating || 4.0,
+        reviews: h.review_count || 0, phone: h.phone || h.phone_number || '',
+        email: h.email || '', hours: h.operating_hours || 'Mon-Fri 8AM-6PM',
+        emergency: h.has_emergency ?? h.emergency ?? false,
+        departments: h.departments || [], doctors: h.doctor_count || h.total_doctors || 0,
+        beds: h.bed_count || h.total_beds || 0, accredited: h.accredited ?? h.is_accredited ?? true,
+        insurance: h.accepted_insurance || [], favorite: false,
+      })));
+      setError(null);
+    } catch (err: any) {
+      console.error('Failed to load hospitals:', err);
+      setError('Failed to load hospitals');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadHospitals(); }, [loadHospitals]);
 
   const filtered = hospitals.filter(h => h.name.toLowerCase().includes(searchQuery.toLowerCase()) || h.type.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <AppLayout title="Find Hospitals" subtitle="Search nearby healthcare facilities" navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : <>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Nearby" value={hospitals.length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<MedicalServices />} label="Cancer Centers" value={2} color="#c62828" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<MedicalServices />} label="Cancer Centers" value={hospitals.filter(h => h.type?.toLowerCase().includes('cancer')).length} color="#c62828" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Favorite />} label="Favorites" value={hospitals.filter(h => h.favorite).length} color="#e91e63" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Verified />} label="Accredited" value={hospitals.filter(h => h.accredited).length} color="#4caf50" /></Grid>
       </Grid>
@@ -120,6 +143,8 @@ const HospitalsPage: React.FC = () => {
           </Grid>
         ))}
       </Grid>
+
+      </>}
 
       {/* Hospital Detail Dialog */}
       <Dialog open={!!selectedHospital} onClose={() => setSelectedHospital(null)} maxWidth="md" fullWidth>

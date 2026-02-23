@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Switch, FormControlLabel, Divider, Alert, IconButton, TextField,
   Dialog, DialogTitle, DialogContent, DialogActions, Select,
-  MenuItem, FormControl, InputLabel, Checkbox,
+  MenuItem, FormControl, InputLabel, Checkbox, CircularProgress,
 } from '@mui/material';
 import {
   Notifications, NotificationsActive, Email, Sms, Campaign,
@@ -15,42 +15,44 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { adminNavItems } from './AdminDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
+import { notificationsAPI } from '../../services/api';
 
 const AdminNotifications: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [notificationRules, setNotificationRules] = useState<any[]>([]);
+  const [recentBroadcasts, setRecentBroadcasts] = useState<any[]>([]);
+  const [notificationStats, setNotificationStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const notificationRules = [
-    { id: 'NR-001', name: 'Critical Cancer Risk Alert', trigger: 'Cancer risk > 80%', channels: ['Email', 'SMS', 'Push'], recipients: 'Patient + Doctor', priority: 'critical', enabled: true },
-    { id: 'NR-002', name: 'System Health Warning', trigger: 'CPU > 90% or Memory > 85%', channels: ['Email', 'Slack'], recipients: 'Admin Team', priority: 'high', enabled: true },
-    { id: 'NR-003', name: 'New Hospital Registration', trigger: 'Hospital registration', channels: ['Email'], recipients: 'Admin Team', priority: 'medium', enabled: true },
-    { id: 'NR-004', name: 'AI Model Drift Detected', trigger: 'Data drift > threshold', channels: ['Email', 'Slack'], recipients: 'AI Team', priority: 'high', enabled: true },
-    { id: 'NR-005', name: 'Appointment Reminder', trigger: '24h before appointment', channels: ['Email', 'SMS', 'Push'], recipients: 'Patient', priority: 'low', enabled: true },
-    { id: 'NR-006', name: 'Lab Results Ready', trigger: 'Lab results published', channels: ['Email', 'Push'], recipients: 'Patient + Doctor', priority: 'medium', enabled: true },
-    { id: 'NR-007', name: 'Security Breach Alert', trigger: 'Security event detected', channels: ['Email', 'SMS', 'Slack'], recipients: 'Security Team', priority: 'critical', enabled: true },
-    { id: 'NR-008', name: 'Subscription Expiring', trigger: '30 days before expiry', channels: ['Email'], recipients: 'Hospital Admin', priority: 'medium', enabled: true },
-    { id: 'NR-009', name: 'Weekly Digest', trigger: 'Every Monday 8 AM', channels: ['Email'], recipients: 'All Users', priority: 'low', enabled: false },
-    { id: 'NR-010', name: 'Backup Failure', trigger: 'Backup job fails', channels: ['Email', 'SMS', 'Slack'], recipients: 'DevOps Team', priority: 'critical', enabled: true },
-  ];
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await notificationsAPI.list();
+      const data = res.data ?? res;
+      const items = Array.isArray(data) ? data : (data.notifications ?? data.items ?? []);
+      setNotificationRules(data.rules ?? data.notification_rules ?? items);
+      setRecentBroadcasts(data.broadcasts ?? data.recent_broadcasts ?? []);
+      setNotificationStats(data.stats ?? data.notification_stats ?? []);
+      setError('');
+    } catch {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const recentBroadcasts = [
-    { id: 'BC-001', title: 'System Maintenance Notice', message: 'Scheduled maintenance on Jan 2, 2025 from 2-4 AM EST', sentAt: 'Dec 28, 10:00 AM', recipients: 7070, channels: ['Email', 'Push'], status: 'delivered' },
-    { id: 'BC-002', title: 'New Feature: AI Chat Assistant', message: 'Try our new AI-powered health chat assistant for instant insights', sentAt: 'Dec 20, 2:00 PM', recipients: 6100, channels: ['Email', 'Push'], status: 'delivered' },
-    { id: 'BC-003', title: 'Holiday Hours Update', message: 'Updated operating hours for Dec 24-Jan 2', sentAt: 'Dec 18, 9:00 AM', recipients: 7070, channels: ['Email'], status: 'delivered' },
-    { id: 'BC-004', title: 'Privacy Policy Update', message: 'We\'ve updated our privacy policy. Please review the changes.', sentAt: 'Dec 10, 11:00 AM', recipients: 7070, channels: ['Email', 'Push'], status: 'delivered' },
-  ];
-
-  const notificationStats = [
-    { channel: 'Email', sent: 12450, delivered: 12200, opened: 8540, clicked: 3200, failed: 250 },
-    { channel: 'SMS', sent: 3200, delivered: 3150, opened: 3150, clicked: 890, failed: 50 },
-    { channel: 'Push', sent: 8900, delivered: 8500, opened: 5100, clicked: 2800, failed: 400 },
-    { channel: 'Slack', sent: 1200, delivered: 1200, opened: 1200, clicked: 450, failed: 0 },
-  ];
+  useEffect(() => { loadData(); }, [loadData]);
 
   const priorityColors: any = { critical: '#d32f2f', high: '#f57c00', medium: '#ff9800', low: '#4caf50' };
 
   return (
     <AppLayout title="Notifications" subtitle="Manage notification rules and broadcasts" navItems={adminNavItems} portalType="admin">
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
+      ) : <>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<NotificationsActive />} label="Active Rules" value={notificationRules.filter(r => r.enabled).length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Send />} label="Sent Today" value="1,248" color="#4caf50" /></Grid>
@@ -231,6 +233,7 @@ const AdminNotifications: React.FC = () => {
           ))}
         </Grid>
       )}
+      </>}
 
       {/* Broadcast Dialog */}
       <Dialog open={showBroadcast} onClose={() => setShowBroadcast(false)} maxWidth="sm" fullWidth>

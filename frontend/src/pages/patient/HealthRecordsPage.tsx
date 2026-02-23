@@ -4,7 +4,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, InputAdornment, Select, MenuItem, FormControl, InputLabel,
   Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Alert,
-  Pagination, Divider, Tooltip, Badge, LinearProgress, Switch,
+  Pagination, Divider, Tooltip, Badge, LinearProgress, Switch, CircularProgress,
 } from '@mui/material';
 import {
   FolderShared as RecordsIcon, Search as SearchIcon, FilterList,
@@ -32,18 +32,36 @@ const HealthRecordsPage: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'table' | 'timeline'>('table');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [records, setRecords] = useState<any[]>([]);
 
-  const records = [
-    { id: '1', record_number: 'HR-2026-001', record_type: 'lab_result', category: 'Blood Test', status: 'completed', encounter_date: '2026-02-20', primary_diagnosis: 'Annual CBC Panel', doctor_name: 'Dr. Sarah Smith', hospital_name: 'City General Hospital', department: 'Pathology', is_cancer_related: false, ai_risk_level: 'low', follow_up_required: false },
-    { id: '2', record_number: 'HR-2026-002', record_type: 'consultation', category: 'Oncology', status: 'completed', encounter_date: '2026-02-15', primary_diagnosis: 'Cancer Risk Review', doctor_name: 'Dr. James Lee', hospital_name: 'Cancer Research Center', department: 'Oncology', is_cancer_related: true, ai_risk_level: 'moderate', follow_up_required: true, follow_up_date: '2026-03-15' },
-    { id: '3', record_number: 'HR-2026-003', record_type: 'imaging', category: 'Radiology', status: 'completed', encounter_date: '2026-02-10', primary_diagnosis: 'Chest X-Ray - Normal', doctor_name: 'Dr. Emily Chen', hospital_name: 'City General Hospital', department: 'Radiology', is_cancer_related: false, ai_risk_level: 'very_low', follow_up_required: false },
-    { id: '4', record_number: 'HR-2026-004', record_type: 'prescription', category: 'Medication', status: 'active', encounter_date: '2026-02-08', primary_diagnosis: 'Metformin 500mg - Diabetes Management', doctor_name: 'Dr. Robert Wilson', hospital_name: 'Community Health Center', department: 'Internal Medicine', is_cancer_related: false, ai_risk_level: 'low', follow_up_required: true, follow_up_date: '2026-05-08' },
-    { id: '5', record_number: 'HR-2025-042', record_type: 'procedure', category: 'Surgery', status: 'completed', encounter_date: '2025-12-15', primary_diagnosis: 'Mole Removal - Biopsy Benign', doctor_name: 'Dr. Lisa Park', hospital_name: 'Dermatology Clinic', department: 'Dermatology', is_cancer_related: true, ai_risk_level: 'very_low', follow_up_required: false },
-    { id: '6', record_number: 'HR-2025-041', record_type: 'lab_result', category: 'Blood Test', status: 'completed', encounter_date: '2025-11-20', primary_diagnosis: 'Tumor Marker Panel - All Normal', doctor_name: 'Dr. Sarah Smith', hospital_name: 'Cancer Research Center', department: 'Oncology', is_cancer_related: true, ai_risk_level: 'low', follow_up_required: false },
-    { id: '7', record_number: 'HR-2025-040', record_type: 'vaccination', category: 'Preventive', status: 'completed', encounter_date: '2025-10-05', primary_diagnosis: 'HPV Vaccine - Dose 2', doctor_name: 'Dr. Maria Garcia', hospital_name: 'Community Health Center', department: 'Preventive Care', is_cancer_related: true, ai_risk_level: 'very_low', follow_up_required: true, follow_up_date: '2026-04-05' },
-    { id: '8', record_number: 'HR-2025-039', record_type: 'consultation', category: 'General', status: 'completed', encounter_date: '2025-09-18', primary_diagnosis: 'Annual Physical Exam', doctor_name: 'Dr. Robert Wilson', hospital_name: 'Community Health Center', department: 'Internal Medicine', is_cancer_related: false, ai_risk_level: 'low', follow_up_required: false },
-  ];
+  useEffect(() => {
+    const loadRecords = async () => {
+      try {
+        setLoading(true);
+        const res = await healthRecordsAPI.getMyRecords();
+        const data = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        setRecords(data.map((r: any) => ({
+          id: r.id, record_number: r.record_number || `HR-${r.id}`,
+          record_type: r.record_type || 'consultation', category: r.category || r.record_type || 'General',
+          status: r.status || 'completed', encounter_date: r.encounter_date || r.created_at || '',
+          primary_diagnosis: r.primary_diagnosis || r.diagnosis || r.notes || '',
+          doctor_name: r.doctor_name || '', hospital_name: r.hospital_name || '',
+          department: r.department || '', is_cancer_related: r.is_cancer_related ?? false,
+          ai_risk_level: r.ai_risk_level || 'low', follow_up_required: r.follow_up_required ?? false,
+          follow_up_date: r.follow_up_date || '',
+        })));
+        setError(null);
+      } catch (err: any) {
+        console.error('Failed to load records:', err);
+        setError('Failed to load health records');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadRecords();
+  }, []);
 
   const recordTypes = ['all', 'lab_result', 'consultation', 'imaging', 'prescription', 'procedure', 'vaccination'];
 
@@ -68,6 +86,8 @@ const HealthRecordsPage: React.FC = () => {
 
   return (
     <AppLayout title="Health Records" subtitle={`${records.length} records found`} navItems={patientNavItems} portalType="patient">
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : <>
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<RecordsIcon />} label="Total Records" value={records.length} color="#1565c0" /></Grid>
@@ -182,6 +202,8 @@ const HealthRecordsPage: React.FC = () => {
           ))}
         </Card>
       )}
+
+      </>}
 
       {/* Upload Dialog */}
       <Dialog open={showUploadDialog} onClose={() => setShowUploadDialog(false)} maxWidth="sm" fullWidth>
