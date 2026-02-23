@@ -44,10 +44,10 @@ class AppointmentType(str, enum.Enum):
 class Appointment(Base, AuditMixin):
     __tablename__ = "appointments"
     
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     health_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     doctor_id: Mapped[str] = mapped_column(String(36), ForeignKey("doctors.id"), nullable=False, index=True)
-    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospitals.id"), nullable=True)
+    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital.id"), nullable=True)
     department_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital_departments.id"), nullable=True)
     
     appointment_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)

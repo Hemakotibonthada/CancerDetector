@@ -38,9 +38,9 @@ class LabTest(Base):
     
 class LabOrder(Base, AuditMixin):
     __tablename__ = "lab_orders"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     doctor_id: Mapped[str] = mapped_column(String(36), ForeignKey("doctors.id"), nullable=False)
-    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospitals.id"), nullable=True)
+    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital.id"), nullable=True)
     order_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     order_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="ordered", nullable=False)
@@ -53,7 +53,7 @@ class LabOrder(Base, AuditMixin):
     
 class LabResult(Base, AuditMixin):
     __tablename__ = "lab_results"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     lab_order_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("lab_orders.id"), nullable=True)
     lab_test_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("lab_tests.id"), nullable=True)
     result_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)

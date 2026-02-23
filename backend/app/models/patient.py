@@ -110,11 +110,11 @@ class Patient(Base, AuditMixin):
     - Insurance and emergency contact links
     """
     
-    __tablename__ = "patients"
+    __tablename__ = "patient"
     
     # Link to User
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
+        String(36), ForeignKey("user.id", ondelete="CASCADE"),
         unique=True, nullable=False, index=True
     )
     
@@ -130,7 +130,7 @@ class Patient(Base, AuditMixin):
     
     # Primary Hospital
     primary_hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id"), nullable=True
+        String(36), ForeignKey("hospital.id"), nullable=True
     )
     
     # Primary Doctor
@@ -280,7 +280,7 @@ class PatientDemographics(Base):
     __tablename__ = "patient_demographics"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         unique=True, nullable=False, index=True
     )
     
@@ -332,7 +332,7 @@ class PatientAllergy(Base):
     __tablename__ = "patient_allergies"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     
@@ -365,7 +365,7 @@ class PatientFamilyHistory(Base):
     __tablename__ = "patient_family_histories"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     

@@ -28,7 +28,7 @@ class VitalSignAlert(str, enum.Enum):
 
 class VitalSigns(Base):
     __tablename__ = "vital_signs"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     health_record_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("health_records.id"), nullable=True)
     recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     recorded_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)

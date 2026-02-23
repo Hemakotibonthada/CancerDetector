@@ -12,7 +12,7 @@ from app.database import Base, AuditMixin
 # ============================================================================
 class EmergencyContact(Base):
     __tablename__ = "emergency_contacts"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     relationship: Mapped[str] = mapped_column(String(50), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -47,7 +47,7 @@ class DeviceStatus(str, enum.Enum):
 
 class Device(Base, AuditMixin):
     __tablename__ = "devices"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     device_type: Mapped[str] = mapped_column(String(30), nullable=False)
     device_name: Mapped[str] = mapped_column(String(200), nullable=False)
     device_id_external: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
@@ -94,10 +94,10 @@ class Report(Base, AuditMixin):
     report_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    generated_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    generated_by: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False)
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    patient_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("patients.id"), nullable=True)
-    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospitals.id"), nullable=True)
+    patient_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("patient.id"), nullable=True)
+    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital.id"), nullable=True)
     template_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("report_templates.id"), nullable=True)
     content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     file_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
@@ -129,7 +129,7 @@ class FeedbackStatus(str, enum.Enum):
 
 class Feedback(Base, AuditMixin):
     __tablename__ = "feedbacks"
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False, index=True)
     feedback_type: Mapped[str] = mapped_column(String(30), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default=FeedbackStatus.OPEN.value, nullable=False)
     subject: Mapped[str] = mapped_column(String(300), nullable=False)

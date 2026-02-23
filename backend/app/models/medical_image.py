@@ -34,7 +34,7 @@ class ImageAnalysisResult(str, enum.Enum):
 
 class MedicalImage(Base, AuditMixin):
     __tablename__ = "medical_images"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     health_record_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("health_records.id"), nullable=True)
     image_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     image_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -60,7 +60,7 @@ class MedicalImage(Base, AuditMixin):
     ai_detected_regions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     ordering_doctor_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
-    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospitals.id"), nullable=True)
+    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital.id"), nullable=True)
     clinical_indication: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     contrast_used: Mapped[bool] = mapped_column(Boolean, default=False)
     contrast_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

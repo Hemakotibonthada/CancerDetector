@@ -93,7 +93,7 @@ class SmartwatchDevice(Base, AuditMixin):
     __tablename__ = "smartwatch_devices"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     
@@ -153,7 +153,7 @@ class SmartwatchData(Base):
     __tablename__ = "smartwatch_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(
@@ -255,7 +255,7 @@ class HeartRateData(Base):
     __tablename__ = "heart_rate_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -287,7 +287,7 @@ class SpO2Data(Base):
     __tablename__ = "spo2_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -315,7 +315,7 @@ class SleepData(Base):
     __tablename__ = "sleep_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -371,7 +371,7 @@ class ActivityData(Base):
     __tablename__ = "activity_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -423,7 +423,7 @@ class ECGData(Base):
     __tablename__ = "ecg_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -483,7 +483,7 @@ class StressData(Base):
     __tablename__ = "stress_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -512,7 +512,7 @@ class TemperatureData(Base):
     __tablename__ = "temperature_data"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -540,7 +540,7 @@ class BloodPressureEstimate(Base):
     __tablename__ = "blood_pressure_estimates"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False)

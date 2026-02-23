@@ -65,7 +65,7 @@ class SDOHAssessment(Base):
 class SocialRisk(Base):
     """Individual social risk factor tracking."""
     patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id"), nullable=False)
-    assessment_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("sdoh_assessment.id"), nullable=True)
+    assessment_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     domain: Mapped[str] = mapped_column(String(30), nullable=False)
     risk_factor: Mapped[str] = mapped_column(String(200), nullable=False)
     risk_level: Mapped[str] = mapped_column(String(20), default=RiskLevel.LOW.value)

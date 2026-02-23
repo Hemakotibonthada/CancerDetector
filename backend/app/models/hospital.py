@@ -137,7 +137,7 @@ class Hospital(Base, AuditMixin):
     Hospital entity with comprehensive organizational information.
     """
     
-    __tablename__ = "hospitals"
+    __tablename__ = "hospital"
     
     # Basic Information
     name: Mapped[str] = mapped_column(String(300), nullable=False, index=True)
@@ -244,7 +244,7 @@ class HospitalDepartment(Base, AuditMixin):
     __tablename__ = "hospital_departments"
     
     hospital_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("hospitals.id", ondelete="CASCADE"),
+        String(36), ForeignKey("hospital.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     
@@ -295,10 +295,10 @@ class HospitalStaff(Base, AuditMixin):
     __tablename__ = "hospital_staff"
     
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False, index=True
+        String(36), ForeignKey("user.id"), nullable=False, index=True
     )
     hospital_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("hospitals.id", ondelete="CASCADE"),
+        String(36), ForeignKey("hospital.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     department_id: Mapped[Optional[str]] = mapped_column(
@@ -349,10 +349,10 @@ class Doctor(Base, AuditMixin):
     __tablename__ = "doctors"
     
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), unique=True, nullable=False, index=True
+        String(36), ForeignKey("user.id"), unique=True, nullable=False, index=True
     )
     hospital_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("hospitals.id", ondelete="CASCADE"),
+        String(36), ForeignKey("hospital.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     department_id: Mapped[Optional[str]] = mapped_column(

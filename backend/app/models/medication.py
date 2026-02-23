@@ -149,7 +149,7 @@ class Prescription(Base, AuditMixin):
     
     # Patient
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     health_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -159,7 +159,7 @@ class Prescription(Base, AuditMixin):
         String(36), ForeignKey("doctors.id"), nullable=False
     )
     hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id"), nullable=True
+        String(36), ForeignKey("hospital.id"), nullable=True
     )
     
     # Prescription Details
@@ -261,7 +261,7 @@ class MedicationSchedule(Base):
         nullable=False, index=True
     )
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False, index=True
+        String(36), ForeignKey("patient.id"), nullable=False, index=True
     )
     
     # Schedule
@@ -297,7 +297,7 @@ class MedicationAdherence(Base):
         nullable=False, index=True
     )
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False, index=True
+        String(36), ForeignKey("patient.id"), nullable=False, index=True
     )
     
     # Tracking

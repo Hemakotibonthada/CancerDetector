@@ -62,7 +62,7 @@ class TumorMeasurement(Base):
     """Tumor measurement tracking (RECIST/WHO)."""
     patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id"), nullable=False)
     study_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    ai_reading_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("ai_reading_result.id"), nullable=True)
+    ai_reading_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     lesion_id: Mapped[str] = mapped_column(String(50), nullable=False)
     lesion_type: Mapped[str] = mapped_column(String(30), default="target")
     anatomy: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -111,7 +111,7 @@ class StructuredRadiologyReport(Base):
     patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id"), nullable=False)
     radiologist_id: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False)
     study_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    ai_reading_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("ai_reading_result.id"), nullable=True)
+    ai_reading_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     accession_number: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     modality: Mapped[str] = mapped_column(String(20), nullable=False)
     exam_name: Mapped[str] = mapped_column(String(200), nullable=False)

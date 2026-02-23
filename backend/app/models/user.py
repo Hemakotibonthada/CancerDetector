@@ -106,7 +106,7 @@ class User(Base, AuditMixin):
     - Account status management
     """
     
-    __tablename__ = "users"
+    __tablename__ = "user"
     
     # Authentication fields
     email: Mapped[str] = mapped_column(
@@ -189,7 +189,7 @@ class User(Base, AuditMixin):
     
     # Organization
     hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id"), nullable=True
+        String(36), ForeignKey("hospital.id"), nullable=True
     )
     department_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("hospital_departments.id"), nullable=True
@@ -297,7 +297,7 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
     
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
+        String(36), ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     
@@ -364,7 +364,7 @@ class UserPreference(Base):
     __tablename__ = "user_preferences"
     
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
+        String(36), ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     

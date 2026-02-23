@@ -104,7 +104,7 @@ class CancerScreening(Base, AuditMixin):
     __tablename__ = "cancer_screenings"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     health_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -121,7 +121,7 @@ class CancerScreening(Base, AuditMixin):
     
     # Hospital/Doctor
     hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id"), nullable=True
+        String(36), ForeignKey("hospital.id"), nullable=True
     )
     doctor_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("doctors.id"), nullable=True
@@ -191,7 +191,7 @@ class CancerRiskAssessment(Base, AuditMixin):
     __tablename__ = "cancer_risk_assessments"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     health_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -294,7 +294,7 @@ class CancerPrediction(Base):
     __tablename__ = "cancer_predictions"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     risk_assessment_id: Mapped[Optional[str]] = mapped_column(
@@ -346,7 +346,7 @@ class ScreeningRecommendation(Base):
     __tablename__ = "screening_recommendations"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     risk_assessment_id: Mapped[Optional[str]] = mapped_column(
@@ -389,7 +389,7 @@ class TumorMarker(Base):
     __tablename__ = "tumor_markers"
     
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     blood_sample_id: Mapped[Optional[str]] = mapped_column(

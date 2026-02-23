@@ -71,7 +71,7 @@ class BloodDonor(Base):
     __tablename__ = "blood_donors"
 
     user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
+        String(36), ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False, unique=True, index=True
     )
     blood_group: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
@@ -121,11 +121,11 @@ class BloodRequest(Base):
     __tablename__ = "blood_requests"
 
     requester_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
+        String(36), ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id", ondelete="SET NULL"),
+        String(36), ForeignKey("hospital.id", ondelete="SET NULL"),
         nullable=True, index=True
     )
     patient_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -178,7 +178,7 @@ class BloodDonorMatch(Base):
         nullable=False, index=True
     )
     donor_user_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="CASCADE"),
+        String(36), ForeignKey("user.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
 

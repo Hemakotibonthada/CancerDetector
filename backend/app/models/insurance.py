@@ -21,7 +21,7 @@ class InsuranceProvider(str, enum.Enum):
 
 class Insurance(Base, AuditMixin):
     __tablename__ = "insurance"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     provider_name: Mapped[str] = mapped_column(String(200), nullable=False)
     provider_type: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     policy_number: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -49,7 +49,7 @@ class Insurance(Base, AuditMixin):
 
 class InsuranceClaim(Base, AuditMixin):
     __tablename__ = "insurance_claims"
-    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id", ondelete="CASCADE"), nullable=False, index=True)
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patient.id", ondelete="CASCADE"), nullable=False, index=True)
     insurance_id: Mapped[str] = mapped_column(String(36), ForeignKey("insurance.id"), nullable=False)
     health_record_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("health_records.id"), nullable=True)
     claim_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)

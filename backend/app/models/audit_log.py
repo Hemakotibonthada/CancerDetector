@@ -37,7 +37,7 @@ class AuditAction(str, enum.Enum):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     
-    user_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("user.id"), nullable=True, index=True)
     action: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     resource_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     resource_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)

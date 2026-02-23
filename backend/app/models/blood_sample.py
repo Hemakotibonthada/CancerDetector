@@ -116,7 +116,7 @@ class BloodSample(Base, AuditMixin):
     
     # Patient
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     health_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -148,7 +148,7 @@ class BloodSample(Base, AuditMixin):
     
     # Hospital/Lab
     hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id"), nullable=True
+        String(36), ForeignKey("hospital.id"), nullable=True
     )
     lab_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     ordering_doctor_id: Mapped[Optional[str]] = mapped_column(

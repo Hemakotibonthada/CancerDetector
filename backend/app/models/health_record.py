@@ -112,7 +112,7 @@ class HealthRecord(Base, AuditMixin):
     
     # Patient Reference
     patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id", ondelete="CASCADE"),
+        String(36), ForeignKey("patient.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
     health_id: Mapped[str] = mapped_column(
@@ -137,7 +137,7 @@ class HealthRecord(Base, AuditMixin):
     
     # Hospital & Doctor
     hospital_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("hospitals.id"), nullable=True
+        String(36), ForeignKey("hospital.id"), nullable=True
     )
     doctor_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("doctors.id"), nullable=True

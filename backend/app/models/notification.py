@@ -44,7 +44,7 @@ class NotificationPriority(str, enum.Enum):
 class Notification(Base):
     __tablename__ = "notifications"
     
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
     
     notification_type: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
     priority: Mapped[str] = mapped_column(String(20), default=NotificationPriority.MEDIUM.value, nullable=False)
