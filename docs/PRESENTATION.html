@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CancerGuard AI — Presentation</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/white.min.css">
+<style>
+  .reveal h1 { font-size: 2.2em; color: #1565c0; }
+  .reveal h2 { font-size: 1.6em; color: #1565c0; }
+  .reveal h3 { font-size: 1.2em; color: #283593; }
+  .reveal .slide-number { font-size: 14px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+  .stat-card { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 12px; text-align: center; }
+  .stat-card .number { font-size: 2.5em; font-weight: 800; }
+  .stat-card .label { font-size: 0.7em; opacity: 0.9; }
+  .stat-card.green { background: linear-gradient(135deg, #43e97b, #38f9d7); color: #1b5e20; }
+  .stat-card.pink { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .stat-card.blue { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #01579b; }
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; font-size: 0.65em; }
+  .tech-card { background: #f5f5f5; padding: 15px; border-radius: 8px; border-left: 4px solid #1565c0; }
+  .tech-card h4 { margin: 0 0 8px 0; color: #1565c0; }
+  .tech-card p { margin: 0; color: #555; }
+  .portal-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; }
+  .portal-card { padding: 20px; border-radius: 12px; text-align: center; color: white; }
+  .portal-card.user { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .portal-card.hospital { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .portal-card.admin { background: linear-gradient(135deg, #43e97b, #38f9d7); color: #1b5e20; }
+  .portal-card .count { font-size: 2em; font-weight: 800; }
+  .feature-list { text-align: left; font-size: 0.7em; columns: 2; column-gap: 30px; }
+  .feature-list li { margin-bottom: 6px; break-inside: avoid; }
+  .arch-box { background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 0.65em; }
+  .arch-box.highlight { border-color: #1565c0; background: #e3f2fd; }
+  .improvement-card { background: #fff3e0; border-left: 4px solid #e65100; padding: 10px 15px; margin: 8px 0; border-radius: 4px; font-size: 0.65em; text-align: left; }
+  .timeline { display: flex; justify-content: space-between; margin: 30px 0; font-size: 0.6em; }
+  .timeline-item { text-align: center; flex: 1; }
+  .timeline-dot { width: 30px; height: 30px; background: #1565c0; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }
+  table { font-size: 0.65em; width: 100%; }
+  table th { background: #1565c0; color: white; padding: 8px; }
+  table td { padding: 6px 8px; border-bottom: 1px solid #e0e0e0; }
+  .small { font-size: 0.65em; }
+  .gradient-text { background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- Slide 1: Title -->
+<section>
+  <h1 class="gradient-text">🏥 CancerGuard AI</h1>
+  <h3 style="color: #555;">AI-Powered Cancer Detection & Comprehensive Healthcare Platform</h3>
+  <p style="color: #888; font-size: 0.6em;">Version 1.0.0 | Full-Stack Enterprise Healthcare Solution</p>
+  <div style="margin-top: 40px; font-size: 0.5em; color: #999;">
+    React • FastAPI • TensorFlow • PyTorch • React Native<br>
+    457 API Endpoints • 239 Database Tables • 89 Pages • 38 Modules
+  </div>
+</section>
+
+<!-- Slide 2: Problem Statement -->
+<section>
+  <h2>The Problem</h2>
+  <div style="font-size: 0.75em; text-align: left; max-width: 700px; margin: 0 auto;">
+    <p>🔴 <strong>Cancer is the 2nd leading cause of death globally</strong></p>
+    <p>🔴 Late-stage detection reduces 5-year survival rates to as low as 10%</p>
+    <p>🔴 Fragmented health records make it difficult to track risk over time</p>
+    <p>🔴 Patients lack tools to actively manage their health data</p>
+    <p>🔴 Hospitals need integrated systems for end-to-end care</p>
+  </div>
+  <div style="margin-top: 30px; padding: 15px; background: #e8f5e9; border-radius: 8px; font-size: 0.7em;">
+    <strong style="color: #2e7d32;">Our Solution:</strong> An AI-powered platform that combines early cancer risk prediction
+    with comprehensive health monitoring, document management, and hospital operations — accessible to everyone.
+  </div>
+</section>
+
+<!-- Slide 3: Platform at a Glance -->
+<section>
+  <h2>Platform at a Glance</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="number">457</div>
+      <div class="label">API Endpoints</div>
+    </div>
+    <div class="stat-card pink">
+      <div class="number">239</div>
+      <div class="label">Database Tables</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="number">89</div>
+      <div class="label">Frontend Pages</div>
+    </div>
+    <div class="stat-card green">
+      <div class="number">38</div>
+      <div class="label">API Modules</div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 4: Technology Stack -->
+<section>
+  <h2>Technology Stack</h2>
+  <div class="tech-grid">
+    <div class="tech-card">
+      <h4>⚡ Backend</h4>
+      <p>FastAPI 0.104<br>Python 3.13<br>SQLAlchemy 2.0 Async<br>JWT Auth</p>
+    </div>
+    <div class="tech-card">
+      <h4>🎨 Frontend</h4>
+      <p>React 18<br>TypeScript 4.9<br>Material UI v5<br>Recharts</p>
+    </div>
+    <div class="tech-card">
+      <h4>📱 Mobile</h4>
+      <p>Expo 50<br>React Native 0.73<br>React Navigation 6<br>RN Paper</p>
+    </div>
+    <div class="tech-card">
+      <h4>🧠 AI/ML</h4>
+      <p>TensorFlow 2.15<br>PyTorch 2.1<br>XGBoost / LightGBM<br>SHAP / LIME</p>
+    </div>
+    <div class="tech-card">
+      <h4>🗄️ Database</h4>
+      <p>SQLite (dev)<br>PostgreSQL (prod)<br>Alembic migrations<br>Async ORM</p>
+    </div>
+    <div class="tech-card">
+      <h4>🔒 Security</h4>
+      <p>JWT + Refresh Tokens<br>bcrypt Hashing<br>RBAC (4 roles)<br>Audit Logging</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 5: Three Portals -->
+<section>
+  <h2>Three Dedicated Portals</h2>
+  <div class="portal-grid">
+    <div class="portal-card user">
+      <div class="count">37</div>
+      <div>User Pages</div>
+      <p style="font-size: 0.6em; margin-top: 10px;">Dashboard • Cancer Risk<br>Health Records • Documents<br>Insurance • Telehealth<br>Wearables • Mental Health</p>
+    </div>
+    <div class="portal-card hospital">
+      <div class="count">30</div>
+      <div>Hospital Pages</div>
+      <p style="font-size: 0.6em; margin-top: 10px;">Operations • Lab & Radiology<br>Pathology • Pharmacy<br>Emergency • Surgery<br>Clinical Trials • Quality</p>
+    </div>
+    <div class="portal-card admin">
+      <div class="count">22</div>
+      <div>Admin Pages</div>
+      <p style="font-size: 0.6em; margin-top: 10px;">System Monitoring<br>User & Hospital Mgmt<br>AI Model Management<br>Security & Compliance</p>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 6: User Portal Features -->
+<section>
+  <h2>User Portal — Key Features</h2>
+  <ul class="feature-list">
+    <li>🎯 AI Cancer Risk Assessment (multi-model ensemble)</li>
+    <li>📊 Health Dashboard with live vitals</li>
+    <li>📁 Medical Document Upload & Management</li>
+    <li>🛡️ Insurance Policy & Claims Tracking</li>
+    <li>⌚ Smartwatch & Wearable Integration</li>
+    <li>🩸 Blood Tests & Biomarker Tracking</li>
+    <li>💊 Medication Management & Adherence</li>
+    <li>📅 Appointment Scheduling</li>
+    <li>🧬 Genetic Profile & Genomics</li>
+    <li>🧠 Mental Health (CBT, Mindfulness)</li>
+    <li>🥗 Diet, Nutrition & Hydration</li>
+    <li>🏃 Exercise & Fitness Tracking</li>
+    <li>📹 Telehealth Video Consultations</li>
+    <li>💬 Secure Messaging with Care Team</li>
+    <li>📚 Health Education & Quizzes</li>
+    <li>🩺 Screening Schedule & Reminders</li>
+    <li>👨‍👩‍👧 Family Health History</li>
+    <li>🩸 Blood Donor Registration</li>
+    <li>💰 Billing & Payment Tracking</li>
+    <li>🏆 Gamification & Health Challenges</li>
+  </ul>
+</section>
+
+<!-- Slide 7: Hospital Portal Features -->
+<section>
+  <h2>Hospital Portal — Clinical Operations</h2>
+  <ul class="feature-list">
+    <li>📋 Patient Management & Demographics</li>
+    <li>🏥 Bed Management & Occupancy</li>
+    <li>🔬 Lab Management & Quality Control</li>
+    <li>📷 Radiology with AI-Assisted Reads</li>
+    <li>🧫 Pathology (Specimens, Slides, Tumor Board)</li>
+    <li>💊 Pharmacy & Formulary Management</li>
+    <li>🚑 Emergency (Triage, Sepsis, Stroke)</li>
+    <li>🩸 Blood Bank & Cross-Matching</li>
+    <li>🔪 Surgery Scheduling & Tracking</li>
+    <li>📹 Telemedicine & Virtual Waiting Room</li>
+    <li>🧬 Genomics Lab Workflows</li>
+    <li>📊 Clinical Decision Support</li>
+    <li>🧪 Clinical Trials Management</li>
+    <li>✅ Quality & Safety (Incidents, Infection Control)</li>
+    <li>📦 Supply Chain & Asset Tracking</li>
+    <li>👥 Staff Directory & Workforce Management</li>
+    <li>📊 Population Health & Disease Registries</li>
+    <li>📈 AI Analytics & Predictive Models</li>
+  </ul>
+</section>
+
+<!-- Slide 8: Architecture -->
+<section>
+  <h2>System Architecture</h2>
+  <div style="font-size: 0.6em;">
+    <div class="arch-box" style="text-align: center;">
+      <strong>Client Layer</strong><br>
+      React Web App (37 user + 30 hospital + 22 admin pages) | Expo Mobile App | Swagger Docs
+    </div>
+    <div style="text-align: center; font-size: 1.3em;">⬇️ HTTPS / REST ⬇️</div>
+    <div class="arch-box highlight" style="text-align: center;">
+      <strong>FastAPI Backend</strong><br>
+      CORS → JWT Auth → 38 Router Modules → Service Layer → Pydantic Validation<br>
+      457 Endpoints | Request Timing | Audit Logging
+    </div>
+    <div style="text-align: center; font-size: 1.3em;">⬇️</div>
+    <div class="arch-box" style="text-align: center;">
+      <strong>Data Layer</strong><br>
+      SQLAlchemy 2.0 Async ORM → SQLite (dev) / PostgreSQL (prod)<br>
+      239 Tables | 40 Model Files | Soft Delete | UUID Primary Keys
+    </div>
+    <div style="text-align: center; font-size: 1.3em;">⬇️</div>
+    <div class="arch-box" style="text-align: center; border-color: #e65100; background: #fff3e0;">
+      <strong>AI/ML Engine</strong><br>
+      TensorFlow | PyTorch | XGBoost | LightGBM | CatBoost<br>
+      Cancer Risk Prediction | SHAP/LIME Explainability | Optuna HPO
+    </div>
+  </div>
+</section>
+
+<!-- Slide 9: Data Model Overview -->
+<section>
+  <h2>Data Model — 239 Tables</h2>
+  <table>
+    <tr><th>Domain</th><th>Tables</th><th>Key Models</th></tr>
+    <tr><td>User & Auth</td><td>4</td><td>User, Session, Preference</td></tr>
+    <tr><td>Patient & Health</td><td>14</td><td>Patient, Records, Vitals, Labs</td></tr>
+    <tr><td>Cancer & Screening</td><td>6</td><td>Screening, RiskAssessment, Prediction</td></tr>
+    <tr><td>Wearables & IoT</td><td>22</td><td>Glucose, ECG, Gait, Sleep, SpO2</td></tr>
+    <tr><td>Genomics</td><td>8</td><td>Sequencing, Variants, LiquidBiopsy</td></tr>
+    <tr><td>Clinical Trials</td><td>8</td><td>Protocol, Participants, Visits</td></tr>
+    <tr><td>Imaging & Pathology</td><td>17</td><td>Radiology, AI Reads, Specimens</td></tr>
+    <tr><td>Billing & Insurance</td><td>16</td><td>Invoice, Claims, PriorAuth</td></tr>
+    <tr><td>Communication</td><td>15</td><td>Messages, Referrals, Telehealth</td></tr>
+    <tr><td>Quality & Safety</td><td>9</td><td>Incidents, Infections, Checklists</td></tr>
+    <tr><td>Mental Health</td><td>9</td><td>CBT, Mindfulness, Crisis</td></tr>
+    <tr><td>+ 15 more domains</td><td>111</td><td>Nutrition, Rehab, Supply, Education, etc.</td></tr>
+  </table>
+</section>
+
+<!-- Slide 10: Security -->
+<section>
+  <h2>Security Architecture</h2>
+  <div style="font-size: 0.75em; text-align: left; max-width: 600px; margin: 0 auto;">
+    <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0;">
+      🔐 <strong>Layer 1:</strong> CORS whitelist — origin-based access control
+    </div>
+    <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 8px 0;">
+      🔑 <strong>Layer 2:</strong> JWT Authentication — access (15min) + refresh (7 days)
+    </div>
+    <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin: 8px 0;">
+      👤 <strong>Layer 3:</strong> RBAC — Patient / Doctor / Hospital Admin / System Admin
+    </div>
+    <div style="background: #fce4ec; padding: 12px; border-radius: 6px; margin: 8px 0;">
+      ✅ <strong>Layer 4:</strong> Pydantic input validation on all requests
+    </div>
+    <div style="background: #f3e5f5; padding: 12px; border-radius: 6px; margin: 8px 0;">
+      🛡️ <strong>Layer 5:</strong> SQLAlchemy ORM — SQL injection prevention
+    </div>
+    <div style="background: #e0f2f1; padding: 12px; border-radius: 6px; margin: 8px 0;">
+      🔒 <strong>Layer 6:</strong> bcrypt password hashing + audit logging
+    </div>
+  </div>
+</section>
+
+<!-- Slide 11: AI/ML Pipeline -->
+<section>
+  <h2>AI/ML Cancer Risk Engine</h2>
+  <div style="font-size: 0.7em;">
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot">1</div>
+        <strong>Data Collection</strong><br>Blood biomarkers<br>Genetics<br>Lifestyle
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot">2</div>
+        <strong>Preprocessing</strong><br>Feature engineering<br>Normalization<br>Missing data
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot">3</div>
+        <strong>Ensemble Models</strong><br>TensorFlow DNN<br>PyTorch<br>XGBoost/LightGBM
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot">4</div>
+        <strong>Prediction</strong><br>Risk score<br>Risk level<br>Confidence
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot">5</div>
+        <strong>Explainability</strong><br>SHAP values<br>LIME<br>Feature importance
+      </div>
+    </div>
+    <div class="arch-box highlight" style="text-align: center;">
+      <strong>Risk Levels:</strong> Very Low → Low → Moderate → High → Very High → Critical<br>
+      <strong>Factors:</strong> Blood biomarkers, Genetic variants, Family history, Lifestyle, Vitals, Medical history
+    </div>
+  </div>
+</section>
+
+<!-- Slide 12: Key Differentiators -->
+<section>
+  <h2>Key Differentiators</h2>
+  <div style="font-size: 0.7em; text-align: left; max-width: 650px; margin: 0 auto;">
+    <div style="display: flex; align-items: flex-start; margin: 15px 0;">
+      <span style="font-size: 1.5em; margin-right: 15px;">🧠</span>
+      <div><strong>Multi-Model AI Ensemble</strong> — Not just one algorithm; combines deep learning, gradient boosting, and classical ML for robust predictions</div>
+    </div>
+    <div style="display: flex; align-items: flex-start; margin: 15px 0;">
+      <span style="font-size: 1.5em; margin-right: 15px;">📱</span>
+      <div><strong>Cross-Platform</strong> — Web, iOS, Android with shared backend and consistent experience</div>
+    </div>
+    <div style="display: flex; align-items: flex-start; margin: 15px 0;">
+      <span style="font-size: 1.5em; margin-right: 15px;">🏥</span>
+      <div><strong>Full Hospital EHR</strong> — Not just patient-facing; comprehensive clinical operations including radiology, pathology, pharmacy, emergency</div>
+    </div>
+    <div style="display: flex; align-items: flex-start; margin: 15px 0;">
+      <span style="font-size: 1.5em; margin-right: 15px;">⌚</span>
+      <div><strong>IoT & Wearable Integration</strong> — 22 wearable data tables for continuous monitoring (glucose, gait, respiratory, ECG)</div>
+    </div>
+    <div style="display: flex; align-items: flex-start; margin: 15px 0;">
+      <span style="font-size: 1.5em; margin-right: 15px;">🔬</span>
+      <div><strong>Genomics-Ready</strong> — Liquid biopsy, gene panels, pharmacogenomics, hereditary cancer assessment</div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 13: Demo -->
+<section>
+  <h2>Demo Accounts</h2>
+  <table>
+    <tr><th>Role</th><th>Email</th><th>Password</th></tr>
+    <tr><td>👤 User</td><td>patient@cancerguard.ai</td><td>Patient@123456</td></tr>
+    <tr><td>🩺 Doctor</td><td>doctor@cancerguard.ai</td><td>Doctor@123456</td></tr>
+    <tr><td>🏥 Hospital Admin</td><td>hospital.admin@cancerguard.ai</td><td>Hospital@123456</td></tr>
+    <tr><td>⚙️ System Admin</td><td>admin@cancerguard.ai</td><td>Admin@123456</td></tr>
+  </table>
+  <div style="margin-top: 30px; font-size: 0.7em;">
+    <p><strong>Backend:</strong> http://localhost:8000 (Swagger docs at /docs)</p>
+    <p><strong>Frontend:</strong> http://localhost:3000</p>
+    <p><strong>Mobile:</strong> Expo Go app (scan QR code)</p>
+  </div>
+</section>
+
+<!-- Slide 14: Thank You -->
+<section>
+  <h1 class="gradient-text">Thank You</h1>
+  <p style="font-size: 0.8em; color: #555;">CancerGuard AI — Empowering Early Detection, Saving Lives</p>
+  <div style="margin-top: 40px; font-size: 0.6em; color: #888;">
+    <p>📂 GitHub: <a href="https://github.com/Hemakotibonthada/CancerDetector">github.com/Hemakotibonthada/CancerDetector</a></p>
+    <p>📧 Built with FastAPI + React + TensorFlow + Expo</p>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.min.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    transition: 'slide',
+    width: 960,
+    height: 700,
+  });
+</script>
+</body>
+</html>
