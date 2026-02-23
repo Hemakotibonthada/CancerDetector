@@ -37,40 +37,39 @@ import { patientsAPI, healthRecordsAPI, notificationsAPI } from '../../services/
 
 // Patient navigation items
 export const patientNavItems: NavItem[] = [
-  { icon: <DashIcon />, label: 'Dashboard', path: '/dashboard', section: 'Main' },
-  { icon: <AssessIcon />, label: 'Cancer Risk', path: '/cancer-risk', section: 'Main' },
-  { icon: <RecordsIcon />, label: 'Health Records', path: '/health-records', section: 'Health' },
-  { icon: <BiotechIcon />, label: 'Blood Tests', path: '/blood-tests', section: 'Health' },
-  { icon: <HeartIcon />, label: 'Vital Signs', path: '/vital-signs', section: 'Health' },
-  { icon: <WatchIcon />, label: 'Smartwatch', path: '/smartwatch', section: 'Devices' },
-  { icon: <CalendarIcon />, label: 'Appointments', path: '/appointments', section: 'Care' },
-  { icon: <MedIcon />, label: 'Medications', path: '/medications', section: 'Care' },
-  { icon: <HospitalIcon />, label: 'Find Hospitals', path: '/hospitals', section: 'Care' },
-  { icon: <BrainIcon />, label: 'Symptom Checker', path: '/symptoms', section: 'Tools' },
-  { icon: <FitnessIcon />, label: 'Health Goals', path: '/health-goals', section: 'Wellness' },
-  { icon: <TimelineIcon />, label: 'Health Timeline', path: '/timeline', section: 'Wellness' },
-  { icon: <DnaIcon />, label: 'Genetic Profile', path: '/genetics', section: 'Advanced' },
-  { icon: <DietIcon />, label: 'Diet & Nutrition', path: '/diet', section: 'Wellness' },
-  { icon: <SpaIcon />, label: 'Mental Wellness', path: '/mental-health', section: 'Wellness' },
-  { icon: <TreatmentIcon />, label: 'Treatment Plan', path: '/treatment', section: 'Care' },
-  { icon: <RunIcon />, label: 'Exercise & Fitness', path: '/exercise', section: 'Wellness' },
-  { icon: <ScreeningIcon />, label: 'Screening Schedule', path: '/screening', section: 'Care' },
-  { icon: <FamilyIcon />, label: 'Family Health', path: '/family-health', section: 'Advanced' },
-  { icon: <BloodIcon />, label: 'Blood Donor', path: '/blood-donor', section: 'Advanced' },
-  { icon: <TimelineIcon />, label: 'Clinical Pathways', path: '/clinical-pathways', section: 'Advanced' },
-  { icon: <DnaIcon />, label: 'Genomics', path: '/genomics', section: 'Advanced' },
-  { icon: <TrophyIcon />, label: 'Engagement', path: '/engagement', section: 'Wellness' },
-  { icon: <FitnessIcon />, label: 'Rehabilitation', path: '/rehabilitation', section: 'Care' },
-  { icon: <WatchIcon />, label: 'Wearables+', path: '/wearables', section: 'Devices' },
-  { icon: <PhoneIcon />, label: 'Communication', path: '/communication', section: 'Care' },
-  { icon: <HospitalIcon />, label: 'Telehealth', path: '/telehealth', section: 'Care' },
-  { icon: <DietIcon />, label: 'Nutrition+', path: '/nutrition', section: 'Wellness' },
-  { icon: <SpaIcon />, label: 'Mental Health+', path: '/mental-health-enhanced', section: 'Wellness' },
-  { icon: <BrainIcon />, label: 'Education', path: '/education', section: 'Tools' },
-  { icon: <ShieldIcon />, label: 'Social Support', path: '/social-determinants', section: 'Advanced' },
-  { icon: <MedicalServices />, label: 'Billing', path: '/billing', section: 'Account' },
-  { icon: <NotifIcon />, label: 'Notifications', path: '/notifications', badge: 3, section: 'Account' },
-  { icon: <PersonIcon />, label: 'Profile', path: '/profile', section: 'Account' },
+  { icon: <DashIcon />, label: 'Dashboard', path: '/patient', section: 'Main' },
+  { icon: <AssessIcon />, label: 'Cancer Risk', path: '/patient/cancer-risk', section: 'Main' },
+  { icon: <RecordsIcon />, label: 'Health Records', path: '/patient/records', section: 'Health' },
+  { icon: <BiotechIcon />, label: 'Blood Tests', path: '/patient/blood-tests', section: 'Health' },
+  { icon: <HeartIcon />, label: 'Vital Signs', path: '/patient/vitals', section: 'Health' },
+  { icon: <WatchIcon />, label: 'Smartwatch', path: '/patient/smartwatch', section: 'Devices' },
+  { icon: <CalendarIcon />, label: 'Appointments', path: '/patient/appointments', section: 'Care' },
+  { icon: <MedIcon />, label: 'Medications', path: '/patient/medications', section: 'Care' },
+  { icon: <HospitalIcon />, label: 'Find Hospitals', path: '/patient/hospitals', section: 'Care' },
+  { icon: <BrainIcon />, label: 'Symptom Checker', path: '/patient/symptoms', section: 'Tools' },
+  { icon: <FitnessIcon />, label: 'Health Goals', path: '/patient/goals', section: 'Wellness' },
+  { icon: <DnaIcon />, label: 'Genetic Profile', path: '/patient/genetics', section: 'Advanced' },
+  { icon: <DietIcon />, label: 'Diet & Nutrition', path: '/patient/diet', section: 'Wellness' },
+  { icon: <SpaIcon />, label: 'Mental Wellness', path: '/patient/mental-health', section: 'Wellness' },
+  { icon: <TreatmentIcon />, label: 'Treatment Plan', path: '/patient/treatment', section: 'Care' },
+  { icon: <RunIcon />, label: 'Exercise & Fitness', path: '/patient/exercise', section: 'Wellness' },
+  { icon: <ScreeningIcon />, label: 'Screening Schedule', path: '/patient/screening', section: 'Care' },
+  { icon: <FamilyIcon />, label: 'Family Health', path: '/patient/family-health', section: 'Advanced' },
+  { icon: <BloodIcon />, label: 'Blood Donor', path: '/patient/blood-donor', section: 'Advanced' },
+  { icon: <TimelineIcon />, label: 'Clinical Pathways', path: '/patient/clinical-pathways', section: 'Advanced' },
+  { icon: <DnaIcon />, label: 'Genomics', path: '/patient/genomics', section: 'Advanced' },
+  { icon: <TrophyIcon />, label: 'Engagement', path: '/patient/engagement', section: 'Wellness' },
+  { icon: <FitnessIcon />, label: 'Rehabilitation', path: '/patient/rehabilitation', section: 'Care' },
+  { icon: <WatchIcon />, label: 'Wearables+', path: '/patient/wearables', section: 'Devices' },
+  { icon: <PhoneIcon />, label: 'Communication', path: '/patient/communication', section: 'Care' },
+  { icon: <HospitalIcon />, label: 'Telehealth', path: '/patient/telehealth', section: 'Care' },
+  { icon: <DietIcon />, label: 'Nutrition+', path: '/patient/nutrition', section: 'Wellness' },
+  { icon: <SpaIcon />, label: 'Mental Health+', path: '/patient/mental-health-enhanced', section: 'Wellness' },
+  { icon: <BrainIcon />, label: 'Education', path: '/patient/education', section: 'Tools' },
+  { icon: <ShieldIcon />, label: 'Social Support', path: '/patient/social-determinants', section: 'Advanced' },
+  { icon: <MedicalServices />, label: 'Billing', path: '/patient/billing', section: 'Account' },
+  { icon: <NotifIcon />, label: 'Notifications', path: '/patient/notifications', badge: 3, section: 'Account' },
+  { icon: <PersonIcon />, label: 'Profile', path: '/patient/profile', section: 'Account' },
 ];
 
 const PatientDashboard: React.FC = () => {
@@ -160,7 +159,7 @@ const PatientDashboard: React.FC = () => {
                 <ScienceIcon sx={{ fontSize: 60, color: riskColor, opacity: 0.2 }} />
               </Box>
             </Stack>
-            <Button size="small" onClick={() => navigate('/cancer-risk')} sx={{ mt: 2, color: riskColor, fontWeight: 600 }} endIcon={<ArrowForward />}>
+            <Button size="small" onClick={() => navigate('/patient/cancer-risk')} sx={{ mt: 2, color: riskColor, fontWeight: 600 }} endIcon={<ArrowForward />}>
               View Full Report
             </Button>
           </Card>
@@ -245,23 +244,23 @@ const PatientDashboard: React.FC = () => {
           <Grid container spacing={3}>
             {/* Quick Stats */}
             <Grid item xs={6} sm={3}>
-              <StatCard icon={<RecordsIcon />} label="Health Records" value={healthSummary?.total_health_records ?? 0} color="#1565c0" change={12} onClick={() => navigate('/health-records')} />
+              <StatCard icon={<RecordsIcon />} label="Health Records" value={healthSummary?.total_health_records ?? 0} color="#1565c0" change={12} onClick={() => navigate('/patient/records')} />
             </Grid>
             <Grid item xs={6} sm={3}>
-              <StatCard icon={<BiotechIcon />} label="Blood Tests" value={healthSummary?.total_blood_tests ?? 0} color="#00897b" change={5} onClick={() => navigate('/blood-tests')} />
+              <StatCard icon={<BiotechIcon />} label="Blood Tests" value={healthSummary?.total_blood_tests ?? 0} color="#00897b" change={5} onClick={() => navigate('/patient/blood-tests')} />
             </Grid>
             <Grid item xs={6} sm={3}>
-              <StatCard icon={<MedIcon />} label="Active Medications" value={healthSummary?.active_medications ?? 0} color="#f57c00" onClick={() => navigate('/medications')} />
+              <StatCard icon={<MedIcon />} label="Active Medications" value={healthSummary?.active_medications ?? 0} color="#f57c00" onClick={() => navigate('/patient/medications')} />
             </Grid>
             <Grid item xs={6} sm={3}>
-              <StatCard icon={<CalendarIcon />} label="Appointments" value={3} color="#7b1fa2" change={-2} onClick={() => navigate('/appointments')} />
+              <StatCard icon={<CalendarIcon />} label="Appointments" value={3} color="#7b1fa2" change={-2} onClick={() => navigate('/patient/appointments')} />
             </Grid>
 
             {/* Daily Goals Progress */}
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Daily Health Goals" subtitle="Track your daily targets" icon={<TrophyIcon />}
-                  action={<Button size="small" onClick={() => navigate('/health-goals')}>View All</Button>} />
+                  action={<Button size="small" onClick={() => navigate('/patient/goals')}>View All</Button>} />
                 <Stack spacing={2}>
                   <ProgressCard title="Steps" value={steps} max={10000} color="#66bb6a" icon={<RunIcon />} unit="" subtitle={`${((steps/10000)*100).toFixed(0)}% of daily goal`} />
                   <ProgressCard title="Water Intake" value={waterIntake} max={8} color="#42a5f5" icon={<WaterIcon />} unit=" glasses" subtitle={`${8-waterIntake} more glasses to go`} />
@@ -277,14 +276,14 @@ const PatientDashboard: React.FC = () => {
                 <SectionHeader title="Quick Actions" subtitle="Common tasks at a glance" />
                 <Grid container spacing={1.5}>
                   {[
-                    { icon: <AssessIcon />, label: 'Run AI Risk\nAssessment', color: '#1565c0', path: '/cancer-risk' },
-                    { icon: <BiotechIcon />, label: 'View Blood\nResults', color: '#00897b', path: '/blood-tests' },
-                    { icon: <WatchIcon />, label: 'Sync\nSmartwatch', color: '#7b1fa2', path: '/smartwatch' },
-                    { icon: <CalendarIcon />, label: 'Book\nAppointment', color: '#f57c00', path: '/appointments' },
-                    { icon: <MedIcon />, label: 'Medication\nReminder', color: '#e91e63', path: '/medications' },
-                    { icon: <RecordsIcon />, label: 'Upload\nRecords', color: '#00695c', path: '/health-records' },
-                    { icon: <BrainIcon />, label: 'Symptom\nChecker', color: '#5c6bc0', path: '/symptoms' },
-                    { icon: <HospitalIcon />, label: 'Find\nHospitals', color: '#ef6c00', path: '/hospitals' },
+                    { icon: <AssessIcon />, label: 'Run AI Risk\nAssessment', color: '#1565c0', path: '/patient/cancer-risk' },
+                    { icon: <BiotechIcon />, label: 'View Blood\nResults', color: '#00897b', path: '/patient/blood-tests' },
+                    { icon: <WatchIcon />, label: 'Sync\nSmartwatch', color: '#7b1fa2', path: '/patient/smartwatch' },
+                    { icon: <CalendarIcon />, label: 'Book\nAppointment', color: '#f57c00', path: '/patient/appointments' },
+                    { icon: <MedIcon />, label: 'Medication\nReminder', color: '#e91e63', path: '/patient/medications' },
+                    { icon: <RecordsIcon />, label: 'Upload\nRecords', color: '#00695c', path: '/patient/records' },
+                    { icon: <BrainIcon />, label: 'Symptom\nChecker', color: '#5c6bc0', path: '/patient/symptoms' },
+                    { icon: <HospitalIcon />, label: 'Find\nHospitals', color: '#ef6c00', path: '/patient/hospitals' },
                     { icon: <PhoneIcon />, label: 'Emergency\nSOS', color: '#d32f2f', path: '' },
                   ].map((action, i) => (
                     <Grid item xs={4} key={i}>
@@ -342,7 +341,7 @@ const PatientDashboard: React.FC = () => {
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Upcoming Appointments" icon={<CalendarIcon />}
-                  action={<Button size="small" onClick={() => navigate('/appointments')} endIcon={<ArrowForward />}>View All</Button>} />
+                  action={<Button size="small" onClick={() => navigate('/patient/appointments')} endIcon={<ArrowForward />}>View All</Button>} />
                 <Stack spacing={2}>
                   {[
                     { doctor: 'Dr. Sarah Smith', specialty: 'Oncologist', date: 'Feb 25, 2026', time: '10:00 AM', type: 'In-Person', status: 'confirmed' },
@@ -379,7 +378,7 @@ const PatientDashboard: React.FC = () => {
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Today's Medications" icon={<MedIcon />}
-                  action={<Button size="small" onClick={() => navigate('/medications')}>Manage</Button>} />
+                  action={<Button size="small" onClick={() => navigate('/patient/medications')}>Manage</Button>} />
                 <Stack spacing={1.5}>
                   {[
                     { name: 'Aspirin 81mg', time: '8:00 AM', taken: true, type: 'Preventive' },
