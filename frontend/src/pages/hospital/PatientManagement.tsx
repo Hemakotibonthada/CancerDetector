@@ -67,7 +67,7 @@ const PatientManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <AppLayout title="Patient Management" subtitle="Manage all patients in your hospital" navItems={hospitalNavItems} portalType="hospital">
+      <AppLayout title="User Management" subtitle="Manage all users in your hospital" navItems={hospitalNavItems} portalType="hospital">
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
           <CircularProgress />
         </Box>
@@ -76,7 +76,7 @@ const PatientManagement: React.FC = () => {
   }
 
   return (
-    <AppLayout title="Patient Management" subtitle="Manage all patients in your hospital" navItems={hospitalNavItems} portalType="hospital">
+    <AppLayout title="User Management" subtitle="Manage all users in your hospital" navItems={hospitalNavItems} portalType="hospital">
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>

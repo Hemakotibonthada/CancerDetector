@@ -100,7 +100,7 @@ const PatientDashboard: React.FC = () => {
         <AppBar position="sticky" elevation={0} sx={{ bgcolor: 'white', borderBottom: '1px solid #e0e0e0' }}>
           <Toolbar>
             <IconButton onClick={() => setDrawerOpen(true)} sx={{ mr: 2 }}><MenuIcon /></IconButton>
-            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a237e', flex: 1 }}>Patient Dashboard</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a237e', flex: 1 }}>My Dashboard</Typography>
             <Stack direction="row" spacing={2} alignItems="center">
               <Chip icon={<ShieldIcon />} label={`Health ID: ${user?.health_id || 'N/A'}`}
                 sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600 }} />

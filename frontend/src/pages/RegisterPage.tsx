@@ -89,7 +89,7 @@ const RegisterPage: React.FC = () => {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField fullWidth label="Role" select value={formData.role} onChange={handleChange('role')}>
-                    <MenuItem value="patient">Patient</MenuItem>
+                    <MenuItem value="patient">User</MenuItem>
                     <MenuItem value="doctor">Doctor</MenuItem>
                     <MenuItem value="hospital_admin">Hospital Administrator</MenuItem>
                   </TextField>

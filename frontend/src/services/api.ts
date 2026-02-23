@@ -797,4 +797,26 @@ export const workforceAPI = {
   getDashboardStats: () => api.get('/workforce/dashboard/stats'),
 };
 
+// Documents & File Upload API
+export const documentsAPI = {
+  upload: (formData: FormData) => api.post('/documents/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getMyDocuments: (params?: any) => api.get('/documents/my', { params }),
+  getDocument: (id: string) => api.get(`/documents/${id}`),
+  updateDocument: (id: string, data: any) => api.put(`/documents/${id}`, data),
+  deleteDocument: (id: string) => api.delete(`/documents/${id}`),
+  downloadDocument: (id: string) => api.get(`/documents/download/${id}`, { responseType: 'blob' }),
+  getStats: () => api.get('/documents/stats/summary'),
+};
+
+// Insurance Management API
+export const insuranceAPI = {
+  getPolicies: () => api.get('/documents/insurance/policies'),
+  addPolicy: (data: any) => api.post('/documents/insurance/policies', data),
+  updatePolicy: (id: string, data: any) => api.put(`/documents/insurance/policies/${id}`, data),
+  deletePolicy: (id: string) => api.delete(`/documents/insurance/policies/${id}`),
+  getClaims: (params?: any) => api.get('/documents/insurance/claims', { params }),
+  submitClaim: (data: any) => api.post('/documents/insurance/claims', data),
+  getSummary: () => api.get('/documents/insurance/summary'),
+};
+
 export default api;

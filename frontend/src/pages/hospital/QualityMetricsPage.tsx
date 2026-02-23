@@ -146,7 +146,7 @@ const QualityMetricsPage: React.FC = () => {
             <StatCard icon={<CheckCircle />} label="Targets Met" value={`${meetingTarget.length}/${qualityMetrics.length}`} color="#5e92f3" subtitle="Key performance indicators" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Star />} label="Patient Satisfaction" value="4.6/5" change="+0.1" color="#ff9800" subtitle="This month" />
+            <StatCard icon={<Star />} label="User Satisfaction" value="4.6/5" change="+0.1" color="#ff9800" subtitle="This month" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<ThumbUp />} label="NPS Score" value="72" change="+5" color="#ae52d4" subtitle="Net Promoter Score" />
@@ -207,7 +207,7 @@ const QualityMetricsPage: React.FC = () => {
           <Grid container spacing={2.5}>
             <Grid item xs={12} md={8}>
               <Card sx={{ p: 3 }}>
-                <SectionHeader title="Patient Satisfaction Trend" icon={<Star />} />
+                <SectionHeader title="User Satisfaction Trend" icon={<Star />} />
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={satisfactionTrend}>
                     <CartesianGrid strokeDasharray="3 3" />

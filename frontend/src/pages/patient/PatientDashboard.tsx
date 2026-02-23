@@ -24,7 +24,7 @@ import {
   Opacity as OpacityIcon, FitnessCenter as FitnessIcon,
   Psychology as BrainIcon, Bloodtype as BloodIcon,
   Vaccines as VaccineIcon, MedicalServices, ContentCopy,
-  Lightbulb as TipIcon, MoreHoriz, Visibility,
+  Lightbulb as TipIcon, MoreHoriz, Visibility, Description as DocsIcon,
   Biotech as DnaIcon, RestaurantMenu as DietIcon, Spa as SpaIcon,
   MedicalInformation as TreatmentIcon, EventAvailable as ScreeningIcon,
   FamilyRestroom as FamilyIcon,
@@ -35,7 +35,7 @@ import AppLayout, { NavItem } from '../../components/common/AppLayout';
 import { StatCard, ProgressCard, MetricGauge, GlassCard, SectionHeader, StatusBadge, TimelineItem } from '../../components/common/SharedComponents';
 import { patientsAPI, healthRecordsAPI, notificationsAPI } from '../../services/api';
 
-// Patient navigation items
+// User navigation items
 export const patientNavItems: NavItem[] = [
   { icon: <DashIcon />, label: 'Dashboard', path: '/patient', section: 'Main' },
   { icon: <AssessIcon />, label: 'Cancer Risk', path: '/patient/cancer-risk', section: 'Main' },
@@ -67,6 +67,8 @@ export const patientNavItems: NavItem[] = [
   { icon: <SpaIcon />, label: 'Mental Health+', path: '/patient/mental-health-enhanced', section: 'Wellness' },
   { icon: <BrainIcon />, label: 'Education', path: '/patient/education', section: 'Tools' },
   { icon: <ShieldIcon />, label: 'Social Support', path: '/patient/social-determinants', section: 'Advanced' },
+  { icon: <DocsIcon />, label: 'My Documents', path: '/patient/documents', section: 'Health' },
+  { icon: <ShieldIcon />, label: 'Insurance', path: '/patient/insurance', section: 'Account' },
   { icon: <MedicalServices />, label: 'Billing', path: '/patient/billing', section: 'Account' },
   { icon: <NotifIcon />, label: 'Notifications', path: '/patient/notifications', badge: 3, section: 'Account' },
   { icon: <PersonIcon />, label: 'Profile', path: '/patient/profile', section: 'Account' },
@@ -110,7 +112,7 @@ const PatientDashboard: React.FC = () => {
   const healthScore = Math.round(100 - riskPercent * 0.6 - (stressLevel * 0.1) + (sleepHours > 7 ? 5 : 0));
 
   return (
-    <AppLayout title="Patient Dashboard" subtitle={`Welcome back, ${user?.first_name}`} navItems={patientNavItems} portalType="patient">
+    <AppLayout title="My Dashboard" subtitle={`Welcome back, ${user?.first_name}`} navItems={patientNavItems} portalType="patient">
       {loading && <LinearProgress sx={{ mb: 2, borderRadius: 2 }} />}
 
       {/* Health Score & Risk Overview */}

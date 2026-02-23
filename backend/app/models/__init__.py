@@ -39,6 +39,8 @@ from app.models.blood_donor import (
     MatchStatus, DonationStatus,
 )
 
+from app.models.document import Document, InsurancePolicy, UserInsuranceClaim
+
 # New model imports
 from app.models.clinical_decision import (
     ClinicalPathway, PatientPathwayEnrollment, DrugInteraction,

@@ -46,7 +46,7 @@ const LandingPage: React.FC = () => {
     {
       icon: <SecurityIcon sx={{ fontSize: 48, color: '#f57c00' }} />,
       title: 'Unique Health ID',
-      description: 'Every patient gets a unique Health ID that stores their entire health history, medications, and AI-generated risk assessments.',
+      description: 'Every user gets a unique Health ID that stores their entire health history, medications, and AI-generated risk assessments.',
     },
     {
       icon: <HeartIcon sx={{ fontSize: 48, color: '#c62828' }} />,
@@ -239,12 +239,12 @@ const LandingPage: React.FC = () => {
               </Stack>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
                 Advanced AI-powered cancer detection and health monitoring platform.
-                Empowering patients and healthcare providers with predictive analytics.
+                Empowering users and healthcare providers with predictive analytics.
               </Typography>
             </Grid>
             <Grid item xs={6} md={2}>
               <Typography sx={{ color: 'white', fontWeight: 600, mb: 2 }}>Platform</Typography>
-              {['For Patients', 'For Hospitals', 'For Doctors', 'AI Models'].map(item => (
+              {['For Users', 'For Hospitals', 'For Doctors', 'AI Models'].map(item => (
                 <Typography key={item} variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1, cursor: 'pointer', '&:hover': { color: 'white' } }}>
                   {item}
                 </Typography>

@@ -164,8 +164,8 @@ const HospitalManagement: React.FC = () => {
       {activeTab === 2 && (
         <Grid container spacing={2}>
           {[
-            { plan: 'Basic', price: '$499/mo', features: ['Up to 5 doctors', 'Basic patient portal', 'Standard reports', 'Email support'], hospitals: 2, color: '#9e9e9e' },
-            { plan: 'Professional', price: '$1,499/mo', features: ['Up to 50 doctors', 'Full patient portal', 'AI risk assessment', 'Advanced reports', 'Priority support', 'Telemedicine'], hospitals: 8, color: '#1565c0' },
+            { plan: 'Basic', price: '$499/mo', features: ['Up to 5 doctors', 'Basic user portal', 'Standard reports', 'Email support'], hospitals: 2, color: '#9e9e9e' },
+            { plan: 'Professional', price: '$1,499/mo', features: ['Up to 50 doctors', 'Full user portal', 'AI risk assessment', 'Advanced reports', 'Priority support', 'Telemedicine'], hospitals: 8, color: '#1565c0' },
             { plan: 'Enterprise', price: '$4,999/mo', features: ['Unlimited doctors', 'Full platform access', 'Custom AI models', 'Custom reports', '24/7 support', 'API access', 'White-label', 'SLA guarantee'], hospitals: 12, color: '#7b1fa2' },
           ].map((p) => (
             <Grid item xs={12} md={4} key={p.plan}>

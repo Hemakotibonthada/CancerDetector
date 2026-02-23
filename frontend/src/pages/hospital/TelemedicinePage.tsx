@@ -71,7 +71,7 @@ const TelemedicinePage: React.FC = () => {
             <StatCard icon={<CheckCircle />} label="Completed" value={completed.length.toString()} change="+2" color="#4caf50" subtitle="This week" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Star />} label="Avg Rating" value={avgRating.toFixed(1)} color="#ff9800" subtitle="Patient satisfaction" />
+            <StatCard icon={<Star />} label="Avg Rating" value={avgRating.toFixed(1)} color="#ff9800" subtitle="User satisfaction" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Timer />} label="Avg Duration" value="30 min" color="#ae52d4" subtitle="Per session" />

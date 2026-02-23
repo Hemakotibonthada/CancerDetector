@@ -19,7 +19,7 @@ import { hospitalsAPI, analyticsAPI } from '../../services/api';
 
 export const hospitalNavItems = [
   { section: 'Overview', icon: <Dashboard />, label: 'Dashboard', path: '/hospital/dashboard' },
-  { section: 'Patients', icon: <People />, label: 'Patient Management', path: '/hospital/patients' },
+  { section: 'Patients', icon: <People />, label: 'User Management', path: '/hospital/patients' },
   { section: 'Patients', icon: <PersonAdd />, label: 'Admissions', path: '/hospital/admissions' },
   { section: 'Staff', icon: <MedicalServices />, label: 'Doctor Management', path: '/hospital/doctors' },
   { section: 'Staff', icon: <Groups />, label: 'Staff Directory', path: '/hospital/staff' },

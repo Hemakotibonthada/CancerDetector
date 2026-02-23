@@ -114,7 +114,7 @@ const HospitalSettings: React.FC = () => {
                 <FormControlLabel control={<Switch defaultChecked />} label={<Typography sx={{ fontSize: 13 }}>AI-powered risk assessment</Typography>} />
                 <FormControlLabel control={<Switch defaultChecked />} label={<Typography sx={{ fontSize: 13 }}>Real-time bed tracking</Typography>} />
                 <FormControlLabel control={<Switch />} label={<Typography sx={{ fontSize: 13 }}>Maintenance mode</Typography>} />
-                <FormControlLabel control={<Switch defaultChecked />} label={<Typography sx={{ fontSize: 13 }}>Patient portal access</Typography>} />
+                <FormControlLabel control={<Switch defaultChecked />} label={<Typography sx={{ fontSize: 13 }}>User portal access</Typography>} />
                 <FormControlLabel control={<Switch defaultChecked />} label={<Typography sx={{ fontSize: 13 }}>Telemedicine enabled</Typography>} />
               </Stack>
             </Card>

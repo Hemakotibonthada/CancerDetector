@@ -9,7 +9,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 
-// Patient Pages (lazy loaded)
+// User Pages (lazy loaded)
 const PatientDashboard = lazy(() => import('./pages/patient/PatientDashboard'));
 const CancerRiskPage = lazy(() => import('./pages/patient/CancerRiskPage'));
 const HealthRecordsPage = lazy(() => import('./pages/patient/HealthRecordsPage'));
@@ -33,8 +33,10 @@ const ExerciseFitnessPage = lazy(() => import('./pages/patient/ExerciseFitnessPa
 const ScreeningSchedulePage = lazy(() => import('./pages/patient/ScreeningSchedulePage'));
 const FamilyHealthPage = lazy(() => import('./pages/patient/FamilyHealthPage'));
 const BloodDonorPage = lazy(() => import('./pages/patient/BloodDonorPage'));
+const DocumentsPage = lazy(() => import('./pages/patient/DocumentsPage'));
+const InsurancePage = lazy(() => import('./pages/patient/InsurancePage'));
 
-// New Patient Pages (lazy loaded)
+// New User Pages (lazy loaded)
 const ClinicalPathwaysPage = lazy(() => import('./pages/patient/ClinicalPathwaysPage'));
 const GenomicsPage = lazy(() => import('./pages/patient/GenomicsPage'));
 const PatientEngagementPage = lazy(() => import('./pages/patient/PatientEngagementPage'));
@@ -154,7 +156,7 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><DashboardRouter /></ProtectedRoute>} />
 
-              {/* Patient Routes */}
+              {/* User Routes */}
               <Route path="/patient" element={<ProtectedRoute><PatientDashboard /></ProtectedRoute>} />
               <Route path="/patient/cancer-risk" element={<ProtectedRoute><CancerRiskPage /></ProtectedRoute>} />
               <Route path="/patient/records" element={<ProtectedRoute><HealthRecordsPage /></ProtectedRoute>} />
@@ -190,6 +192,8 @@ function App() {
               <Route path="/patient/education" element={<ProtectedRoute><EducationPage /></ProtectedRoute>} />
               <Route path="/patient/social-determinants" element={<ProtectedRoute><SocialDeterminantsPage /></ProtectedRoute>} />
               <Route path="/patient/billing" element={<ProtectedRoute><BillingPatientPage /></ProtectedRoute>} />
+              <Route path="/patient/documents" element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
+              <Route path="/patient/insurance" element={<ProtectedRoute><InsurancePage /></ProtectedRoute>} />
 
               {/* Hospital Routes */}
               <Route path="/hospital" element={<ProtectedRoute roles={HOSPITAL_ROLES}><HospitalDashboard /></ProtectedRoute>} />

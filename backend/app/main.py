@@ -113,7 +113,7 @@ def create_application() -> FastAPI:
         rehabilitation_router, nutrition_enhanced_router, mental_health_enhanced_router,
         clinical_trials_v2_router, radiology_enhanced_router, pharmacy_enhanced_router,
         education_router, social_determinants_router, wearable_enhanced_router,
-        emergency_router, workforce_router,
+        emergency_router, workforce_router, documents_router,
     )
     
     api_prefix = settings.api_prefix
@@ -154,6 +154,7 @@ def create_application() -> FastAPI:
     app.include_router(wearable_enhanced_router, prefix=api_prefix)
     app.include_router(emergency_router, prefix=api_prefix)
     app.include_router(workforce_router, prefix=api_prefix)
+    app.include_router(documents_router, prefix=api_prefix)
     
     # ========================================================================
     # Root & Health Endpoints

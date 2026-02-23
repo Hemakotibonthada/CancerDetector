@@ -103,7 +103,7 @@ const LoginPage: React.FC = () => {
 
             <Box sx={{ mt: 4, p: 2, bgcolor: '#f5f5f5', borderRadius: 2 }}>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>Demo Accounts:</Typography>
-              <Typography variant="body2" color="text.secondary">Patient: patient@cancerguard.ai / Patient@123456</Typography>
+              <Typography variant="body2" color="text.secondary">User: patient@cancerguard.ai / Patient@123456</Typography>
               <Typography variant="body2" color="text.secondary">Doctor: doctor@cancerguard.ai / Doctor@123456</Typography>
               <Typography variant="body2" color="text.secondary">Admin: admin@cancerguard.ai / Admin@123456</Typography>
               <Typography variant="body2" color="text.secondary">Hospital Admin: hospital.admin@cancerguard.ai / Hospital@123456</Typography>
