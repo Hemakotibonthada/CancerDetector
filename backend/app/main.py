@@ -202,8 +202,9 @@ def create_application() -> FastAPI:
     
     # Serve frontend static files if build exists
     frontend_build = PROJECT_DIR / "frontend" / "build"
-    if frontend_build.exists():
-        app.mount("/static", StaticFiles(directory=str(frontend_build / "static")), name="static")
+    frontend_static = frontend_build / "static"
+    if frontend_build.exists() and frontend_static.exists():
+        app.mount("/static", StaticFiles(directory=str(frontend_static)), name="static")
         
         # Catch-all for SPA routing
         @app.get("/{full_path:path}")

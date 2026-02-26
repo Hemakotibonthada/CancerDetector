@@ -702,7 +702,7 @@ export const requestIdleCallback = (
   if ('requestIdleCallback' in window) {
     return window.requestIdleCallback(callback, options);
   }
-  return window.setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline), 1) as unknown as number;
+  return (window as any).setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 50 } as IdleDeadline), 1) as unknown as number;
 };
 
 /**

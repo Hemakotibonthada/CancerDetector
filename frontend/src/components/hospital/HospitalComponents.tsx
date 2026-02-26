@@ -23,7 +23,7 @@ import {
   Timeline as TimelineIcon, Speed, Visibility, Edit,
   Delete, Assignment, NotificationsActive, LocalShipping,
   Biotech, Healing, Psychology, Vaccines, Science,
-  MonitorHeart, Emergency, Star, StarBorder,
+  MonitorHeart, LocalHospital as Emergency, Star, StarBorder,
   ExpandMore, ExpandLess, Circle, Groups,
   AccessTime, DoNotDisturb, EventAvailable,
 } from '@mui/icons-material';

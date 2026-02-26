@@ -1,4 +1,5 @@
-import { createTheme, alpha, PaletteMode } from '@mui/material/styles';
+import { createTheme, alpha } from '@mui/material/styles';
+type PaletteMode = 'light' | 'dark';
 import { keyframes } from '@mui/system';
 
 // ==================== Animation Keyframes ====================

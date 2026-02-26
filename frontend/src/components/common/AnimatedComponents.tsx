@@ -459,16 +459,16 @@ export const AnimatedList = forwardRef<HTMLDivElement, AnimatedListProps>(
       };
     });
 
-    const Wrapper = asList ? List : Box;
+    const WrapperComponent: React.ElementType = asList ? List : Box;
 
     return (
-      <Wrapper
+      <WrapperComponent
         ref={ref}
         sx={[childStyles as SxProps<Theme>, ...(Array.isArray(sx) ? sx : [sx])]}
         {...rest}
       >
         {children}
-      </Wrapper>
+      </WrapperComponent>
     );
   }
 );
