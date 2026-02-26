@@ -1,0 +1,109 @@
+# =============================================================================
+# CancerGuard AI - Docker Ignore
+# =============================================================================
+
+# Version Control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules
+frontend/node_modules
+mobile/node_modules
+
+# Build outputs
+frontend/build
+frontend/coverage
+mobile/.expo
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info
+*.egg
+.eggs
+dist/
+build/
+.pytest_cache
+.mypy_cache
+htmlcov
+.coverage
+.tox
+.venv
+venv/
+env/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+
+# Temp files
+temp/
+tmp/
+
+# Backups
+backups/
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Testing
+tests/
+*.test.*
+*.spec.*
+coverage/
+
+# Mobile (not needed in backend container)
+mobile/
+
+# CI/CD
+.github/
+.circleci/
+
+# Kubernetes
+k8s/
+
+# Monitoring configs (mounted separately)
+monitoring/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Uploads (mounted as volume)
+uploads/
+exports/
+
+# Data files
+data/
+*.csv
+*.json
+!package.json
+!tsconfig.json
+!app.json
+
+# AI saved models (mounted as volume)
+ai_models/saved_models/
+
+# Scripts
+scripts/
+Makefile

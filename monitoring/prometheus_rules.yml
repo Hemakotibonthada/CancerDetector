@@ -1,0 +1,417 @@
+# =============================================================================
+# CancerGuard AI - Prometheus Monitoring Rules
+# =============================================================================
+
+groups:
+  # ── API Performance ─────────────────────────────────────────
+  - name: api_performance
+    rules:
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High API response time (P95 > 2s)"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.handler }}"
+
+      - alert: CriticalResponseTime
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Critical API response time (P99 > 5s)"
+          description: "99th percentile response time is {{ $value }}s"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High API error rate (> 5%)"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.handler }}"
+
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Unusually high request rate"
+          description: "Request rate is {{ $value }} req/s"
+
+  # ── Application Health ──────────────────────────────────────
+  - name: application_health
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been unreachable for more than 1 minute."
+
+      - alert: HealthCheckFailing
+        expr: probe_success == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Health check failing for {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024^3 > 3
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High memory usage (> 3GB)"
+          description: "Memory usage is {{ $value | humanize }}GB for {{ $labels.job }}"
+
+      - alert: CriticalMemoryUsage
+        expr: process_resident_memory_bytes / 1024^3 > 6
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Critical memory usage (> 6GB)"
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High CPU usage (> 90%)"
+
+  # ── Database ────────────────────────────────────────────────
+  - name: database
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_pool_available_connections == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "No available connections in the pool"
+
+      - alert: HighDatabaseConnectionUsage
+        expr: db_pool_used_connections / db_pool_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Database connection pool usage > 80%"
+          description: "Usage: {{ $value | humanizePercentage }}"
+
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Slow database queries (P95 > 1s)"
+          description: "95th percentile query time: {{ $value }}s"
+
+      - alert: DatabaseReplicationLag
+        expr: pg_replication_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Database replication lag > 30s"
+
+      - alert: DatabaseDiskUsage
+        expr: pg_database_size_bytes / 1024^3 > 50
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Database size exceeds 50GB"
+          description: "Current size: {{ $value | humanize }}GB"
+
+  # ── Redis/Cache ─────────────────────────────────────────────
+  - name: cache
+    rules:
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Redis is down"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Redis memory usage > 90%"
+
+      - alert: LowCacheHitRate
+        expr: redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total) < 0.7
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Cache hit rate below 70%"
+          description: "Hit rate: {{ $value | humanizePercentage }}"
+
+      - alert: HighRedisLatency
+        expr: redis_commands_duration_seconds_total / redis_commands_processed_total > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Redis command latency > 10ms average"
+
+  # ── Celery/Background Tasks ─────────────────────────────────
+  - name: celery
+    rules:
+      - alert: CeleryWorkerDown
+        expr: celery_workers_active == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "No active Celery workers"
+
+      - alert: HighTaskFailureRate
+        expr: rate(celery_task_failures_total[10m]) / rate(celery_task_completed_total[10m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Celery task failure rate > 10%"
+
+      - alert: TaskQueueBacklog
+        expr: celery_task_queue_length > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Celery task queue backlog > 1000"
+          description: "Queue length: {{ $value }}"
+
+      - alert: LongRunningTask
+        expr: celery_task_runtime_seconds > 300
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Celery task running > 5 minutes"
+
+  # ── Infrastructure ──────────────────────────────────────────
+  - name: infrastructure
+    rules:
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Disk usage > 85% on {{ $labels.instance }}"
+
+      - alert: CriticalDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes > 0.95
+        for: 5m
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "Disk usage > 95% on {{ $labels.instance }}"
+
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total[5m]) > 100 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Network traffic > 100MB/s on {{ $labels.instance }}"
+
+      - alert: ContainerRestarts
+        expr: increase(kube_pod_container_status_restarts_total[1h]) > 3
+        for: 1m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Container {{ $labels.container }} restarted {{ $value }} times in 1h"
+
+      - alert: PodNotReady
+        expr: kube_pod_status_ready{condition="true"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "Pod {{ $labels.pod }} is not ready"
+
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 30 * 24 * 3600
+        for: 1h
+        labels:
+          severity: warning
+          team: infrastructure
+        annotations:
+          summary: "SSL certificate expires in less than 30 days"
+
+      - alert: SSLCertificateExpiryCritical
+        expr: probe_ssl_earliest_cert_expiry - time() < 7 * 24 * 3600
+        for: 1h
+        labels:
+          severity: critical
+          team: infrastructure
+        annotations:
+          summary: "SSL certificate expires in less than 7 days"
+
+  # ── Cancer Detection ML ─────────────────────────────────────
+  - name: ml_models
+    rules:
+      - alert: ModelInferenceSlow
+        expr: histogram_quantile(0.95, rate(ml_inference_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "ML model inference P95 > 5s"
+          description: "Model {{ $labels.model_name }} inference time: {{ $value }}s"
+
+      - alert: ModelAccuracyDegradation
+        expr: ml_model_accuracy < 0.85
+        for: 30m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "ML model accuracy dropped below 85%"
+          description: "Model {{ $labels.model_name }} accuracy: {{ $value }}"
+
+      - alert: DataDriftDetected
+        expr: ml_data_drift_score > 0.3
+        for: 1h
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "Data drift detected for model {{ $labels.model_name }}"
+          description: "Drift score: {{ $value }}"
+
+      - alert: HighPredictionUncertainty
+        expr: ml_prediction_uncertainty_avg > 0.4
+        for: 15m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "High average prediction uncertainty"
+
+      - alert: ModelLoadFailure
+        expr: ml_model_load_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "ML model failed to load: {{ $labels.model_name }}"
+
+  # ── Security ────────────────────────────────────────────────
+  - name: security
+    rules:
+      - alert: HighAuthFailureRate
+        expr: rate(auth_login_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} failures/s - possible brute force attack"
+
+      - alert: SuspiciousAPIAccess
+        expr: rate(http_requests_total{status="403"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High rate of 403 Forbidden responses"
+
+      - alert: UnauthorizedAccessAttempt
+        expr: rate(http_requests_total{status="401"}[5m]) > 20
+        for: 2m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Excessive unauthorized access attempts"
+
+      - alert: DataExfiltrationRisk
+        expr: rate(http_response_size_bytes_sum[5m]) > 100 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Unusually high data transfer rate (> 100MB/s)"
+
+  # ── HIPAA Compliance ────────────────────────────────────────
+  - name: compliance
+    rules:
+      - alert: AuditLogFailure
+        expr: audit_log_write_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: compliance
+        annotations:
+          summary: "Audit log write failure - HIPAA compliance risk"
+
+      - alert: PHIAccessAnomaly
+        expr: rate(phi_access_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: warning
+          team: compliance
+        annotations:
+          summary: "Abnormal PHI access rate detected"
+          description: "{{ $value }} PHI accesses/s - review required"
+
+      - alert: EncryptionFailure
+        expr: encryption_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Data encryption failure detected"
