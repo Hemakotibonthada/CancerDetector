@@ -1,8 +1,9 @@
 # CancerGuard AI — API Reference
 
-> **Base URL:** `http://localhost:8000/api/v1`  
+> **Base URL:** `http://localhost:8001/api/v1`  
 > **Auth:** Bearer JWT token in `Authorization` header  
-> **Docs:** `http://localhost:8000/docs` (Swagger UI)
+> **Docs:** `http://localhost:8001/docs` (Swagger UI)  
+> **Note:** Default port is 8001 for development. Use port 8000 for production or Docker deployments.
 
 ---
 
@@ -374,6 +375,6 @@ GET /health
   "environment": "development",
   "database": { "status": "healthy" },
   "uptime_seconds": 3600.5,
-  "timestamp": "2026-02-23T12:00:00Z"
+  "timestamp": "2026-02-26T12:00:00Z"
 }
 ```

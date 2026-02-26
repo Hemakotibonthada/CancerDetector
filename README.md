@@ -43,14 +43,16 @@
 
 ### Key Highlights
 
-- **69 REST API endpoints** across 14 modules
-- **55 database models** across 17 modules with full audit trailing
-- **57 frontend pages** across 3 portals (Patient, Hospital, Admin)
-- **63 routes** with role-based access control
+- **457 REST API endpoints** across 38 modules
+- **239 database tables** across 41 model files with full audit trailing
+- **101 frontend pages** across 3 portals (Patient, Hospital, Admin)
+- **31 mobile screens** across 4 portals (Patient, Hospital, Admin, Auth)
+- **10 AI/ML models** with full training, inference, and explainability pipeline
 - **AI cancer prediction** using XGBoost, LightGBM, Random Forest, Neural Network ensemble
 - **Real-time smartwatch integration** (heart rate, SpO2, ECG, sleep, activity)
 - **Blood donor matching** with Haversine geolocation and blood group compatibility
 - **HIPAA-compliant** audit logging, encryption, and access control
+- **6 React contexts**, **4 service modules**, **15 reusable components**, and **6 utility libraries**
 
 ---
 
@@ -62,20 +64,20 @@
 │  ┌──────────┐  ┌──────────────┐  ┌────────────────┐        │
 │  │ Patient   │  │  Hospital    │  │  Admin          │        │
 │  │ Portal    │  │  Portal      │  │  Portal         │        │
-│  │ (22 pages)│  │  (18 pages)  │  │  (16 pages)     │        │
+│  │ (39 pages)│  │  (31 pages)  │  │  (22 pages)     │        │
 │  └─────┬─────┘  └──────┬───────┘  └────────┬────────┘        │
 │        │               │                   │                 │
 │        └───────────────┼───────────────────┘                 │
 │                        │                                     │
 │              ┌─────────▼─────────┐                           │
-│              │  API Service Layer│ (29 modules, Axios)       │
+│              │  API Service Layer│ (4 service files, Axios)  │
 │              └─────────┬─────────┘                           │
 └────────────────────────┼─────────────────────────────────────┘
                          │ HTTP/REST (proxy :3000 → :8000)
 ┌────────────────────────┼─────────────────────────────────────┐
 │                   BACKEND (FastAPI)                           │
 │              ┌─────────▼─────────┐                           │
-│              │  14 API Routers   │ /api/v1/*                 │
+│              │  38 API Routers   │ /api/v1/*                 │
 │              └─────────┬─────────┘                           │
 │        ┌───────────────┼───────────────────┐                 │
 │  ┌─────▼─────┐  ┌──────▼──────┐  ┌────────▼────────┐       │
@@ -83,7 +85,7 @@
 │  │ RBAC      │  │ Ensemble    │  │  CRUD, Matching  │       │
 │  └───────────┘  └─────────────┘  └─────────────────┘       │
 │              ┌─────────▼─────────┐                           │
-│              │  SQLAlchemy ORM   │ (55 models, async)        │
+│              │  SQLAlchemy ORM   │ (239 tables, async)       │
 │              └─────────┬─────────┘                           │
 │              ┌─────────▼─────────┐                           │
 │              │   SQLite / Postgres│                           │
@@ -98,10 +100,10 @@
 ### Backend
 | Component | Technology |
 |-----------|-----------|
-| Framework | FastAPI (async, Python 3.10+) |
+| Framework | FastAPI (async, Python 3.13) |
 | ORM | SQLAlchemy 2.x with `DeclarativeBase`, async session |
 | Database | SQLite (dev) / PostgreSQL (prod) via `aiosqlite` / `asyncpg` |
-| Authentication | JWT (HS256) — access tokens (60min) + refresh tokens (30 days) |
+| Authentication | JWT (HS256) — access tokens (15min) + refresh tokens (7 days) |
 | Password Hashing | bcrypt via passlib |
 | Configuration | Pydantic Settings with `.env` support |
 | Middleware | CORS, request timing (`X-Process-Time`), rate limiting |
@@ -121,8 +123,9 @@
 **Frontend (package.json):**
 ```
 @emotion/react, @emotion/styled, @mui/icons-material, @mui/material,
-@mui/x-charts, @mui/x-data-grid, axios, chart.js, react, react-chartjs-2,
-react-dom, react-router-dom, react-scripts, recharts, typescript, web-vitals
+@mui/x-charts, @mui/x-data-grid, axios, chart.js, framer-motion, react,
+react-chartjs-2, react-dom, react-router-dom, react-scripts, recharts,
+typescript, web-vitals
 ```
 
 ---
@@ -151,13 +154,13 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # Run the server
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8001
 ```
 
-The backend starts at `http://localhost:8000` with:
-- **API docs (Swagger):** `http://localhost:8000/docs`
-- **ReDoc:** `http://localhost:8000/redoc`
-- **Health check:** `http://localhost:8000/health`
+The backend starts at `http://localhost:8001` with:
+- **API docs (Swagger):** `http://localhost:8001/docs`
+- **ReDoc:** `http://localhost:8001/redoc`
+- **Health check:** `http://localhost:8001/health`
 
 ### Frontend Setup
 
@@ -171,7 +174,7 @@ npm install
 npm start
 ```
 
-The frontend starts at `http://localhost:3000` with proxy to `:8000`.
+The frontend starts at `http://localhost:3000` (or `http://localhost:3002` if port 3000 is in use) with proxy to the backend.
 
 ### First Run
 
@@ -193,7 +196,7 @@ Cancer detection/
 │       │   ├── config.py              # 9 settings classes (DB, auth, AI, email, etc.)
 │       │   ├── database.py            # SQLAlchemy async engine, Base, mixins
 │       │   └── security.py            # JWT creation/validation, password hashing
-│       ├── models/                    # 17 model files, 55 ORM classes
+│       ├── models/                    # 41 model files (239 tables)
 │       │   ├── __init__.py            # Exports all 71 symbols (models + enums)
 │       │   ├── user.py                # User, UserSession, UserPreference
 │       │   ├── patient.py             # Patient, Demographics, Allergy, FamilyHistory
@@ -212,7 +215,7 @@ Cancer detection/
 │       │   ├── insurance.py           # Insurance, InsuranceClaim, Provider
 │       │   ├── report.py              # Report, Feedback, SystemConfig, FeatureFlag, etc.
 │       │   └── blood_donor.py         # BloodDonor, BloodRequest, Match, DonationRecord
-│       └── api/                       # 14 route files, 69 endpoints
+│       └── api/                       # 38 route files (457 endpoints)
 │           ├── __init__.py            # Exports all routers
 │           ├── auth.py                # Authentication (register, login, JWT)
 │           ├── users.py               # User CRUD
@@ -249,9 +252,9 @@ Cancer detection/
 │           ├── LandingPage.tsx         # Public landing
 │           ├── LoginPage.tsx           # Authentication
 │           ├── RegisterPage.tsx        # Registration
-│           ├── patient/               # 23 patient pages
-│           ├── hospital/              # 18 hospital pages
-│           └── admin/                 # 16 admin pages
+│           ├── patient/               # 39 patient pages
+│           ├── hospital/              # 31 hospital pages
+│           └── admin/                 # 22 admin pages
 │
 └── README.md
 ```
@@ -277,8 +280,8 @@ The backend uses **Pydantic Settings** with 9 sub-configuration classes. All set
 | `RateLimitSettings` | `RATELIMIT_` | Per-endpoint rate limits |
 
 **Application Defaults:**
-- Port: `8000`
-- CORS Origins: `localhost:3000`, `localhost:8000`
+- Port: `8001` (development)
+- CORS Origins: `localhost:3000`, `localhost:3002`, `localhost:8000`, `localhost:8001`
 - Debug: `true` (dev mode)
 - API Prefix: `/api/v1`
 
@@ -624,9 +627,9 @@ The app uses a **shared layout architecture** (`AppLayout`) with three themed po
 
 | Portal | Color Theme | Target Users | Pages |
 |--------|------------|-------------|-------|
-| Patient | Deep Navy (`#0d1b2a`) | Patients | 22 pages |
-| Hospital | Indigo (`#1a237e`) | Doctors, Nurses, Hospital Admin | 18 pages |
-| Admin | Dark Purple (`#1b1b2f`) | System Admin, Super Admin | 16 pages |
+| Patient | Deep Navy (`#0d1b2a`) | Patients | 39 pages |
+| Hospital | Indigo (`#1a237e`) | Doctors, Nurses, Hospital Admin | 31 pages |
+| Admin | Dark Purple (`#1b1b2f`) | System Admin, Super Admin | 22 pages |
 
 **AppLayout Features:**
 - Collapsible sidebar with section grouping
@@ -637,7 +640,7 @@ The app uses a **shared layout architecture** (`AppLayout`) with three themed po
 - Health ID badge display
 - Responsive: drawer becomes temporary on mobile
 
-### Patient Portal (22 Pages)
+### Patient Portal (39 Pages)
 
 | Page | Route | Description |
 |------|-------|-------------|
@@ -647,30 +650,48 @@ The app uses a **shared layout architecture** (`AppLayout`) with three themed po
 | **Blood Tests** | `/patient/blood-tests` | Blood sample list, biomarker results, trend analysis, AI analysis |
 | **Vital Signs** | `/patient/vitals` | Heart rate, BP, temperature, SpO2, respiratory rate tracking |
 | **Smartwatch** | `/patient/smartwatch` | Device management, real-time vitals, sleep/activity/ECG data |
+| **Wearable Enhanced** | `/patient/wearable` | Advanced wearable analytics, glucose, gait, respiratory |
 | **Appointments** | `/patient/appointments` | Book/view appointments, telemedicine links, doctor selection |
 | **Medications** | `/patient/medications` | Current prescriptions, schedule, adherence tracking, reminders |
 | **Find Hospitals** | `/patient/hospitals` | Hospital directory, search by specialization, ratings, location |
 | **Treatment Plan** | `/patient/treatment` | Active treatment plans, phases, clinical trial enrollment |
 | **Screening Schedule** | `/patient/screening` | Cancer screening calendar, recommended tests, guideline adherence |
+| **Cancer Screening** | `/patient/cancer-screening` | Full screening workflow, results, staging |
 | **Symptom Checker** | `/patient/symptoms` | AI-powered symptom assessment, severity indicators, recommendations |
 | **Health Goals** | `/patient/goals` | Set/track health goals, progress visualization, achievements |
-| **Health Timeline** | `/patient/messages` | Chronological health events, messages with healthcare providers |
+| **Communication Hub** | `/patient/communication` | Secure messaging, care team, referrals, consent forms |
 | **Diet & Nutrition** | `/patient/diet` | Meal planning, nutrition logs, anti-cancer food recommendations |
-| **Mental Wellness** | `/patient/mental-health` | Mental health assessments, therapy sessions, mood tracking, resources |
+| **Nutrition Enhanced** | `/patient/nutrition` | Advanced nutrition assessment, hydration, enteral nutrition |
+| **Mental Wellness** | `/patient/mental-health` | Mental health assessments, therapy sessions, mood tracking |
+| **Mental Health Enhanced** | `/patient/mental-health-enhanced` | CBT, mindfulness, crisis intervention, safety plans |
 | **Exercise & Fitness** | `/patient/exercise` | Exercise logging, fitness goals, activity recommendations |
 | **Genetic Profile** | `/patient/genetics` | Genetic markers, pharmacogenomics, hereditary risk analysis |
+| **Genomics** | `/patient/genomics` | Liquid biopsy, gene expression, sequencing data |
 | **Family Health** | `/patient/family-health` | Family tree builder, hereditary condition tracking, risk analysis |
-| **Blood Donor** | `/patient/blood-donor` | Register as donor, manage availability, respond to requests, donation history |
+| **Blood Donor** | `/patient/blood-donor` | Register as donor, manage availability, respond to requests |
+| **Clinical Pathways** | `/patient/clinical-pathways` | Clinical decision pathways, guidelines |
+| **Documents** | `/patient/documents` | Upload/manage medical reports, scan results |
+| **Insurance** | `/patient/insurance` | Policy management, claims tracking, coverage details |
+| **Billing** | `/patient/billing` | Invoices, payments, cost estimates |
+| **Telehealth** | `/patient/telehealth` | Video consultations, remote monitoring |
+| **Messages** | `/patient/messages` | Secure messaging with healthcare providers |
+| **Education** | `/patient/education` | Health literacy resources, quizzes, learning modules |
+| **Social Determinants** | `/patient/sdoh` | SDOH assessments, community resources, food insecurity |
+| **Rehabilitation** | `/patient/rehabilitation` | Rehab plans, therapy sessions, functional assessments |
+| **Research & Trials** | `/patient/research` | Clinical trial enrollment, research participation |
+| **Patient Engagement** | `/patient/engagement` | Gamification, challenges, peer support, rewards |
 | **Notifications** | `/patient/notifications` | All notifications with filtering, mark read, action links |
+| **Settings** | `/patient/settings` | App preferences, notification settings |
 | **Profile** | `/patient/profile` | Personal info, settings, emergency contacts, preferences |
 
-### Hospital Portal (18 Pages)
+### Hospital Portal (31 Pages)
 
 | Page | Route | Description |
 |------|-------|-------------|
 | **Dashboard** | `/hospital` | Hospital KPIs, bed occupancy, daily stats, revenue, patient flow |
 | **Patient Management** | `/hospital/patients` | Patient directory, admissions, discharge, health records access |
 | **Doctor Management** | `/hospital/doctors` | Doctor roster, specializations, schedules, assignments |
+| **Doctor Dashboard** | `/hospital/doctor-dashboard` | Individual doctor view, caseload, upcoming appointments |
 | **Staff Directory** | `/hospital/staff` | Staff directory, departments, roles, shifts |
 | **Appointments** | `/hospital/appointments` | Hospital-wide appointment management, scheduling |
 | **Lab Management** | `/hospital/lab` | Lab order management, test queue, result entry, alerts |
@@ -680,14 +701,26 @@ The app uses a **shared layout architecture** (`AppLayout`) with three themed po
 | **Settings** | `/hospital/settings` | Hospital configuration, departments, staff management |
 | **Surgery** | `/hospital/surgery` | OR scheduling, surgery list, pre-op/post-op management |
 | **Pharmacy** | `/hospital/pharmacy` | Drug inventory, prescription dispensing, stock alerts |
+| **Pharmacy Enhanced** | `/hospital/pharmacy-enhanced` | Formulary, medication reconciliation, controlled substances |
 | **Radiology** | `/hospital/radiology` | Imaging studies, AI analysis requests, DICOM viewer |
+| **Radiology Enhanced** | `/hospital/radiology-enhanced` | AI reads, tumor measurements, dose tracking |
+| **Pathology** | `/hospital/pathology` | Specimen tracking, slides, staining protocols, tumor boards |
 | **Emergency** | `/hospital/emergency` | ED dashboard, triage, case management, wait times |
-| **Telemedicine** | `/hospital/telemedicine` | Virtual consultation sessions, video/chat links |
-| **Clinical Trials** | `/hospital/clinical-trials` | Trial management, patient enrollment, progress tracking |
+| **Emergency Enhanced** | `/hospital/emergency-enhanced` | Sepsis/stroke screening, rapid response |
+| **Telemedicine** | `/hospital/telemedicine` | Virtual consultation sessions, video/chat |
+| **Clinical Trials** | `/hospital/clinical-trials` | Trial management, patient enrollment, progress |
+| **Clinical Trials V2** | `/hospital/clinical-trials-v2` | Enhanced protocol management, adverse events |
+| **Clinical Decision** | `/hospital/clinical-decision` | Guidelines, calculators, drug interactions |
+| **Genomics Lab** | `/hospital/genomics` | Sequencing workflows, variant analysis |
 | **Quality Metrics** | `/hospital/quality` | Patient satisfaction, clinical outcomes, benchmarking |
+| **Quality & Safety** | `/hospital/quality-safety` | Adverse events, incident reports, infection control |
+| **Population Health** | `/hospital/population-health` | Disease registries, care gaps, health equity |
+| **Nutrition Management** | `/hospital/nutrition` | Dietary orders, enteral nutrition |
+| **Rehabilitation** | `/hospital/rehabilitation` | Therapy programs, functional assessments |
+| **Supply Chain** | `/hospital/supply-chain` | Inventory, purchase orders, asset tracking |
 | **Blood Bank** | `/hospital/blood-bank` | Blood inventory, requests, donor matching, transfusion records |
 
-### Admin Portal (16 Pages)
+### Admin Portal (22 Pages)
 
 | Page | Route | Description |
 |------|-------|-------------|
@@ -706,6 +739,12 @@ The app uses a **shared layout architecture** (`AppLayout`) with three themed po
 | **Data Management** | `/admin/data-management` | Backups, storage stats, retention policies, data quality |
 | **Billing** | `/admin/billing` | Subscription management, revenue tracking |
 | **Integrations** | `/admin/integrations` | Third-party API connections, health checks |
+| **Education Management** | `/admin/education` | Content management for education resources |
+| **Population Health Admin** | `/admin/population-health` | Public health campaigns, disease tracking |
+| **Quality Dashboard** | `/admin/quality` | System-wide quality metrics |
+| **Research Portal** | `/admin/research` | Research study management, IRB submissions |
+| **Social Determinants Admin** | `/admin/sdoh` | Community program management |
+| **Workforce Management** | `/admin/workforce` | Staffing, scheduling, credentialing |
 | **Training Center** | `/admin/training` | Staff training courses, certifications, progress tracking |
 
 ### Shared Components
@@ -729,7 +768,7 @@ Located in `frontend/src/components/common/`:
 
 The `services/api.ts` file contains **29+ API modules** built on Axios with:
 
-- **Base URL:** `/api/v1` (proxied in development)
+- **Base URL:** `/api/v1` (proxied in development from port 3000/3002 to backend port 8001)
 - **Request interceptor:** Auto-attaches JWT Bearer token
 - **Response interceptor:** Auto-refreshes token on 401, redirects to login on failure
 
@@ -1015,6 +1054,15 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 | `GET /api/v1/health` | No Auth | API health status |
 | `GET /api/v1/admin/system-health` | Admin Auth | Full system metrics (DB, memory, disk) |
 
+### Deployment Ports
+
+| Service | Dev Port | Description |
+|---------|----------|-------------|
+| Backend (FastAPI) | 8001 | API server |
+| Frontend (React) | 3000 / 3002 | Dev server (auto-selects next available) |
+| Swagger UI | 8001/docs | Interactive API documentation |
+| ReDoc | 8001/redoc | Alternative API docs |
+
 ---
 
 ## Contributing
@@ -1038,16 +1086,27 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 | Category | Count |
 |----------|-------|
-| Backend API endpoints | 69 |
-| Backend ORM models | 55 |
-| Backend model files | 17 |
-| Backend API modules | 14 |
-| Backend config classes | 9 |
-| Frontend pages | 57 |
-| Frontend routes | 63 |
-| Frontend API modules | 29+ |
+| Backend API endpoints | 457 |
+| Backend API modules | 38 |
+| Backend ORM tables | 239 |
+| Backend model files | 41 |
+| Backend service files | 17 |
+| Backend schema files | 10 |
+| Frontend pages (total) | 101 |
+| Frontend patient pages | 39 |
+| Frontend hospital pages | 31 |
+| Frontend admin pages | 22 |
+| Frontend components | 15 |
+| Frontend service files | 4 |
+| Frontend contexts | 6 |
+| Frontend hooks | 2 |
+| Frontend utilities | 6 |
 | Frontend TypeScript interfaces | 60+ |
-| Frontend dependencies | 16 |
+| Frontend dependencies | 17 |
+| Mobile screens | 31 |
+| Mobile components | 2 |
+| AI/ML model files | 10 |
+| AI/ML pipeline files (total) | 31 |
 | Blood biomarker features | 46 |
 | Notification types | 21 |
 | User roles | 12 |

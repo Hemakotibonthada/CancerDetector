@@ -4,7 +4,7 @@
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
-| Python | 3.10+ | Backend runtime |
+| Python | 3.13+ | Backend runtime |
 | Node.js | 18+ | Frontend build |
 | npm | 9+ | Package management |
 | Git | 2.40+ | Version control |
@@ -47,8 +47,8 @@ This will:
 - Initialize SQLite database (`cancerguard.db`)
 - Create all 239 tables
 - Seed demo data automatically
-- Start server on http://localhost:8000
-- Swagger docs available at http://localhost:8000/docs
+- Start server on http://localhost:8001
+- Swagger docs available at http://localhost:8001/docs
 
 ### 1.4 Frontend Setup
 
@@ -58,7 +58,9 @@ npm install
 npm start
 ```
 
-Frontend starts on http://localhost:3000.
+Frontend starts on http://localhost:3000 (or http://localhost:3002 if port 3000 is in use).
+
+> **Note:** The `framer-motion` package is required and included in `package.json`. If you encounter animation-related errors, run `npm install framer-motion --save`.
 
 ### 1.5 Mobile App (Optional)
 
@@ -109,7 +111,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
 # CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:3005
+CORS_ORIGINS=http://localhost:3000,http://localhost:3002,http://localhost:8001
 
 # File Uploads
 MAX_UPLOAD_SIZE_MB=50
@@ -121,7 +123,7 @@ UPLOAD_DIR=uploads
 Create `frontend/.env`:
 
 ```env
-REACT_APP_API_URL=http://localhost:8000/api/v1
+REACT_APP_API_URL=http://localhost:8001/api/v1
 ```
 
 ---
@@ -322,7 +324,7 @@ sudo certbot --nginx -d cancerguard.example.com
 | Issue | Solution |
 |-------|----------|
 | `ModuleNotFoundError` | Ensure virtual env is activated and dependencies installed |
-| Port 8000 in use | Kill existing process or change PORT in `.env` |
+| Port 8000/8001 in use | Kill existing process or change PORT in `.env` |
 | Database locked | Stop other processes accessing `cancerguard.db` |
 | CORS errors | Add your frontend URL to `CORS_ORIGINS` |
 | Token expired | Frontend auto-redirects to login on 401 |
@@ -342,7 +344,7 @@ LOG_LEVEL=INFO    # DEBUG, INFO, WARNING, ERROR, CRITICAL
 
 | Tool | URL | Description |
 |------|-----|-------------|
-| Swagger UI | http://localhost:8000/docs | Interactive API docs |
-| ReDoc | http://localhost:8000/redoc | Alternative API docs |
+| Swagger UI | http://localhost:8001/docs | Interactive API docs |
+| ReDoc | http://localhost:8001/redoc | Alternative API docs |
 | Frontend | http://localhost:3000 | React dev server |
-| Health Check | http://localhost:8000/health | Server status |
+| Health Check | http://localhost:8001/health | Server status |

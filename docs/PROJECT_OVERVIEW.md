@@ -25,13 +25,21 @@ Cancer remains one of the leading causes of death worldwide, with early detectio
 | Database Tables | 239 |
 | API Endpoints | 457 |
 | API Modules | 38 |
-| Backend Model Files | 40 |
-| Backend API Route Files | 37 |
-| Frontend User Pages | 37 |
-| Frontend Hospital Pages | 30 |
+| Backend Model Files | 41 |
+| Backend API Route Files | 38 |
+| Backend Service Files | 17 |
+| Backend Schema Files | 10 |
+| Frontend User Pages | 39 |
+| Frontend Hospital Pages | 31 |
 | Frontend Admin Pages | 22 |
-| Mobile App Screens | 4 portals |
-| AI/ML Model Files | 8 |
+| Frontend Components | 15 |
+| Frontend Context Providers | 6 |
+| Frontend Service Files | 4 |
+| Frontend Utility Files | 6 |
+| Mobile App Screens | 31 |
+| Mobile Components | 2 |
+| AI/ML Model Files | 10 |
+| AI/ML Pipeline Files (total) | 31 |
 
 ---
 
@@ -64,10 +72,12 @@ Cancer remains one of the leading causes of death worldwide, with early detectio
 | Framework | React 18.2 |
 | Language | TypeScript 4.9 |
 | UI Library | Material UI (MUI) v5 |
+| Animation | Framer Motion |
 | Charts | Recharts, Chart.js, MUI X Charts |
 | Data Grid | MUI X Data Grid |
 | HTTP Client | Axios |
 | Routing | React Router v6 |
+| Build Target | ES6 with downlevelIteration |
 
 ### Mobile
 | Component | Technology |
@@ -120,7 +130,7 @@ Cancer remains one of the leading causes of death worldwide, with early detectio
 
 ## 6. Portal Breakdown
 
-### 6.1 User Portal (37 pages)
+### 6.1 User Portal (39 pages)
 The user-facing portal provides comprehensive health management:
 
 | Category | Features |
@@ -155,7 +165,7 @@ The user-facing portal provides comprehensive health management:
 | **Profile & Settings** | Account management, preferences |
 | **Notifications** | Alert center, push notifications |
 
-### 6.2 Hospital Portal (30 pages)
+### 6.2 Hospital Portal (31 pages)
 Hospital-facing tools for clinical and administrative operations:
 
 | Category | Features |

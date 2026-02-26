@@ -9,7 +9,7 @@
                     │  Web App  │  Mobile App  │  Swagger/ReDoc     │
                     │  React 18 │  Expo/RN     │  OpenAPI 3.0       │
                     │  MUI v5   │  RN Paper    │  Auto-generated    │
-                    │  Port 3000│  Expo GO     │  Port 8000/docs    │
+                    │  Port 3000│  Expo GO     │  Port 8001/docs    │
                     └─────┬─────┴──────┬───────┴────────┬───────────┘
                           │            │                │
                      ═════╪════════════╪════════════════╪═════════
@@ -51,7 +51,7 @@
                     │                                                │
                     │  ┌────────────────────────────────────────┐    │
                     │  │      SQLAlchemy 2.0 Async ORM         │    │
-                    │  │  40 Model Files │ 239 Tables           │    │
+                    │  │  41 Model Files │ 239 Tables           │    │
                     │  │  AsyncSession │ BaseMixin │ to_dict()  │    │
                     │  └────────────────────┬───────────────────┘    │
                     │                       │                        │
@@ -99,14 +99,14 @@ app = create_application()
 
 ```
 main.py
-  ├── imports from app.api.__init__
-  │     ├── auth_router           → /api/v1/auth/*
-  │     ├── users_router          → /api/v1/users/*
-  │     ├── patients_router       → /api/v1/patients/*
-  │     ├── hospitals_router      → /api/v1/hospitals/*
-  │     ├── cancer_detection_router → /api/v1/cancer-detection/*
-  │     ├── ... (33 more routers)
-  │     └── documents_router      → /api/v1/documents/*
+  └── 39 API Modules
+       ├── auth_router           → /api/v1/auth/*
+       ├── users_router          → /api/v1/users/*
+       ├── patients_router       → /api/v1/patients/*
+       ├── hospitals_router      → /api/v1/hospitals/*
+       ├── cancer_detection_router → /api/v1/cancer-detection/*
+       ├── ... (33 more routers)
+       └── documents_router      → /api/v1/documents/*
   └── app.include_router(router, prefix="/api/v1")
 ```
 
@@ -173,11 +173,11 @@ App.tsx
        │    ├── /patient/records → HealthRecordsPage
        │    ├── /patient/documents → DocumentsPage
        │    ├── /patient/insurance → InsurancePage
-       │    └── ... (37 total)
+       │    └── ... (39 total)
        ├── Hospital Routes (ProtectedRoute + HOSPITAL_ROLES)
        │    ├── /hospital → HospitalDashboard
        │    ├── /hospital/patients → PatientManagement
-       │    └── ... (30 total)
+       │    └── ... (31 total)
        └── Admin Routes (ProtectedRoute + ADMIN_ROLES)
             ├── /admin → AdminDashboard
             └── ... (22 total)
@@ -193,6 +193,26 @@ AuthContext
   ├── logout()
   ├── isAuthenticated
   └── loading
+
+AppContext
+  ├── Global app state
+  └── Shared utilities
+
+ThemeContext
+  ├── Light/dark mode toggle
+  └── Theme preferences
+
+NotificationContext
+  ├── Real-time notifications
+  └── Notification preferences
+
+MedicalDataContext
+  ├── Shared medical data across pages
+  └── Data caching
+
+WebSocketContext
+  ├── WebSocket connection management
+  └── Real-time data streaming
 
 Per-Page State (useState/useEffect)
   ├── Data loaded via API calls
@@ -216,6 +236,15 @@ services/api.ts
        ├── documentsAPI (7 methods)
        ├── insuranceAPI (7 methods)
        └── ... (35 more modules)
+
+services/analyticsService.ts
+  └── Analytics tracking & reporting
+
+services/cacheService.ts
+  └── Client-side data caching
+
+services/websocketService.ts
+  └── WebSocket connection management
 ```
 
 ### 3.4 Shared Component Library
@@ -227,14 +256,41 @@ components/common/
   │    ├── Collapsible sections
   │    ├── Portal-based theming
   │    └── Mobile drawer
-  └── SharedComponents.tsx
-       ├── StatCard
-       ├── ProgressCard
-       ├── MetricGauge
-       ├── GlassCard
-       ├── SectionHeader
-       ├── StatusBadge
-       └── TimelineItem
+  ├── SharedComponents.tsx
+  │    ├── StatCard, ProgressCard, MetricGauge
+  │    ├── GlassCard, SectionHeader
+  │    └── StatusBadge, TimelineItem
+  ├── AnimatedComponents.tsx
+  │    └── Framer Motion animated wrappers
+  ├── ChartComponents.tsx
+  │    └── Reusable chart wrappers (Recharts, Chart.js)
+  ├── DashboardWidgets.tsx
+  │    └── Dashboard-specific widget components
+  ├── DataVisualization.tsx
+  │    └── Data tables, grids, visualizations
+  ├── FeedbackComponents.tsx
+  │    └── Toast, snackbar, dialog components
+  ├── FormComponents.tsx
+  │    └── Reusable form fields and validation
+  ├── LayoutComponents.tsx
+  │    └── Page layouts, tab panels, toggle groups
+  └── MediaComponents.tsx
+       └── Image, video, file upload components
+
+components/patient/
+  └── PatientComponents.tsx
+
+components/hospital/
+  └── HospitalComponents.tsx
+
+components/admin/
+  └── AdminComponents.tsx
+
+components/auth/
+  └── AuthComponents.tsx
+
+components/landing/
+  └── LandingComponents.tsx
 ```
 
 ---
@@ -319,9 +375,9 @@ Return document metadata
 ### 6.1 Development
 
 ```
-localhost:3000  ←  React dev server (npm start)
-localhost:8000  ←  Uvicorn + FastAPI (python run.py)
-cancerguard.db ←  SQLite file database
+localhost:3000 / 3002  ←  React dev server (npm start)
+localhost:8001         ←  Uvicorn + FastAPI (python run.py)
+cancerguard.db         ←  SQLite file database
 ```
 
 ### 6.2 Production (Recommended)
