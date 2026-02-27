@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Box, Container, Typography, TextField, Button, Card, CardContent,
-  Stack, Alert, InputAdornment, IconButton, CircularProgress, MenuItem, Grid,
+  Stack, Alert, InputAdornment, IconButton, CircularProgress, MenuItem, Grid, useTheme,
 } from '@mui/material';
 import {
   PersonAdd as PersonIcon, Email as EmailIcon, Lock as LockIcon,
@@ -10,10 +10,13 @@ import {
   Person as UserIcon, Phone as PhoneIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import { useThemeContext } from '../context/ThemeContext';
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { register, isAuthenticated } = useAuth();
+  const theme = useTheme();
+  const { isDark } = useThemeContext();
   const [formData, setFormData] = useState({
     email: '', username: '', password: '', confirm_password: '',
     first_name: '', last_name: '', phone_number: '', role: 'patient',
@@ -52,15 +55,17 @@ const RegisterPage: React.FC = () => {
   return (
     <Box sx={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', py: 4,
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: isDark
+        ? `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 100%)`
+        : `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
     }}>
       <Container maxWidth="md">
         <Card sx={{ p: 4, borderRadius: 4 }}>
           <CardContent>
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                <HealthIcon sx={{ fontSize: 40, color: '#1565c0' }} />
-                <Typography variant="h4" sx={{ fontWeight: 800, color: '#1565c0' }}>CancerGuard AI</Typography>
+                <HealthIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />
+                <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.primary.main }}>CancerGuard AI</Typography>
               </Stack>
               <Typography variant="body1" color="text.secondary">Create your account and get your unique Health ID</Typography>
             </Box>
@@ -128,7 +133,7 @@ const RegisterPage: React.FC = () => {
               <Button type="submit" fullWidth variant="contained" size="large" disabled={loading}
                 sx={{
                   mt: 3, mb: 2, py: 1.5,
-                  background: 'linear-gradient(135deg, #1565c0, #0d47a1)',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
                 }}>
                 {loading ? <CircularProgress size={24} color="inherit" /> : 'Create Account & Get Health ID'}
               </Button>
@@ -137,7 +142,7 @@ const RegisterPage: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
                 Already have an account?{' '}
-                <Link to="/login" style={{ color: '#1565c0', fontWeight: 600, textDecoration: 'none' }}>Sign In</Link>
+                <Link to="/login" style={{ color: theme.palette.primary.main, fontWeight: 600, textDecoration: 'none' }}>Sign In</Link>
               </Typography>
             </Box>
           </CardContent>

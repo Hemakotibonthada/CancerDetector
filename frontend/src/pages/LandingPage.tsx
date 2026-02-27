@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Container, Typography, Button, Grid, Card, CardContent,
-  AppBar, Toolbar, Stack, Chip, Avatar, IconButton, useTheme
+  AppBar, Toolbar, Stack, Chip, Avatar, IconButton, useTheme, alpha,
 } from '@mui/material';
 import {
   Science as ScienceIcon,
@@ -16,11 +16,15 @@ import {
   HealthAndSafety as HealthIcon,
   ArrowForward as ArrowIcon,
   CheckCircle as CheckIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from '@mui/icons-material';
+import { useThemeContext } from '../context/ThemeContext';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const { isDark, toggleTheme } = useThemeContext();
 
   const features = [
     {
@@ -63,21 +67,28 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', transition: 'background-color 0.3s ease' }}>
       {/* Navbar */}
-      <AppBar position="fixed" sx={{ bgcolor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <AppBar position="fixed" sx={{
+        bgcolor: isDark ? alpha(theme.palette.background.paper, 0.92) : 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(20px)', boxShadow: `0 1px 3px ${isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)'}`,
+        borderBottom: isDark ? `1px solid ${theme.palette.divider}` : 'none',
+      }}>
         <Toolbar sx={{ justifyContent: 'space-between', maxWidth: 1200, width: '100%', mx: 'auto' }}>
           <Stack direction="row" alignItems="center" spacing={1}>
-            <HealthIcon sx={{ color: '#1565c0', fontSize: 32 }} />
-            <Typography variant="h6" sx={{ color: '#1565c0', fontWeight: 800, letterSpacing: -0.5 }}>
+            <HealthIcon sx={{ color: theme.palette.primary.main, fontSize: 32 }} />
+            <Typography variant="h6" sx={{ color: theme.palette.primary.main, fontWeight: 800, letterSpacing: -0.5 }}>
               CancerGuard AI
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={2}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <IconButton onClick={toggleTheme} size="small" sx={{ color: theme.palette.text.secondary }}>
+              {isDark ? <LightModeIcon /> : <DarkModeIcon />}
+            </IconButton>
             <Button color="primary" onClick={() => navigate('/login')}>Sign In</Button>
             <Button variant="contained" onClick={() => navigate('/register')} sx={{
-              background: 'linear-gradient(135deg, #1565c0, #0d47a1)',
-              '&:hover': { background: 'linear-gradient(135deg, #1976d2, #1565c0)' },
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              '&:hover': { background: `linear-gradient(135deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})` },
             }}>
               Get Started
             </Button>
@@ -136,13 +147,13 @@ const LandingPage: React.FC = () => {
 
       {/* Stats Section */}
       <Container maxWidth="lg" sx={{ mt: -6, mb: 8, position: 'relative', zIndex: 2 }}>
-        <Card sx={{ p: 4, bgcolor: 'white' }}>
+        <Card sx={{ p: 4 }}>
           <Grid container spacing={4}>
             {stats.map((stat, index) => (
               <Grid item xs={6} md={3} key={index}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Typography variant="h3" sx={{ color: '#1565c0', fontWeight: 800 }}>{stat.value}</Typography>
-                  <Typography variant="body1" sx={{ color: '#666', fontWeight: 500 }}>{stat.label}</Typography>
+                  <Typography variant="h3" sx={{ color: theme.palette.primary.main, fontWeight: 800 }}>{stat.value}</Typography>
+                  <Typography variant="body1" sx={{ color: 'text.secondary', fontWeight: 500 }}>{stat.label}</Typography>
                 </Box>
               </Grid>
             ))}
@@ -153,10 +164,10 @@ const LandingPage: React.FC = () => {
       {/* Features Section */}
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Box sx={{ textAlign: 'center', mb: 8 }}>
-          <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#1a237e' }}>
+          <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: 'text.primary' }}>
             Comprehensive Cancer Detection Platform
           </Typography>
-          <Typography variant="h6" sx={{ color: '#666', maxWidth: 700, mx: 'auto', fontWeight: 400 }}>
+          <Typography variant="h6" sx={{ color: 'text.secondary', maxWidth: 700, mx: 'auto', fontWeight: 400 }}>
             Combining cutting-edge AI with multi-source health data for the most accurate
             cancer risk assessment available today.
           </Typography>
@@ -166,13 +177,13 @@ const LandingPage: React.FC = () => {
             <Grid item xs={12} md={4} key={index}>
               <Card sx={{
                 height: '100%', p: 3, transition: 'all 0.3s',
-                '&:hover': { transform: 'translateY(-8px)', boxShadow: '0 12px 40px rgba(0,0,0,0.12)' },
-                border: '1px solid rgba(0,0,0,0.06)',
+                '&:hover': { transform: 'translateY(-8px)', boxShadow: isDark ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)' },
+                border: `1px solid ${theme.palette.divider}`,
               }}>
                 <CardContent>
                   <Box sx={{ mb: 2 }}>{feature.icon}</Box>
-                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>{feature.title}</Typography>
-                  <Typography variant="body1" sx={{ color: '#666', lineHeight: 1.7 }}>{feature.description}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>{feature.title}</Typography>
+                  <Typography variant="body1" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>{feature.description}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -181,9 +192,9 @@ const LandingPage: React.FC = () => {
       </Container>
 
       {/* How It Works */}
-      <Box sx={{ bgcolor: '#f0f4f8', py: 10 }}>
+      <Box sx={{ bgcolor: isDark ? alpha(theme.palette.background.paper, 0.5) : alpha(theme.palette.primary.main, 0.04), py: 10 }}>
         <Container maxWidth="lg">
-          <Typography variant="h3" sx={{ fontWeight: 800, mb: 6, textAlign: 'center', color: '#1a237e' }}>
+          <Typography variant="h3" sx={{ fontWeight: 800, mb: 6, textAlign: 'center', color: 'text.primary' }}>
             How It Works
           </Typography>
           <Grid container spacing={4}>
@@ -195,11 +206,11 @@ const LandingPage: React.FC = () => {
             ].map((item, index) => (
               <Grid item xs={12} md={3} key={index}>
                 <Box sx={{ textAlign: 'center' }}>
-                  <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 2, bgcolor: '#1565c0', fontSize: 28, fontWeight: 800 }}>
+                  <Avatar sx={{ width: 64, height: 64, mx: 'auto', mb: 2, bgcolor: theme.palette.primary.main, fontSize: 28, fontWeight: 800 }}>
                     {item.step}
                   </Avatar>
-                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>{item.title}</Typography>
-                  <Typography variant="body2" sx={{ color: '#666' }}>{item.desc}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>{item.title}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{item.desc}</Typography>
                 </Box>
               </Grid>
             ))}
@@ -210,7 +221,7 @@ const LandingPage: React.FC = () => {
       {/* CTA */}
       <Box sx={{
         py: 10,
-        background: 'linear-gradient(135deg, #1565c0, #0d47a1)',
+        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
         textAlign: 'center',
       }}>
         <Container maxWidth="md">
@@ -221,7 +232,8 @@ const LandingPage: React.FC = () => {
             Join thousands of users who are taking control of their health with AI-powered cancer screening.
           </Typography>
           <Button variant="contained" size="large" onClick={() => navigate('/register')}
-            sx={{ bgcolor: 'white', color: '#1565c0', fontWeight: 700, px: 6, py: 1.5, fontSize: '1.1rem' }}
+            sx={{ bgcolor: 'white', color: theme.palette.primary.main, fontWeight: 700, px: 6, py: 1.5, fontSize: '1.1rem',
+              '&:hover': { bgcolor: alpha('#ffffff', 0.9) } }}
             endIcon={<ArrowIcon />}>
             Get Started for Free
           </Button>
@@ -229,12 +241,12 @@ const LandingPage: React.FC = () => {
       </Box>
 
       {/* Footer */}
-      <Box sx={{ bgcolor: '#0d1b2a', py: 6 }}>
+      <Box sx={{ bgcolor: isDark ? alpha(theme.palette.background.default, 0.95) : '#0d1b2a', py: 6, borderTop: isDark ? `1px solid ${theme.palette.divider}` : 'none' }}>
         <Container maxWidth="lg">
           <Grid container spacing={4}>
             <Grid item xs={12} md={4}>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-                <HealthIcon sx={{ color: '#5e92f3' }} />
+                <HealthIcon sx={{ color: theme.palette.primary.main }} />
                 <Typography sx={{ color: 'white', fontWeight: 700, fontSize: 18 }}>CancerGuard AI</Typography>
               </Stack>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>

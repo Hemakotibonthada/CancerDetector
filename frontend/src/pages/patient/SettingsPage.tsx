@@ -3,23 +3,26 @@ import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
   Switch, FormControlLabel, Divider, Alert, Slider, Select,
-  MenuItem, FormControl, InputLabel, Avatar, IconButton,
+  MenuItem, FormControl, InputLabel, Avatar, IconButton, useTheme, alpha,
 } from '@mui/material';
 import {
   Settings as SettingsIcon, Notifications, Lock, Palette, Language,
   Download, DeleteForever, Security, PrivacyTip, DarkMode,
   LightMode, Email, Sms, PhoneAndroid, VolumeUp, Visibility,
   VisibilityOff, Key, Smartphone, CloudDownload, Help,
+  WaterDrop, Park, WbSunny, NightsStay, LocalHospital, ColorLens,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { useThemeContext, ThemeVariant, themeVariants } from '../../context/ThemeContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { SectionHeader } from '../../components/common/SharedComponents';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const theme = useTheme();
+  const { isDark, toggleTheme, mode, setMode, variant, setVariant } = useThemeContext();
   const [activeTab, setActiveTab] = useState(0);
-  const [darkMode, setDarkMode] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [show2FADialog, setShow2FADialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -211,7 +214,7 @@ const SettingsPage: React.FC = () => {
                 { device: 'Safari on iPhone', ip: '10.0.0.x', time: '2 hours ago', current: false },
                 { device: 'Firefox on MacOS', ip: '172.16.0.x', time: '1 day ago', current: false },
               ].map((s, i) => (
-                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.5, borderBottom: '1px solid #f0f0f0' }}>
+                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{s.device}</Typography>
                     <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{s.ip} • {s.time}</Typography>
@@ -228,7 +231,7 @@ const SettingsPage: React.FC = () => {
                 { date: 'Feb 19, 2026 8:15 AM', device: 'Safari', location: 'Medical City, MC', status: 'Success' },
                 { date: 'Feb 18, 2026 11:00 PM', device: 'Unknown', location: 'New York, NY', status: 'Failed' },
               ].map((l, i) => (
-                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1, borderBottom: '1px solid #f0f0f0' }}>
+                <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1, borderBottom: `1px solid ${theme.palette.divider}` }}>
                   <Box>
                     <Typography sx={{ fontSize: 12 }}>{l.date}</Typography>
                     <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{l.device} • {l.location}</Typography>
@@ -245,17 +248,33 @@ const SettingsPage: React.FC = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Card sx={{ p: 3 }}>
-              <SectionHeader title="Theme" />
+              <SectionHeader title="Theme Mode" />
               <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                <Card sx={{ p: 2, flex: 1, cursor: 'pointer', border: !darkMode ? '2px solid #1565c0' : '1px solid #e0e0e0', textAlign: 'center' }} onClick={() => setDarkMode(false)}>
-                  <LightMode sx={{ fontSize: 32, color: '#f57c00' }} />
+                <Card sx={{ p: 2, flex: 1, cursor: 'pointer', border: !isDark ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`, textAlign: 'center' }} onClick={() => setMode('light')}>
+                  <LightMode sx={{ fontSize: 32, color: theme.palette.warning.main }} />
                   <Typography sx={{ fontSize: 13, fontWeight: 600, mt: 1 }}>Light</Typography>
                 </Card>
-                <Card sx={{ p: 2, flex: 1, cursor: 'pointer', border: darkMode ? '2px solid #1565c0' : '1px solid #e0e0e0', textAlign: 'center' }} onClick={() => setDarkMode(true)}>
-                  <DarkMode sx={{ fontSize: 32, color: '#1a1a2e' }} />
+                <Card sx={{ p: 2, flex: 1, cursor: 'pointer', border: isDark ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`, textAlign: 'center' }} onClick={() => setMode('dark')}>
+                  <DarkMode sx={{ fontSize: 32, color: isDark ? theme.palette.primary.main : 'text.secondary' }} />
                   <Typography sx={{ fontSize: 13, fontWeight: 600, mt: 1 }}>Dark</Typography>
                 </Card>
               </Stack>
+              <SectionHeader title="Theme Variant" />
+              <Grid container spacing={1.5} sx={{ mb: 3 }}>
+                {(Object.entries(themeVariants) as [ThemeVariant, typeof themeVariants[ThemeVariant]][]).map(([key, def]) => (
+                  <Grid item xs={6} key={key}>
+                    <Card sx={{
+                      p: 1.5, cursor: 'pointer', textAlign: 'center',
+                      border: variant === key ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`,
+                      bgcolor: variant === key ? alpha(theme.palette.primary.main, 0.08) : undefined,
+                    }} onClick={() => setVariant(key)}>
+                      <Box sx={{ width: 24, height: 24, borderRadius: '50%', bgcolor: def.light.primary.main, mx: 'auto', mb: 0.5, border: isDark ? '2px solid rgba(255,255,255,0.2)' : '2px solid rgba(0,0,0,0.1)' }} />
+                      <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{def.label}</Typography>
+                      <Typography sx={{ fontSize: 10, color: 'text.secondary' }}>{def.description}</Typography>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
               <SectionHeader title="Font Size" />
               <Slider defaultValue={14} min={12} max={20} step={1} marks valueLabelDisplay="auto" sx={{ mb: 3 }} />
               <SectionHeader title="Language" />
@@ -309,7 +328,7 @@ const SettingsPage: React.FC = () => {
                   { label: 'Appointment Records', desc: '8 appointments', size: '0.4 MB' },
                   { label: 'Symptom Logs', desc: '32 entries', size: '0.1 MB' },
                 ].map(item => (
-                  <Stack key={item.label} direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: '#f8f9ff', borderRadius: 2 }}>
+                  <Stack key={item.label} direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: alpha(theme.palette.background.default, 0.6), borderRadius: 2 }}>
                     <Box>
                       <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{item.label}</Typography>
                       <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{item.desc} • {item.size}</Typography>
@@ -329,19 +348,19 @@ const SettingsPage: React.FC = () => {
                   <Typography sx={{ fontSize: 13, fontWeight: 600 }}>19.5 MB / 100 MB used</Typography>
                   <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>19.5%</Typography>
                 </Stack>
-                <Box sx={{ width: '100%', height: 12, borderRadius: 6, bgcolor: '#f0f0f0', overflow: 'hidden', display: 'flex' }}>
-                  <Box sx={{ width: '15%', height: '100%', bgcolor: '#1565c0' }} />
-                  <Box sx={{ width: '2%', height: '100%', bgcolor: '#4caf50' }} />
-                  <Box sx={{ width: '1%', height: '100%', bgcolor: '#f57c00' }} />
-                  <Box sx={{ width: '1.5%', height: '100%', bgcolor: '#7b1fa2' }} />
+                <Box sx={{ width: '100%', height: 12, borderRadius: 6, bgcolor: alpha(theme.palette.text.primary, 0.08), overflow: 'hidden', display: 'flex' }}>
+                  <Box sx={{ width: '15%', height: '100%', bgcolor: theme.palette.primary.main }} />
+                  <Box sx={{ width: '2%', height: '100%', bgcolor: theme.palette.success.main }} />
+                  <Box sx={{ width: '1%', height: '100%', bgcolor: theme.palette.warning.main }} />
+                  <Box sx={{ width: '1.5%', height: '100%', bgcolor: theme.palette.secondary.main }} />
                 </Box>
               </Box>
               <Stack spacing={0.5}>
                 {[
-                  { label: 'Smartwatch Data', color: '#1565c0', size: '15.4 MB' },
-                  { label: 'Health Records', color: '#4caf50', size: '2.3 MB' },
-                  { label: 'Blood Tests', color: '#f57c00', size: '1.1 MB' },
-                  { label: 'Other', color: '#7b1fa2', size: '0.7 MB' },
+                  { label: 'Smartwatch Data', color: theme.palette.primary.main, size: '15.4 MB' },
+                  { label: 'Health Records', color: theme.palette.success.main, size: '2.3 MB' },
+                  { label: 'Blood Tests', color: theme.palette.warning.main, size: '1.1 MB' },
+                  { label: 'Other', color: theme.palette.secondary.main, size: '0.7 MB' },
                 ].map(s => (
                   <Stack key={s.label} direction="row" spacing={1} alignItems="center">
                     <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: s.color }} />
@@ -351,7 +370,7 @@ const SettingsPage: React.FC = () => {
                 ))}
               </Stack>
             </Card>
-            <Card sx={{ p: 3, border: '1px solid #ffcdd2', bgcolor: '#fff5f5' }}>
+            <Card sx={{ p: 3, border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`, bgcolor: isDark ? alpha(theme.palette.error.dark, 0.1) : alpha(theme.palette.error.light, 0.08) }}>
               <SectionHeader title="Danger Zone" />
               <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 2 }}>Permanent actions that cannot be undone.</Typography>
               <Stack spacing={1.5}>
@@ -386,7 +405,7 @@ const SettingsPage: React.FC = () => {
           <Typography sx={{ fontSize: 13, color: 'text.secondary', mb: 2 }}>
             Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
           </Typography>
-          <Box sx={{ width: 150, height: 150, bgcolor: '#f0f0f0', mx: 'auto', mb: 2, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Box sx={{ width: 150, height: 150, bgcolor: alpha(theme.palette.text.primary, 0.06), mx: 'auto', mb: 2, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>[QR Code]</Typography>
           </Box>
           <TextField label="Enter Verification Code" fullWidth size="small" placeholder="000000" />

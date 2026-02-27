@@ -1,4 +1,4 @@
-import { MD3DarkTheme, configureFonts } from 'react-native-paper';
+import { MD3DarkTheme, MD3LightTheme, configureFonts } from 'react-native-paper';
 
 const fontConfig = {
   displayLarge: { fontFamily: 'System', fontSize: 57, fontWeight: '400' as const, letterSpacing: 0, lineHeight: 64 },
@@ -143,5 +143,97 @@ export const theme = {
   fonts: configureFonts({ config: fontConfig }),
   roundness: borderRadius.md,
 };
+
+// ============================================================================
+// Light Color Palette
+// ============================================================================
+export const lightColors = {
+  // Primary palette
+  primary: '#0288d1',
+  primaryDark: '#01579b',
+  primaryLight: '#4fc3f7',
+
+  // Secondary
+  secondary: '#651fff',
+  secondaryDark: '#4a148c',
+
+  // Accent colors
+  accent: '#0097a7',
+  success: '#2e7d32',
+  warning: '#f57c00',
+  error: '#d32f2f',
+  info: '#1565c0',
+
+  // Portal colors
+  patientPortal: '#0288d1',
+  hospitalPortal: '#2e7d32',
+  adminPortal: '#651fff',
+
+  // Background
+  background: '#f5f7fa',
+  surface: '#ffffff',
+  surfaceVariant: '#f0f4f8',
+  card: '#ffffff',
+  cardHover: '#f5f5f5',
+
+  // Text
+  text: '#1a1a2e',
+  textSecondary: 'rgba(0,0,0,0.6)',
+  textTertiary: 'rgba(0,0,0,0.45)',
+  textDisabled: 'rgba(0,0,0,0.26)',
+
+  // Borders
+  border: 'rgba(0,0,0,0.12)',
+  borderLight: 'rgba(0,0,0,0.06)',
+  divider: 'rgba(0,0,0,0.08)',
+
+  // Status colors
+  statusActive: '#2e7d32',
+  statusInactive: '#757575',
+  statusPending: '#f57c00',
+  statusCritical: '#d32f2f',
+  statusScheduled: '#1565c0',
+
+  // Chart colors
+  chart: ['#0288d1', '#2e7d32', '#f57c00', '#d32f2f', '#651fff', '#0097a7', '#e91e63', '#00c853'],
+
+  // Gradients
+  gradientPrimary: ['#f5f7fa', '#e8edf2'] as const,
+  gradientCard: ['#ffffff', '#fafbfc'] as const,
+  gradientAccent: ['#0288d1', '#4fc3f7'] as const,
+};
+
+export const lightTheme = {
+  ...MD3LightTheme,
+  colors: {
+    ...MD3LightTheme.colors,
+    primary: lightColors.primary,
+    secondary: lightColors.secondary,
+    background: lightColors.background,
+    surface: lightColors.surface,
+    surfaceVariant: lightColors.surfaceVariant,
+    error: lightColors.error,
+    onPrimary: '#ffffff',
+    onSecondary: '#ffffff',
+    onBackground: lightColors.text,
+    onSurface: lightColors.text,
+    onError: '#ffffff',
+    outline: lightColors.border,
+    elevation: {
+      level0: 'transparent',
+      level1: lightColors.surface,
+      level2: lightColors.card,
+      level3: lightColors.cardHover,
+      level4: '#e8e8e8',
+      level5: '#e0e0e0',
+    },
+  },
+  fonts: configureFonts({ config: fontConfig }),
+  roundness: borderRadius.md,
+};
+
+// Helper to get colors based on dark mode
+export const getColors = (isDark: boolean) => isDark ? colors : lightColors;
+export const getTheme = (isDark: boolean) => isDark ? theme : lightTheme;
 
 export type AppTheme = typeof theme;

@@ -1,8 +1,8 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
+import { CssBaseline, CircularProgress, Box } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { lightTheme } from './theme';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Auth Pages (eager loaded)
 import LandingPage from './pages/LandingPage';
@@ -111,7 +111,7 @@ const EducationManagementPage = lazy(() => import('./pages/admin/EducationManage
 const SocialDeterminantsAdminPage = lazy(() => import('./pages/admin/SocialDeterminantsAdminPage'));
 
 const LoadingFallback = () => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default', transition: 'background-color 0.3s ease' }}>
     <CircularProgress size={48} />
   </Box>
 );
@@ -144,7 +144,7 @@ const HOSPITAL_ROLES = ['hospital_admin', 'doctor', 'nurse', 'oncologist', 'surg
 
 function App() {
   return (
-    <ThemeProvider theme={lightTheme}>
+    <ThemeProvider>
       <CssBaseline />
       <AuthProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

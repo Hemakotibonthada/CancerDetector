@@ -12,9 +12,11 @@ import {
   Settings as SettingsIcon, Help as HelpIcon, HealthAndSafety as HealthIcon,
   KeyboardArrowDown, ExpandLess, ExpandMore, Close as CloseIcon,
   LocalHospital as HospitalIcon, AdminPanelSettings as AdminIcon,
-  Dashboard as DashIcon,
+  Dashboard as DashIcon, Palette as PaletteIcon,
+  WaterDrop, Park, WbSunny, NightsStay, LocalHospital, ColorLens,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { useThemeContext, ThemeVariant, themeVariants } from '../../context/ThemeContext';
 
 export interface NavItem {
   icon: React.ReactNode;
@@ -53,19 +55,30 @@ const portalNames = {
 
 const DRAWER_WIDTH = 260;
 
+const variantIcons: Record<ThemeVariant, React.ReactNode> = {
+  default: <ColorLens sx={{ fontSize: 16 }} />,
+  ocean: <WaterDrop sx={{ fontSize: 16 }} />,
+  emerald: <Park sx={{ fontSize: 16 }} />,
+  sunset: <WbSunny sx={{ fontSize: 16 }} />,
+  midnight: <NightsStay sx={{ fontSize: 16 }} />,
+  clinical: <LocalHospital sx={{ fontSize: 16 }} />,
+};
+
 const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const theme = useTheme();
+  const { isDark, toggleTheme, variant, setVariant, sidebarColors, appbarColors } = useThemeContext();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [notifMenuAnchor, setNotifMenuAnchor] = useState<null | HTMLElement>(null);
+  const [themeMenuAnchor, setThemeMenuAnchor] = useState<null | HTMLElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const colors = portalColors[portalType];
+  const colors = { ...portalColors[portalType], accent: sidebarColors.accent, gradient: sidebarColors.bg };
 
   const toggleSection = (section: string) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -87,7 +100,7 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f0f4f8' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default', transition: 'background-color 0.3s ease' }}>
       {/* Sidebar */}
       <Drawer
         variant={isMobile ? 'temporary' : 'persistent'}
@@ -289,19 +302,20 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
           position="sticky"
           elevation={0}
           sx={{
-            bgcolor: 'rgba(255,255,255,0.85)',
+            bgcolor: appbarColors.bg,
             backdropFilter: 'blur(20px)',
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
-            color: '#1a1a2e',
+            borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+            color: appbarColors.text,
+            transition: 'background-color 0.3s ease, color 0.3s ease',
           }}
         >
           <Toolbar sx={{ gap: 1 }}>
-            <IconButton onClick={() => setDrawerOpen(!drawerOpen)} size="small">
+            <IconButton onClick={() => setDrawerOpen(!drawerOpen)} size="small" sx={{ color: appbarColors.text }}>
               <MenuIcon />
             </IconButton>
 
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, color: '#1a1a2e' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: 18, color: appbarColors.text }}>
                 {title}
               </Typography>
               {subtitle && (
@@ -315,7 +329,7 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
             {searchOpen ? (
               <Paper sx={{
                 display: 'flex', alignItems: 'center', px: 2, py: 0.5,
-                width: 300, borderRadius: 3, border: '1px solid #e0e0e0',
+                width: 300, borderRadius: 3, border: `1px solid ${theme.palette.divider}`,
               }}>
                 <SearchIcon sx={{ color: 'text.secondary', mr: 1, fontSize: 20 }} />
                 <InputBase
@@ -338,8 +352,51 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
             )}
 
             <Tooltip title="Help & Support">
-              <IconButton size="small"><HelpIcon /></IconButton>
+              <IconButton size="small" sx={{ color: appbarColors.text }}><HelpIcon /></IconButton>
             </Tooltip>
+
+            {/* Dark/Light Mode Toggle */}
+            <Tooltip title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              <IconButton onClick={toggleTheme} size="small" sx={{ color: appbarColors.text }}>
+                {isDark ? <LightMode /> : <DarkMode />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Theme Variant Selector */}
+            <Tooltip title="Change Theme">
+              <IconButton onClick={(e) => setThemeMenuAnchor(e.currentTarget)} size="small" sx={{ color: appbarColors.text }}>
+                <PaletteIcon />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              anchorEl={themeMenuAnchor}
+              open={!!themeMenuAnchor}
+              onClose={() => setThemeMenuAnchor(null)}
+              PaperProps={{ sx: { width: 240, borderRadius: 3 } }}
+            >
+              <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+                <Typography sx={{ fontWeight: 700, fontSize: 14 }}>Theme Variant</Typography>
+                <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>Customize your experience</Typography>
+              </Box>
+              {(Object.keys(themeVariants) as ThemeVariant[]).map((v) => (
+                <MenuItem
+                  key={v}
+                  onClick={() => { setVariant(v); setThemeMenuAnchor(null); }}
+                  selected={variant === v}
+                  sx={{ py: 1, px: 2 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 32 }}>{variantIcons[v]}</ListItemIcon>
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: variant === v ? 700 : 500 }}>
+                      {themeVariants[v].label}
+                    </Typography>
+                    <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>
+                      {themeVariants[v].description}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Menu>
 
             {/* Notifications */}
             <Tooltip title="Notifications">
@@ -355,7 +412,7 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
               onClose={() => setNotifMenuAnchor(null)}
               PaperProps={{ sx: { width: 360, maxHeight: 420, borderRadius: 3 } }}
             >
-              <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>
+              <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
                 <Typography sx={{ fontWeight: 700, fontSize: 16 }}>Notifications</Typography>
               </Box>
               {[
@@ -372,7 +429,7 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
                   </Box>
                 </MenuItem>
               ))}
-              <Box sx={{ p: 1.5, borderTop: '1px solid #f0f0f0', textAlign: 'center' }}>
+              <Box sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}`, textAlign: 'center' }}>
                 <Typography sx={{ fontSize: 13, color: 'primary.main', fontWeight: 600, cursor: 'pointer' }}>
                   View All Notifications
                 </Typography>
@@ -384,7 +441,11 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
               <Chip
                 label={user.health_id}
                 size="small"
-                sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600, fontSize: 11, display: { xs: 'none', md: 'flex' } }}
+                sx={{
+                  bgcolor: isDark ? alpha(theme.palette.primary.main, 0.15) : '#e3f2fd',
+                  color: theme.palette.primary.main,
+                  fontWeight: 600, fontSize: 11, display: { xs: 'none', md: 'flex' },
+                }}
               />
             )}
 
@@ -402,7 +463,7 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
               onClose={() => setProfileMenuAnchor(null)}
               PaperProps={{ sx: { width: 220, borderRadius: 3 } }}
             >
-              <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #f0f0f0' }}>
+              <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                 <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{user?.first_name} {user?.last_name}</Typography>
                 <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{user?.email}</Typography>
               </Box>
