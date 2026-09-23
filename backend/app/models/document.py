@@ -58,7 +58,7 @@ class Document(Base):
     """Uploaded documents (medical reports, insurance docs, etc.)"""
     __tablename__ = "documents"
 
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     category: Mapped[str] = mapped_column(String(50), default=DocumentCategory.OTHER.value, nullable=False)
@@ -85,7 +85,7 @@ class InsurancePolicy(Base):
     """User's insurance policies"""
     __tablename__ = "insurance_policies"
 
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False, index=True)
     # Policy details
     policy_number: Mapped[str] = mapped_column(String(100), nullable=False)
     group_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -126,7 +126,7 @@ class UserInsuranceClaim(Base):
     """Insurance claims tracking (user-submitted)"""
     __tablename__ = "user_insurance_claims"
     
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False, index=True)
     policy_id: Mapped[str] = mapped_column(String(36), ForeignKey("insurance_policies.id"), nullable=False)
     claim_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     service_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
