@@ -31,22 +31,22 @@ const LandingPage: React.FC = () => {
     {
       icon: <WatchIcon sx={{ fontSize: 48, color: '#00897b' }} />,
       title: 'Smartwatch Integration',
-      description: 'Connect your smartwatch for continuous health monitoring. Real-time heart rate, SpO2, sleep, and stress data feed into our AI models.',
+      description: 'Record supported wearable measurements in your health profile and review them alongside other information.',
     },
     {
       icon: <BiotechIcon sx={{ fontSize: 48, color: '#7b1fa2' }} />,
       title: 'Blood Biomarker Analysis',
-      description: 'Comprehensive analysis of 60+ blood biomarkers including tumor markers, inflammatory markers, and metabolic indicators.',
+      description: 'Keep blood test results and related health records in one place for discussion with your care team.',
     },
     {
       icon: <HospitalIcon sx={{ fontSize: 48, color: '#d32f2f' }} />,
       title: 'Hospital Integration',
-      description: 'Seamless integration with hospitals. Share your health ID for doctors to access your complete medical history securely.',
+      description: 'Organize hospital and clinician information in your personal health profile.',
     },
     {
       icon: <SecurityIcon sx={{ fontSize: 48, color: '#f57c00' }} />,
       title: 'Unique Health ID',
-      description: 'Every user gets a unique Health ID that stores their entire health history, medications, and AI-generated risk assessments.',
+      description: 'Every user gets a unique Health ID for organizing records and exploratory assessments.',
     },
     {
       icon: <HeartIcon sx={{ fontSize: 48, color: '#c62828' }} />,
@@ -98,7 +98,7 @@ const LandingPage: React.FC = () => {
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Grid container spacing={6} alignItems="center">
             <Grid item xs={12} md={7}>
-              <Chip label="AI-Powered Healthcare" sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
+              <Chip label="Research Prototype" sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
               <Typography variant="h2" sx={{ color: 'white', fontWeight: 800, mb: 3, lineHeight: 1.1, fontSize: { xs: '2.5rem', md: '3.5rem' } }}>
                 Explore Health Factors.{' '}
                 <Box component="span" sx={{ background: 'linear-gradient(90deg, #80cbc4, #b2dfdb)', backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent' }}>
@@ -154,11 +154,10 @@ const LandingPage: React.FC = () => {
       <Container maxWidth="lg" sx={{ py: 8 }}>
         <Box sx={{ textAlign: 'center', mb: 8 }}>
           <Typography variant="h3" sx={{ fontWeight: 800, mb: 2, color: '#1a237e' }}>
-            Comprehensive Cancer Detection Platform
+            Explore Your Health Information
           </Typography>
           <Typography variant="h6" sx={{ color: '#666', maxWidth: 700, mx: 'auto', fontWeight: 400 }}>
-            Combining cutting-edge AI with multi-source health data for the most accurate
-            cancer risk assessment available today.
+            Organize your health details and explore rule-based indicators. This prototype has not been validated for clinical use.
           </Typography>
         </Box>
         <Grid container spacing={4}>

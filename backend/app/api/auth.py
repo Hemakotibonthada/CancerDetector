@@ -62,7 +62,7 @@ async def register(
         date_of_birth=user_data.date_of_birth,
         gender=user_data.gender,
         email_verified=False,
-        last_login=datetime.now(timezone.utc),
+        last_login=datetime.utcnow(),
         last_login_ip=request.client.host if request.client else None,
     )
     db.add(user)
@@ -302,7 +302,7 @@ async def change_password(
         raise HTTPException(status_code=400, detail="New passwords do not match")
     
     user.hashed_password = hash_password(password_data.new_password)
-    user.password_changed_at = datetime.now(timezone.utc)
+    user.password_changed_at = datetime.utcnow()
     
     return {"success": True, "message": "Password changed successfully"}
 

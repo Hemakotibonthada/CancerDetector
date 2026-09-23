@@ -251,7 +251,7 @@ class User(Base, AuditMixin):
     @property
     def is_locked(self) -> bool:
         """Check if the account is locked."""
-        if self.locked_until and self.locked_until > datetime.now(timezone.utc):
+        if self.locked_until and self.locked_until > datetime.utcnow():
             return True
         return self.status == UserStatus.LOCKED.value
     
@@ -268,7 +268,7 @@ class User(Base, AuditMixin):
     
     def record_login(self, ip_address: str = None) -> None:
         """Record a successful login."""
-        self.last_login = datetime.now(timezone.utc)
+        self.last_login = datetime.utcnow()
         self.last_login_ip = ip_address
         self.failed_login_attempts = 0
         self.locked_until = None
@@ -277,7 +277,7 @@ class User(Base, AuditMixin):
         """Record a failed login attempt. Returns True if account gets locked."""
         self.failed_login_attempts += 1
         if self.failed_login_attempts >= max_attempts:
-            self.locked_until = datetime.now(timezone.utc) + timedelta(minutes=lockout_minutes)
+            self.locked_until = datetime.utcnow() + timedelta(minutes=lockout_minutes)
             self.status = UserStatus.LOCKED.value
             return True
         return False

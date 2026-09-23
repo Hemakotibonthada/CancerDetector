@@ -167,7 +167,7 @@ async def predict_cancer_risk(
     # Update patient risk
     patient.cancer_risk_score = overall_risk
     patient.overall_cancer_risk = category
-    patient.risk_assessment_date = datetime.now(timezone.utc)
+    patient.risk_assessment_date = datetime.utcnow()
     
     recommendations = [
         "This exploratory score is not a cancer diagnosis or a validated probability.",
