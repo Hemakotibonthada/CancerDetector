@@ -118,3 +118,7 @@ class PasswordReset(BaseModel):
 class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8, max_length=128)
+
+# FastAPI inspects response models when routes are registered. Resolve the
+# forward reference after UserResponse has been declared.
+TokenResponse.model_rebuild()
