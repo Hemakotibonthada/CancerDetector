@@ -87,6 +87,13 @@ class DatabaseSettings(BaseSettings):
     @property
     def database_url(self) -> str:
         """Generate database URL."""
+        platform_url = os.getenv("DATABASE_URL")
+        if platform_url:
+            if not platform_url.startswith(("postgresql://", "postgres://", "postgresql+asyncpg://")):
+                raise ValueError("DATABASE_URL must be a PostgreSQL URL")
+            return platform_url.replace("postgres://", "postgresql+asyncpg://", 1).replace(
+                "postgresql://", "postgresql+asyncpg://", 1
+            )
         if self.use_sqlite:
             return f"sqlite+aiosqlite:///{self.sqlite_path}"
         return (
@@ -97,6 +104,11 @@ class DatabaseSettings(BaseSettings):
     @property
     def sync_database_url(self) -> str:
         """Generate synchronous database URL."""
+        platform_url = os.getenv("DATABASE_URL")
+        if platform_url:
+            return platform_url.replace("postgresql+asyncpg://", "postgresql://", 1).replace(
+                "postgres://", "postgresql://", 1
+            )
         if self.use_sqlite:
             return f"sqlite:///{self.sqlite_path}"
         return (

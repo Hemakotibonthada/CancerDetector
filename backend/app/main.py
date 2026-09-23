@@ -9,6 +9,7 @@ middleware, and startup/shutdown lifecycle management.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -41,6 +42,10 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Environment: {settings.environment.value}")
+    if settings.is_production and not os.getenv("DATABASE_URL"):
+        raise RuntimeError("DATABASE_URL is required in production")
+    if settings.is_production and not os.getenv("AUTH_SECRET_KEY"):
+        raise RuntimeError("AUTH_SECRET_KEY is required in production")
     
     # Initialize database
     await init_db()
@@ -208,6 +213,11 @@ def create_application() -> FastAPI:
         # Catch-all for SPA routing
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
+            if full_path.startswith("api/"):
+                return JSONResponse({"detail": "Not found"}, status_code=404)
+            requested = (frontend_build / full_path).resolve()
+            if requested.is_relative_to(frontend_build.resolve()) and requested.is_file():
+                return FileResponse(str(requested))
             index_file = frontend_build / "index.html"
             if index_file.exists():
                 return FileResponse(str(index_file))

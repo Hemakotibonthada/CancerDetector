@@ -25,8 +25,8 @@ const LandingPage: React.FC = () => {
   const features = [
     {
       icon: <AIIcon sx={{ fontSize: 48, color: '#1565c0' }} />,
-      title: 'AI-Powered Cancer Detection',
-      description: 'Our advanced ensemble ML models analyze blood biomarkers, genetic data, and health patterns to detect cancer risk with 95%+ accuracy.',
+      title: 'Explore Personal Risk Factors',
+      description: 'Review recorded health factors with an exploratory, rule-based score. This prototype is not validated for diagnosis.',
     },
     {
       icon: <WatchIcon sx={{ fontSize: 48, color: '#00897b' }} />,
@@ -51,15 +51,15 @@ const LandingPage: React.FC = () => {
     {
       icon: <HeartIcon sx={{ fontSize: 48, color: '#c62828' }} />,
       title: 'Real-time Monitoring',
-      description: '24/7 health monitoring with instant alerts for anomalies. Early detection that can save lives through proactive healthcare.',
+      description: 'Keep health information in one place and review trends with your care team.',
     },
   ];
 
   const stats = [
-    { value: '95%+', label: 'Detection Accuracy' },
-    { value: '60+', label: 'Biomarkers Analyzed' },
-    { value: '17', label: 'Cancer Types' },
-    { value: '24/7', label: 'Monitoring' },
+    { value: '7', label: 'Exploratory Indicators' },
+    { value: '1', label: 'Personal Health Profile' },
+    { value: '0', label: 'Validated Cancer Models' },
+    { value: 'Your', label: 'Data, Your Control' },
   ];
 
   return (
@@ -100,14 +100,14 @@ const LandingPage: React.FC = () => {
             <Grid item xs={12} md={7}>
               <Chip label="AI-Powered Healthcare" sx={{ mb: 3, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600 }} />
               <Typography variant="h2" sx={{ color: 'white', fontWeight: 800, mb: 3, lineHeight: 1.1, fontSize: { xs: '2.5rem', md: '3.5rem' } }}>
-                Detect Cancer Early.{' '}
+                Explore Health Factors.{' '}
                 <Box component="span" sx={{ background: 'linear-gradient(90deg, #80cbc4, #b2dfdb)', backgroundClip: 'text', WebkitBackgroundClip: 'text', color: 'transparent' }}>
-                  Save Lives.
+                  Plan Better Conversations.
                 </Box>
               </Typography>
               <Typography variant="h5" sx={{ color: 'rgba(255,255,255,0.85)', mb: 4, fontWeight: 400, lineHeight: 1.5 }}>
-                Advanced AI models analyze your blood biomarkers, smartwatch data, and health history
-                to detect cancer risk before symptoms appear.
+                Organize your health information and explore an unvalidated rule-based score.
+                This tool cannot detect or diagnose cancer. Consult a licensed clinician about screening.
               </Typography>
               <Stack direction="row" spacing={2}>
                 <Button variant="contained" size="large" onClick={() => navigate('/register')}
@@ -189,9 +189,9 @@ const LandingPage: React.FC = () => {
           <Grid container spacing={4}>
             {[
               { step: '1', title: 'Create Your Health Profile', desc: 'Sign up and receive your unique Health ID. Enter your medical history, lifestyle data, and connect your smartwatch.' },
-              { step: '2', title: 'AI Analyzes Your Data', desc: 'Our ensemble ML models analyze your blood biomarkers, smartwatch data, genetic info, and health history.' },
-              { step: '3', title: 'Get Risk Assessment', desc: 'Receive a comprehensive cancer risk assessment with specific cancer type risks and personalized recommendations.' },
-              { step: '4', title: 'Continuous Monitoring', desc: 'Ongoing monitoring through your smartwatch with real-time alerts and regular AI-powered health updates.' },
+              { step: '2', title: 'Review Your Information', desc: 'A transparent prototype uses recorded health factors to generate an exploratory score.' },
+              { step: '3', title: 'Get Risk Assessment', desc: 'See which recorded factors influence the prototype score and discuss screening with your clinician.' },
+              { step: '4', title: 'Continuous Monitoring', desc: 'Keep your health profile up to date as you gather new information.' },
             ].map((item, index) => (
               <Grid item xs={12} md={3} key={index}>
                 <Box sx={{ textAlign: 'center' }}>
@@ -215,10 +215,10 @@ const LandingPage: React.FC = () => {
       }}>
         <Container maxWidth="md">
           <Typography variant="h3" sx={{ color: 'white', fontWeight: 800, mb: 2 }}>
-            Early Detection Saves Lives
+            Take Your Questions to Your Clinician
           </Typography>
           <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)', mb: 4 }}>
-            Join thousands of users who are taking control of their health with AI-powered cancer screening.
+            Use this research prototype to organize health factors. It is not a diagnostic or screening tool.
           </Typography>
           <Button variant="contained" size="large" onClick={() => navigate('/register')}
             sx={{ bgcolor: 'white', color: '#1565c0', fontWeight: 700, px: 6, py: 1.5, fontSize: '1.1rem' }}
@@ -238,13 +238,12 @@ const LandingPage: React.FC = () => {
                 <Typography sx={{ color: 'white', fontWeight: 700, fontSize: 18 }}>CancerGuard AI</Typography>
               </Stack>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                Advanced AI-powered cancer detection and health monitoring platform.
-                Empowering users and healthcare providers with predictive analytics.
+                A research prototype for organizing health information and exploring risk factors. Not for diagnosis or treatment decisions.
               </Typography>
             </Grid>
             <Grid item xs={6} md={2}>
               <Typography sx={{ color: 'white', fontWeight: 600, mb: 2 }}>Platform</Typography>
-              {['For Users', 'For Hospitals', 'For Doctors', 'AI Models'].map(item => (
+              {['For Users', 'For Hospitals', 'For Doctors', 'Risk Factors'].map(item => (
                 <Typography key={item} variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1, cursor: 'pointer', '&:hover': { color: 'white' } }}>
                   {item}
                 </Typography>
@@ -259,9 +258,9 @@ const LandingPage: React.FC = () => {
               ))}
             </Grid>
             <Grid item xs={12} md={4}>
-              <Typography sx={{ color: 'white', fontWeight: 600, mb: 2 }}>Compliance</Typography>
+              <Typography sx={{ color: 'white', fontWeight: 600, mb: 2 }}>Status</Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap">
-                {['HIPAA', 'GDPR', 'SOC 2', 'ISO 27001'].map(badge => (
+                {['Research prototype', 'No clinical validation'].map(badge => (
                   <Chip key={badge} label={badge} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', mb: 1 }} />
                 ))}
               </Stack>
@@ -269,7 +268,7 @@ const LandingPage: React.FC = () => {
           </Grid>
           <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-              © 2026 CancerGuard AI. All rights reserved. For research and medical purposes.
+              © 2026 CancerGuard AI. All rights reserved. For research exploration only.
             </Typography>
           </Box>
         </Container>

@@ -1,0 +1,15 @@
+# Runtime imports used by the FastAPI application. The experimental model
+# training packages in requirements.txt are intentionally kept out of the
+# serving image: no trained model artifacts are shipped with this repository.
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.2
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+aiosqlite==0.19.0
+pydantic==2.5.2
+pydantic-settings==2.1.0
+email-validator==2.1.0

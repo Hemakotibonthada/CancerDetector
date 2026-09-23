@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/__pycache__
+**/.venv
+**/venv
+frontend/build
+*.db
+.env
+data
+uploads
+exports
+logs
+temp
+docs
+mobile
+ai_models

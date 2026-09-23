@@ -1,0 +1,36 @@
+# Circuvent Platform supplies the private environment file, public container
+# name and HTTPS route. PostgreSQL and R2 are provisioned with the project.
+services:
+  web:
+    container_name: ${CIRCUVENT_CONTAINER_NAME:?}
+    build: .
+    restart: unless-stopped
+    env_file: ${CIRCUVENT_ENV_FILE:?}
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      DB_USE_SQLITE: "false"
+    volumes:
+      - uploads:/app/uploads
+      - exports:/app/exports
+    networks:
+      - coolify
+      - platform
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; r=json.load(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)); assert r['status']=='healthy'"]
+      interval: 20s
+      timeout: 5s
+      retries: 4
+      start_period: 40s
+
+networks:
+  coolify:
+    external: true
+    name: coolify
+  platform:
+    external: true
+    name: platform_platform-net
+
+volumes:
+  uploads: {}
+  exports: {}

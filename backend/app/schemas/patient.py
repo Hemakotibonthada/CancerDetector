@@ -42,6 +42,7 @@ class PatientResponse(BaseModel):
         from_attributes = True
 
 class PatientUpdate(BaseModel):
+    ai_analysis_consent: Optional[bool] = None
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
     blood_type: Optional[str] = None

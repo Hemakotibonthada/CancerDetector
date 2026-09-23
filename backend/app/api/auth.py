@@ -56,7 +56,7 @@ async def register(
         first_name=user_data.first_name,
         last_name=user_data.last_name,
         phone_number=user_data.phone_number,
-        role=user_data.role,
+        role="patient",
         status=UserStatus.ACTIVE.value,
         health_id=health_id,
         date_of_birth=user_data.date_of_birth,
@@ -68,15 +68,14 @@ async def register(
     db.add(user)
     await db.flush()
     
-    # Create patient profile if role is patient
-    if user_data.role == "patient":
-        patient = Patient(
-            user_id=user.id,
-            health_id=health_id,
-            data_collection_consent=True,
-            ai_analysis_consent=True,
-        )
-        db.add(patient)
+    # Public registration creates patient accounts only. Staff are provisioned separately.
+    patient = Patient(
+        user_id=user.id,
+        health_id=health_id,
+        data_collection_consent=False,
+        ai_analysis_consent=False,
+    )
+    db.add(patient)
     
     await db.flush()
     

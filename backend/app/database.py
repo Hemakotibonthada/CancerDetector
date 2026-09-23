@@ -189,7 +189,7 @@ def get_engine() -> AsyncEngine:
             "echo": settings.database.echo,
         }
         
-        if settings.database.use_sqlite:
+        if db_url.startswith("sqlite"):
             engine_kwargs.update({
                 "connect_args": {"check_same_thread": False},
                 "poolclass": StaticPool,
@@ -314,7 +314,7 @@ async def check_db_health() -> dict:
         return {
             "status": "healthy",
             "database": "connected",
-            "type": "sqlite" if get_settings().database.use_sqlite else "postgresql"
+            "type": "sqlite" if get_settings().database.database_url.startswith("sqlite") else "postgresql"
         }
     except Exception as e:
         logger.error(f"Database health check failed: {e}")

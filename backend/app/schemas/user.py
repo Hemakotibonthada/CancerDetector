@@ -1,7 +1,7 @@
 """User Schemas"""
 from __future__ import annotations
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
@@ -13,7 +13,7 @@ class UserRegister(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     phone_number: Optional[str] = None
-    role: str = "patient"
+    role: Literal["patient"] = "patient"
     date_of_birth: Optional[datetime] = None
     gender: Optional[str] = None
     

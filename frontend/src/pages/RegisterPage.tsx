@@ -88,13 +88,6 @@ const RegisterPage: React.FC = () => {
                     InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon color="action" /></InputAdornment> }} />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <TextField fullWidth label="Role" select value={formData.role} onChange={handleChange('role')}>
-                    <MenuItem value="patient">User</MenuItem>
-                    <MenuItem value="doctor">Doctor</MenuItem>
-                    <MenuItem value="hospital_admin">Hospital Administrator</MenuItem>
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={6}>
                   <TextField fullWidth label="Gender" select value={formData.gender} onChange={handleChange('gender')}>
                     <MenuItem value="male">Male</MenuItem>
                     <MenuItem value="female">Female</MenuItem>

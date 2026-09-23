@@ -19,17 +19,27 @@ from app.security import get_current_user_id, get_current_user_token, generate_r
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/cancer-detection", tags=["Cancer Detection"])
 
+async def owned_patient(patient_id: str, user_id: str, db: AsyncSession) -> Patient:
+    """Resolve the current patient's profile without exposing another user's records."""
+    query = select(Patient).where(Patient.user_id == user_id)
+    if patient_id != "me":
+        query = query.where(Patient.id == patient_id)
+    patient = (await db.execute(query)).scalar_one_or_none()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    return patient
+
 @router.post("/predict/{patient_id}", response_model=CancerRiskResponse)
 async def predict_cancer_risk(
     patient_id: str,
     token_data=Depends(get_current_user_token),
     db: AsyncSession = Depends(get_db_session)
 ):
-    """Run AI cancer risk prediction for a patient."""
-    result = await db.execute(select(Patient).where(Patient.id == patient_id))
-    patient = result.scalar_one_or_none()
-    if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+    """Generate an exploratory risk-factor score for the current patient."""
+    patient = await owned_patient(patient_id, token_data["sub"], db)
+    if not patient.ai_analysis_consent:
+        raise HTTPException(status_code=403, detail="Enable analysis consent in your profile first")
+    patient_id = patient.id
     
     # Gather data points for risk assessment
     risk_factors = {}
@@ -132,7 +142,7 @@ async def predict_cancer_risk(
         health_id=patient.health_id,
         assessment_number=generate_record_number("CRA"),
         assessment_date=datetime.now(timezone.utc),
-        assessment_type="comprehensive_ai",
+        assessment_type="rule_based_prototype",
         overall_risk_score=overall_risk,
         overall_risk_category=category,
         lung_cancer_risk=cancer_type_risks.get("lung"),
@@ -148,9 +158,9 @@ async def predict_cancer_risk(
         family_history_used=True,
         lifestyle_data_used=True,
         top_risk_factors=json.dumps(list(risk_factors.keys())),
-        ai_model_name="CancerGuard Ensemble v1",
-        ai_model_version="1.0.0",
-        ai_confidence=0.87,
+        ai_model_name="Exploratory rules (unvalidated)",
+        ai_model_version="prototype-1",
+        ai_confidence=0.0,
     )
     db.add(assessment)
     
@@ -159,16 +169,10 @@ async def predict_cancer_risk(
     patient.overall_cancer_risk = category
     patient.risk_assessment_date = datetime.now(timezone.utc)
     
-    recommendations = []
-    if category in ["high", "very_high", "critical"]:
-        recommendations.append("Immediate consultation with oncologist recommended")
-        recommendations.append("Comprehensive cancer screening recommended within 2 weeks")
-    elif category == "moderate":
-        recommendations.append("Schedule cancer screening within 1 month")
-        recommendations.append("Regular blood tests every 3 months")
-    else:
-        recommendations.append("Continue regular health checkups")
-        recommendations.append("Annual cancer screening recommended")
+    recommendations = [
+        "This exploratory score is not a cancer diagnosis or a validated probability.",
+        "Discuss personal risk factors and evidence-based screening with a licensed clinician.",
+    ]
     
     return CancerRiskResponse(
         patient_id=patient_id,
@@ -187,8 +191,8 @@ async def predict_cancer_risk(
             "lifestyle": True,
             "genetic": patient.genetic_testing_done,
         },
-        model_confidence=0.87,
-        model_version="1.0.0",
+        model_confidence=0.0,
+        model_version="prototype-1",
     )
 
 
@@ -199,9 +203,10 @@ async def get_risk_history(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Get cancer risk assessment history."""
+    patient = await owned_patient(patient_id, token_data["sub"], db)
     result = await db.execute(
         select(CancerRiskAssessment).where(
-            CancerRiskAssessment.patient_id == patient_id
+            CancerRiskAssessment.patient_id == patient.id
         ).order_by(CancerRiskAssessment.assessment_date.desc()).limit(20)
     )
     assessments = result.scalars().all()
@@ -213,6 +218,18 @@ async def get_risk_history(
             assessment_date=a.assessment_date,
             overall_risk_score=a.overall_risk_score,
             overall_risk_category=a.overall_risk_category,
+            cancer_type_risks={
+                "lung": a.lung_cancer_risk or 0,
+                "breast": a.breast_cancer_risk or 0,
+                "colorectal": a.colorectal_cancer_risk or 0,
+                "prostate": a.prostate_cancer_risk or 0,
+                "skin": a.skin_cancer_risk or 0,
+                "liver": a.liver_cancer_risk or 0,
+                "pancreatic": a.pancreatic_cancer_risk or 0,
+            },
+            top_risk_factors=[{"name": name} for name in json.loads(a.top_risk_factors or "[]")],
+            recommendations=["This unvalidated prototype cannot diagnose cancer. Discuss screening with your clinician."],
+            data_sources_used={"blood_samples": bool(a.blood_data_used), "smartwatch": bool(a.smartwatch_data_used), "clinical_data": bool(a.clinical_data_used)},
             model_confidence=a.ai_confidence or 0.0,
             model_version=a.ai_model_version or "",
         )
@@ -227,10 +244,7 @@ async def create_screening(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Record a cancer screening."""
-    result = await db.execute(select(Patient).where(Patient.id == screening_data.patient_id))
-    patient = result.scalar_one_or_none()
-    if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+    patient = await owned_patient(screening_data.patient_id, token_data["sub"], db)
     
     screening = CancerScreening(
         patient_id=patient.id,
