@@ -1,13 +1,14 @@
 """Documents & Insurance API Routes — upload medical reports, manage insurance policies"""
 from __future__ import annotations
 import os, uuid, shutil, logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File, Form
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.models.document import Document, InsurancePolicy, UserInsuranceClaim
+from app.schemas.dates import parse_optional_datetime
 from app.security import get_current_user_id
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,16 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.pat
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/documents", tags=["Documents & Insurance"])
+
+
+def _parse_policy_date(value: Optional[str], field_name: str) -> Optional[datetime]:
+    """Parse a date-only or datetime form value for a timestamptz column."""
+    try:
+        return parse_optional_datetime(value, naive=False)
+    except ValueError:
+        raise HTTPException(
+            400, f"{field_name} must be a date (YYYY-MM-DD) or datetime"
+        )
 
 # ============================================================================
 # DOCUMENT UPLOAD & MANAGEMENT
@@ -64,13 +75,11 @@ async def upload_document(
     with open(file_path, "wb") as f:
         f.write(content)
     
-    # Parse document_date
-    doc_date = None
-    if document_date:
-        try:
-            doc_date = datetime.fromisoformat(document_date.replace("Z", "+00:00"))
-        except (ValueError, TypeError):
-            pass
+    # HTML date inputs send YYYY-MM-DD. The column is timestamptz, so store aware UTC.
+    try:
+        doc_date = parse_optional_datetime(document_date, naive=False)
+    except ValueError:
+        raise HTTPException(400, "document_date must be a date (YYYY-MM-DD) or datetime")
     
     doc = Document(
         user_id=user_id,
@@ -298,8 +307,8 @@ async def add_insurance_policy(
         plan_type=plan_type,
         group_number=group_number,
         member_id=member_id,
-        effective_date=effective_date,
-        expiration_date=expiration_date,
+        effective_date=_parse_policy_date(effective_date, "effective_date"),
+        expiration_date=_parse_policy_date(expiration_date, "expiration_date"),
         coverage_type=coverage_type,
         deductible=deductible,
         copay=copay,
@@ -409,7 +418,7 @@ async def create_insurance_claim(
     claim = UserInsuranceClaim(
         user_id=user_id,
         policy_id=policy_id,
-        service_date=service_date,
+        service_date=_parse_policy_date(service_date, "service_date"),
         provider_name=provider_name,
         service_description=service_description,
         billed_amount=billed_amount,

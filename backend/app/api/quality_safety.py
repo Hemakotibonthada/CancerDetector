@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
+from app.schemas.dates import parse_optional_datetime
 from app.models.quality_safety import (
     AdverseEvent, IncidentReport, QualityMeasure, InfectionControlRecord,
     SafetyChecklist, ChecklistCompletion, RootCauseAnalysis,
@@ -107,8 +108,12 @@ async def list_infection_records(infection_type: Optional[str] = None, skip: int
 async def create_infection_record(patient_id: str = Body(...), infection_type: str = Body(...), organism: str = Body(None),
                                    location: str = Body(None), onset_date: str = Body(None), is_hai: bool = Body(False),
                                    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db_session)):
+    try:
+        parsed_onset = parse_optional_datetime(onset_date, naive=False)
+    except ValueError:
+        raise HTTPException(400, "onset_date must be a date (YYYY-MM-DD) or datetime")
     record = InfectionControlRecord(patient_id=patient_id, infection_type=infection_type, organism=organism,
-                                     location=location, onset_date=onset_date, is_hai=is_hai, reported_by=user_id)
+                                     location=location, onset_date=parsed_onset, is_hai=is_hai, reported_by=user_id)
     db.add(record)
     await db.commit()
     await db.refresh(record)

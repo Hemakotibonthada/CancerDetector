@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
+from app.schemas.dates import OptionalNaiveDateTime
+
 class PatientCreate(BaseModel):
     user_id: str
     height_cm: Optional[float] = None
@@ -112,7 +114,8 @@ class AllergyCreate(BaseModel):
     allergen: str
     reaction: Optional[str] = None
     severity: str
-    onset_date: Optional[datetime] = None
+    # Date-only strings from forms; patient_allergies.onset_date is timestamp without time zone.
+    onset_date: OptionalNaiveDateTime = None
 
 class FamilyHistoryCreate(BaseModel):
     relationship_type: str
