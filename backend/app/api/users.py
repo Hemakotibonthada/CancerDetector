@@ -135,6 +135,7 @@ async def update_user(
         first_name=user.first_name, last_name=user.last_name,
         full_name=user.full_name, role=user.role, status=user.status,
         health_id=user.health_id, phone_number=user.phone_number,
+        date_of_birth=user.date_of_birth, gender=user.gender,
         created_at=user.created_at,
     )
 

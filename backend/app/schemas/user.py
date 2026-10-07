@@ -5,6 +5,8 @@ from typing import Any, List, Optional, Literal
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
+from app.schemas.dates import OptionalNaiveDateTime
+
 class UserRegister(BaseModel):
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=100)
@@ -14,7 +16,9 @@ class UserRegister(BaseModel):
     last_name: str = Field(..., min_length=1, max_length=100)
     phone_number: Optional[str] = None
     role: Literal["patient"] = "patient"
-    date_of_birth: Optional[datetime] = None
+    # HTML date inputs send YYYY-MM-DD. Stored as a naive timestamp so it fits
+    # user.date_of_birth (timestamp without time zone) on Postgres and SQLite.
+    date_of_birth: OptionalNaiveDateTime = None
     gender: Optional[str] = None
     
     @field_validator("password")
@@ -63,7 +67,7 @@ class UserResponse(BaseModel):
     health_id: Optional[str] = None
     phone_number: Optional[str] = None
     profile_photo_url: Optional[str] = None
-    date_of_birth: Optional[datetime] = None
+    date_of_birth: OptionalNaiveDateTime = None
     gender: Optional[str] = None
     blood_group: Optional[str] = None
     city: Optional[str] = None
@@ -81,7 +85,7 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone_number: Optional[str] = None
-    date_of_birth: Optional[datetime] = None
+    date_of_birth: OptionalNaiveDateTime = None
     gender: Optional[str] = None
     blood_group: Optional[str] = None
     address_line1: Optional[str] = None

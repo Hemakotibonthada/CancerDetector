@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
+from app.schemas.dates import parse_optional_datetime
 from app.models.billing_enhanced import (
     Invoice, PaymentTransaction, InsurancePlan, InsuranceVerification,
     PriorAuthorization, CostEstimate, ChargeCapture, ClaimSubmission,
@@ -32,7 +33,11 @@ async def list_invoices(patient_id: Optional[str] = None, status: Optional[str] 
 async def create_invoice(patient_id: str = Body(...), amount: float = Body(...), description: str = Body(None),
                          due_date: str = Body(None), user_id: str = Depends(get_current_user_id),
                          db: AsyncSession = Depends(get_db_session)):
-    invoice = Invoice(patient_id=patient_id, amount=amount, description=description, due_date=due_date,
+    try:
+        parsed_due_date = parse_optional_datetime(due_date, naive=False)
+    except ValueError:
+        raise HTTPException(400, "due_date must be a date (YYYY-MM-DD) or datetime")
+    invoice = Invoice(patient_id=patient_id, amount=amount, description=description, due_date=parsed_due_date,
                       created_by=user_id, status="pending")
     db.add(invoice)
     await db.commit()
