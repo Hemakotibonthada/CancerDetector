@@ -21,9 +21,14 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : user.role === 'hospital_admin' || user.role === 'doctor' ? (
+      ) : [
+        'hospital_admin', 'doctor', 'nurse', 'oncologist', 'surgeon', 'radiologist', 'pathologist',
+        'general_practitioner', 'specialist', 'cardiologist', 'neurologist', 'dermatologist',
+        'emergency_physician', 'anesthesiologist', 'lab_technician', 'pharmacist', 'receptionist',
+        'support_staff', 'researcher', 'data_analyst', 'insurance_agent',
+      ].includes(user.role) ? (
         <Stack.Screen name="HospitalPortal" component={HospitalNavigator} />
-      ) : user.role === 'admin' || user.role === 'super_admin' ? (
+      ) : user.role === 'system_admin' || user.role === 'super_admin' ? (
         <Stack.Screen name="AdminPortal" component={AdminNavigator} />
       ) : (
         <Stack.Screen name="PatientPortal" component={PatientNavigator} />

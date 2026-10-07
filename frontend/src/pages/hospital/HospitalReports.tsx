@@ -68,10 +68,10 @@ const HospitalReports: React.FC = () => {
       ) : (<>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<Assessment />} label="Reports Generated" value={24} color="#1565c0" change="+8" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Schedule />} label="Scheduled" value={6} color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Download />} label="Downloads" value={156} color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Share />} label="Shared" value={12} color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Assessment />} label="Reports Generated" value={savedReports.length} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Schedule />} label="Scheduled" value="—" color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Download />} label="Downloads" value="—" color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Share />} label="Shared" value="—" color="#7b1fa2" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
@@ -198,12 +198,12 @@ const HospitalReports: React.FC = () => {
               <Typography sx={{ fontWeight: 700, fontSize: 16, mb: 2 }}>Key Metrics</Typography>
               <Stack spacing={2}>
                 {[
-                  { label: 'Total Cancer Cases', value: '157', change: '+12 from last month' },
-                  { label: 'Early Detection Rate', value: '87.3%', change: '+5.2% improvement' },
-                  { label: 'Screening Compliance', value: '78.5%', change: 'Target: 85%' },
-                  { label: '5-Year Survival Rate', value: '82.1%', change: '+3.4% improvement' },
-                  { label: 'Readmission Rate', value: '4.2%', change: 'Below 5% target' },
-                  { label: 'Treatment Success', value: '79.8%', change: '+2.1% from Q3' },
+                  { label: 'Recorded screenings', value: String(diseasePrevalence.reduce((sum: number, row: any) => sum + (Number(row.value) || 0), 0)), change: 'From saved screenings' },
+                  { label: 'Early Detection Rate', value: 'Not available', change: 'Stage at detection is not stored' },
+                  { label: 'Screening Compliance', value: 'Not available', change: 'Not calculated' },
+                  { label: '5-Year Survival Rate', value: 'Not available', change: 'Outcomes are not stored' },
+                  { label: 'Readmission Rate', value: 'Not available', change: 'Not calculated' },
+                  { label: 'Treatment Success', value: 'Not available', change: 'Not calculated' },
                 ].map((m) => (
                   <Stack key={m.label} direction="row" justifyContent="space-between" sx={{ py: 1, borderBottom: '1px solid #f0f0f0' }}>
                     <Box>

@@ -28,6 +28,9 @@ const DietNutritionPage: React.FC = () => {
   const [antiCancerFoods, setAntiCancerFoods] = useState<any[]>([]);
   const [mealPlan, setMealPlan] = useState<any[]>([]);
   const [hydrationData, setHydrationData] = useState<any[]>([]);
+  const [dietStats, setDietStats] = useState<any>({});
+  const [mealDraft, setMealDraft] = useState({ meal_type: 'lunch', notes: '', calories: '', water_ml: '' });
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -49,6 +52,7 @@ const DietNutritionPage: React.FC = () => {
         const logs = Array.isArray(logRes.data) ? logRes.data : (logRes.data.weekly ?? logRes.data.logs ?? []);
         setWeeklyNutrition(logs.map((l: any) => ({ day: l.day ?? l.date ?? '', calories: l.calories ?? 0, protein: l.protein ?? 0, carbs: l.carbs ?? 0, fat: l.fat ?? 0, antioxidants: l.antioxidants ?? 0 })));
         if (Array.isArray(logRes.data.hydration)) setHydrationData(logRes.data.hydration);
+        if (!Array.isArray(logRes.data)) setDietStats(logRes.data);
       }
       if (foodsRes?.data) {
         const foods = Array.isArray(foodsRes.data) ? foodsRes.data : (foodsRes.data.foods ?? []);
@@ -63,6 +67,25 @@ const DietNutritionPage: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const saveMeal = async () => {
+    setSaving(true);
+    try {
+      await dietAPI.logMeal({
+        meal_type: mealDraft.meal_type,
+        calories: Number(mealDraft.calories) || 0,
+        notes: mealDraft.notes || null,
+        water_ml: Number(mealDraft.water_ml) || 0,
+      });
+      setShowLogDialog(false);
+      setMealDraft({ meal_type: 'lunch', notes: '', calories: '', water_ml: '' });
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the meal');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AppLayout title="Diet & Nutrition" navItems={patientNavItems} portalType="patient" subtitle="AI-powered cancer-fighting nutrition">
       {loading ? (
@@ -74,16 +97,16 @@ const DietNutritionPage: React.FC = () => {
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Restaurant />} label="Today's Calories" value="1,580" change="-8%" color="#5e92f3" subtitle="Target: 2,000" />
+            <StatCard icon={<Restaurant />} label="Today's Calories" value={dietStats.today_calories ?? 0} color="#5e92f3" subtitle="From logged meals" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<EcoIcon />} label="Anti-Cancer Score" value="88/100" change="+5" color="#4caf50" subtitle="Excellent" />
+            <StatCard icon={<EcoIcon />} label="Anti-Cancer Score" value="Not available" color="#4caf50" subtitle="Not calculated" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<WaterDrop />} label="Hydration" value="2.25L" change="+12%" color="#0288d1" subtitle="Target: 3L" />
+            <StatCard icon={<WaterDrop />} label="Hydration" value={dietStats.today_water_ml == null ? '—' : `${dietStats.today_water_ml} ml`} color="#0288d1" subtitle="From hydration logs" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<FitnessCenter />} label="Diet Compliance" value="92%" change="+3%" color="#ae52d4" subtitle="7-day average" />
+            <StatCard icon={<FitnessCenter />} label="Diet Compliance" value="Not available" color="#ae52d4" subtitle="Not calculated" />
           </Grid>
         </Grid>
 
@@ -264,18 +287,10 @@ const DietNutritionPage: React.FC = () => {
               <Card sx={{ p: 3, textAlign: 'center' }}>
                 <SectionHeader title="Hydration Goal" icon={<WaterDrop />} />
                 <Box sx={{ py: 2 }}>
-                  <Typography variant="h2" fontWeight={800} color="#0288d1">75%</Typography>
-                  <Typography variant="h6" color="text.secondary">2,250 / 3,000 ml</Typography>
+                  <Typography variant="h2" fontWeight={800} color="#0288d1">{dietStats.today_water_ml ?? 0}</Typography>
+                  <Typography variant="h6" color="text.secondary">ml logged today</Typography>
                 </Box>
-                <LinearProgress variant="determinate" value={75} sx={{ height: 12, borderRadius: 6, bgcolor: '#e3f2fd', mb: 2, '& .MuiLinearProgress-bar': { bgcolor: '#0288d1', borderRadius: 6 } }} />
-                <Stack spacing={1}>
-                  {['Improves drug metabolism', 'Flushes toxins', 'Reduces treatment side effects', 'Supports immune function'].map((tip, i) => (
-                    <Stack key={i} direction="row" spacing={1} alignItems="center">
-                      <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />
-                      <Typography variant="body2" fontSize={12}>{tip}</Typography>
-                    </Stack>
-                  ))}
-                </Stack>
+                <Alert severity="info">A daily water goal is not set. The total above is the sum of logged intake.</Alert>
               </Card>
             </Grid>
           </Grid>
@@ -286,21 +301,21 @@ const DietNutritionPage: React.FC = () => {
           <DialogTitle>Log a Meal</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Meal Type" fullWidth defaultValue="lunch">
+              <TextField select label="Meal Type" fullWidth value={mealDraft.meal_type} onChange={(e) => setMealDraft({ ...mealDraft, meal_type: e.target.value })}>
                 <MenuItem value="breakfast">Breakfast</MenuItem>
                 <MenuItem value="snack_am">Morning Snack</MenuItem>
                 <MenuItem value="lunch">Lunch</MenuItem>
                 <MenuItem value="snack_pm">Afternoon Snack</MenuItem>
                 <MenuItem value="dinner">Dinner</MenuItem>
               </TextField>
-              <TextField label="Foods Eaten" multiline rows={3} fullWidth placeholder="Enter foods and portions..." />
-              <TextField label="Estimated Calories" type="number" fullWidth />
-              <TextField label="Water Intake (ml)" type="number" fullWidth />
+              <TextField label="Foods Eaten" multiline rows={3} fullWidth placeholder="Enter foods and portions..." value={mealDraft.notes} onChange={(e) => setMealDraft({ ...mealDraft, notes: e.target.value })} />
+              <TextField label="Estimated Calories" type="number" fullWidth value={mealDraft.calories} onChange={(e) => setMealDraft({ ...mealDraft, calories: e.target.value })} />
+              <TextField label="Water Intake (ml)" type="number" fullWidth value={mealDraft.water_ml} onChange={(e) => setMealDraft({ ...mealDraft, water_ml: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowLogDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowLogDialog(false)}>Log Meal</Button>
+            <Button variant="contained" disabled={saving} onClick={saveMeal}>Log Meal</Button>
           </DialogActions>
         </Dialog>
       </Box>

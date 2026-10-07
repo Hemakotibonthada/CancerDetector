@@ -23,6 +23,7 @@ const AuditLogs: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<any>(null);
   const [page, setPage] = useState(1);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>({ logs: [], total: 0, failed: 0 });
   const [userActivity, setUserActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +47,17 @@ const AuditLogs: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await adminAPI.getDashboard();
-      const data = res.data;
-      setAuditLogs(data.audit_logs ?? data.auditLogs ?? []);
-      setUserActivity(data.user_activity ?? data.userActivity ?? []);
+      const res = await adminAPI.getAuditLogs();
+      const data = res.data ?? {};
+      const logs = (data.logs ?? []).map((log: any) => ({
+        ...log,
+        user: log.user || log.user_id || '',
+        details: log.details || log.description || log.resource_type || '',
+        action: log.action || '',
+      }));
+      setStats({ ...data, logs });
+      setAuditLogs(logs);
+      setUserActivity(data.user_activity ?? []);
     } catch {
       setError('Failed to load audit data');
     } finally {
@@ -76,10 +84,10 @@ const AuditLogs: React.FC = () => {
     <AppLayout title="Audit Logs" subtitle="Comprehensive platform audit trail" navItems={adminNavItems} portalType="admin">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<History />} label="Total Events" value="12,458" color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Failed Actions" value="23" color="#d32f2f" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Person />} label="Active Users" value="48" color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Security />} label="Security Events" value="5" color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<History />} label="Total Events" value={stats.total ?? 0} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Failed Actions" value={stats.failed ?? 0} color="#d32f2f" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Person />} label="Active Users" value={stats.logs?.length ?? 0} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Security />} label="Security Events" value={stats.failed ?? 0} color="#f57c00" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>

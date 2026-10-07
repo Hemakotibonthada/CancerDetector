@@ -13,6 +13,7 @@ import {
   NavigateBefore, NavigateNext, Refresh, Download,
 } from '@mui/icons-material';
 import AppLayout from '../../components/common/AppLayout';
+import DoctorOptions from '../../components/common/DoctorOptions';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge } from '../../components/common/SharedComponents';
 import { appointmentsAPI } from '../../services/api';
@@ -258,7 +259,7 @@ const AppointmentManagement: React.FC = () => {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField label="Search Patient" fullWidth size="small" InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }} />
-            <FormControl fullWidth size="small"><InputLabel>Doctor</InputLabel><Select label="Doctor"><MenuItem value="d1">Dr. Sarah Smith</MenuItem><MenuItem value="d2">Dr. James Lee</MenuItem><MenuItem value="d3">Dr. Emily Chen</MenuItem></Select></FormControl>
+            <FormControl fullWidth size="small"><InputLabel>Doctor</InputLabel><Select label="Doctor"><DoctorOptions /></Select></FormControl>
             <Grid container spacing={2}>
               <Grid item xs={6}><TextField label="Date" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} /></Grid>
               <Grid item xs={6}><TextField label="Time" type="time" fullWidth size="small" InputLabelProps={{ shrink: true }} /></Grid>

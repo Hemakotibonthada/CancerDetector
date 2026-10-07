@@ -7,6 +7,7 @@ Non-demo users see empty states.
 from __future__ import annotations
 import logging
 import json
+import os
 import random
 from datetime import datetime, timezone, timedelta
 from uuid import uuid4
@@ -30,6 +31,11 @@ from app.security import hash_password, generate_health_id, generate_record_numb
 logger = logging.getLogger(__name__)
 
 
+def demo_seed_allowed() -> bool:
+    """Demo rows are never inserted unless SEED_DEMO_DATA is explicitly true."""
+    return os.getenv("SEED_DEMO_DATA", "").strip().lower() in {"1", "true", "yes"}
+
+
 class SeedService:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -43,7 +49,12 @@ class SeedService:
         self._medications = []
     
     async def seed_all(self):
-        """Seed all data."""
+        """Seed all data. Refused unless SEED_DEMO_DATA=true."""
+        if not demo_seed_allowed():
+            raise RuntimeError(
+                "Demo seeding is disabled. Set SEED_DEMO_DATA=true to allow it. "
+                "Do not set that flag on a database that already holds real accounts."
+            )
         logger.info("Starting database seed...")
         
         # Check if already seeded

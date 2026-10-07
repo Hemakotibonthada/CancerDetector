@@ -134,6 +134,7 @@ from app.models.emergency import (
 from app.models.workforce import (
     StaffProfile, ShiftSchedule, LeaveRequest, CredentialingRecord, PerformanceReview, StaffingMetrics,
 )
+from app.models.operations import HospitalBed, OperatingRoom, ExerciseSession, SecondOpinionRequest
 
 __all__ = [
     # Original models
@@ -233,4 +234,5 @@ __all__ = [
     "CodeEvent", "TraumaAssessment", "RapidResponseTeam",
     # Workforce
     "StaffProfile", "ShiftSchedule", "LeaveRequest", "CredentialingRecord", "PerformanceReview", "StaffingMetrics",
+    "HospitalBed", "OperatingRoom", "ExerciseSession", "SecondOpinionRequest",
 ]

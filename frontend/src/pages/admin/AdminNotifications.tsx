@@ -55,8 +55,8 @@ const AdminNotifications: React.FC = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<NotificationsActive />} label="Active Rules" value={notificationRules.filter(r => r.enabled).length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Send />} label="Sent Today" value="1,248" color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<TrendingUp />} label="Open Rate" value="68.5%" color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Send />} label="Sent Today" value="—" color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<TrendingUp />} label="Open Rate" value="Not available" color="#f57c00" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Campaign />} label="Broadcasts" value={recentBroadcasts.length} color="#9c27b0" /></Grid>
       </Grid>
 
@@ -245,7 +245,7 @@ const AdminNotifications: React.FC = () => {
             <FormControl fullWidth size="small">
               <InputLabel>Target Audience</InputLabel>
               <Select label="Target Audience" defaultValue="all">
-                <MenuItem value="all">All Users (7,070)</MenuItem>
+                <MenuItem value="all">All Users</MenuItem>
                 <MenuItem value="patients">Patients Only (6,100)</MenuItem>
                 <MenuItem value="doctors">Doctors Only (350)</MenuItem>
                 <MenuItem value="staff">Staff Only (620)</MenuItem>

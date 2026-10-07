@@ -30,6 +30,8 @@ const FamilyHealthPage: React.FC = () => {
   const [familyMembers, setFamilyMembers] = useState<any[]>([]);
   const [hereditaryRisk, setHereditaryRisk] = useState<any[]>([]);
   const [cancerPattern, setCancerPattern] = useState<any[]>([]);
+  const [memberDraft, setMemberDraft] = useState({ relative_name: '', relationship_type: 'mother', age: '', condition_name: '', is_cancer: false, relative_living: true });
+  const [saving, setSaving] = useState(false);
 
   const membersWithCancer = familyMembers.filter(m => m.cancerHistory?.length > 0);
   const geneticTestedCount = familyMembers.filter(m => m.geneticTested).length;
@@ -73,6 +75,29 @@ const FamilyHealthPage: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const saveMember = async () => {
+    if (!memberDraft.relationship_type) return;
+    setSaving(true);
+    try {
+      await familyHealthAPI.addMember({
+        relationship_type: memberDraft.relationship_type,
+        relative_name: memberDraft.relative_name || null,
+        condition_name: memberDraft.condition_name || 'Not specified',
+        is_cancer: memberDraft.is_cancer,
+        cancer_type: memberDraft.is_cancer ? (memberDraft.condition_name || null) : null,
+        relative_living: memberDraft.relative_living,
+        age_at_diagnosis: memberDraft.age ? Number(memberDraft.age) : null,
+      });
+      setShowAddDialog(false);
+      setMemberDraft({ relative_name: '', relationship_type: 'mother', age: '', condition_name: '', is_cancer: false, relative_living: true });
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the family member');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AppLayout title="Family Health" navItems={patientNavItems} portalType="patient" subtitle="Hereditary risk & family health tree">
       {loading ? (
@@ -93,14 +118,15 @@ const FamilyHealthPage: React.FC = () => {
             <StatCard icon={<Science />} label="Genetic Testing" value={`${geneticTestedCount}/${familyMembers.length}`} color="#ae52d4" subtitle="Members tested" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<TrendingUp />} label="Hereditary Risk" value="Elevated" color="#ff9800" subtitle="Based on family history" />
+            <StatCard icon={<TrendingUp />} label="Hereditary Risk" value="Not available" color="#ff9800" subtitle="A percentage is not calculated" />
           </Grid>
         </Grid>
 
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: 3 }}>
-          <strong>Hereditary Pattern Detected:</strong> Multiple first-degree relatives with breast and ovarian cancer suggest a possible BRCA gene mutation.
-          We recommend genetic counseling for untested family members.
-        </Alert>
+        {familyMembers.length === 0 && (
+          <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
+            No family history is recorded yet. Add a relative to see stored conditions. A hereditary risk percentage is not calculated.
+          </Alert>
+        )}
 
         <Grid container spacing={2.5}>
           {/* Family Members */}
@@ -187,13 +213,7 @@ const FamilyHealthPage: React.FC = () => {
             <Card sx={{ p: 3 }}>
               <SectionHeader title="Recommendations" icon={<HealthAndSafety />} />
               <Stack spacing={1.5}>
-                {[
-                  { text: 'Get BRCA1/BRCA2 testing', priority: 'High', done: true },
-                  { text: 'Earlier mammography screening', priority: 'High', done: true },
-                  { text: 'Recommend sibling genetic testing', priority: 'Medium', done: false },
-                  { text: 'Consider risk-reducing medications', priority: 'Medium', done: false },
-                  { text: 'Annual ovarian cancer screening', priority: 'High', done: false },
-                ].map((rec, i) => (
+                {[].map((rec: any, i: number) => (
                   <Stack key={i} direction="row" spacing={1} alignItems="center" sx={{ p: 1, bgcolor: '#f8fafc', borderRadius: 2, opacity: rec.done ? 0.6 : 1 }}>
                     <CheckCircle sx={{ fontSize: 16, color: rec.done ? '#4caf50' : '#e0e0e0' }} />
                     <Box sx={{ flex: 1 }}>
@@ -212,8 +232,8 @@ const FamilyHealthPage: React.FC = () => {
           <DialogTitle>Add Family Member</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Full Name" fullWidth />
-              <TextField select label="Relationship" fullWidth defaultValue="">
+              <TextField label="Full Name" fullWidth value={memberDraft.relative_name} onChange={(e) => setMemberDraft({ ...memberDraft, relative_name: e.target.value })} />
+              <TextField select label="Relationship" fullWidth value={memberDraft.relationship_type} onChange={(e) => setMemberDraft({ ...memberDraft, relationship_type: e.target.value })}>
                 <MenuItem value="father">Father</MenuItem>
                 <MenuItem value="mother">Mother</MenuItem>
                 <MenuItem value="brother">Brother</MenuItem>
@@ -225,16 +245,15 @@ const FamilyHealthPage: React.FC = () => {
                 <MenuItem value="cousin">Cousin</MenuItem>
                 <MenuItem value="child">Child</MenuItem>
               </TextField>
-              <TextField label="Age" type="number" fullWidth />
-              <FormControlLabel control={<Switch defaultChecked />} label="Alive" />
-              <TextField label="Medical Conditions" multiline rows={2} fullWidth placeholder="List conditions separated by commas..." />
-              <FormControlLabel control={<Switch />} label="Has Cancer History" />
-              <FormControlLabel control={<Switch />} label="Had Genetic Testing" />
+              <TextField label="Age" type="number" fullWidth value={memberDraft.age} onChange={(e) => setMemberDraft({ ...memberDraft, age: e.target.value })} />
+              <FormControlLabel control={<Switch checked={memberDraft.relative_living} onChange={(e) => setMemberDraft({ ...memberDraft, relative_living: e.target.checked })} />} label="Alive" />
+              <TextField label="Medical Conditions" multiline rows={2} fullWidth placeholder="Condition name" value={memberDraft.condition_name} onChange={(e) => setMemberDraft({ ...memberDraft, condition_name: e.target.value })} />
+              <FormControlLabel control={<Switch checked={memberDraft.is_cancer} onChange={(e) => setMemberDraft({ ...memberDraft, is_cancer: e.target.checked })} />} label="Has Cancer History" />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowAddDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowAddDialog(false)}>Add Member</Button>
+            <Button variant="contained" disabled={saving} onClick={saveMember}>Add Member</Button>
           </DialogActions>
         </Dialog>
       </Box>

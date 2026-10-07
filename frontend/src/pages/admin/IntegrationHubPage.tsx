@@ -72,10 +72,10 @@ const IntegrationHubPage: React.FC = () => {
             <StatCard icon={<CheckCircle />} label="Connected" value={connected.toString()} color="#4caf50" subtitle="Healthy connections" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Sync />} label="Records Synced" value={totalRecords.toLocaleString()} change="+1.2K" color="#ae52d4" subtitle="Total data points" />
+            <StatCard icon={<Sync />} label="Records Synced" value={totalRecords.toLocaleString()} color="#ae52d4" subtitle="Loaded records" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Speed />} label="Avg Uptime" value="99.1%" color="#ff9800" subtitle="All integrations" />
+            <StatCard icon={<Speed />} label="Avg Uptime" value="Not available" color="#ff9800" subtitle="Uptime is not measured" />
           </Grid>
         </Grid>
 

@@ -37,6 +37,9 @@ const ProfilePage: React.FC = () => {
   const [allergies, setAllergies] = useState<any[]>([]);
   const [familyHistory, setFamilyHistory] = useState<any[]>([]);
   const [medicalHistory, setMedicalHistory] = useState<any[]>([]);
+  const [contactDraft, setContactDraft] = useState({ name: '', relationship: '', phone: '', email: '', is_primary: false });
+  const [allergyDraft, setAllergyDraft] = useState({ allergen: '', allergy_type: 'Drug', severity: 'Mild', reaction: '', year: '' });
+  const [saving, setSaving] = useState(false);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -60,11 +63,12 @@ const ProfilePage: React.FC = () => {
         pcp: p.primary_care_physician || '',
         pcpPhone: p.pcp_phone || '',
         joinDate: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
-        lastLogin: p.last_login ? new Date(p.last_login).toLocaleDateString() : new Date().toLocaleDateString(),
+        lastLogin: p.last_login ? new Date(p.last_login).toLocaleDateString() : '—',
       });
       if (p.emergency_contacts) setEmergencyContacts(Array.isArray(p.emergency_contacts) ? p.emergency_contacts : []);
       if (p.allergies) setAllergies(Array.isArray(p.allergies) ? p.allergies : JSON.parse(p.allergies || '[]'));
-      if (p.family_history) setFamilyHistory(Array.isArray(p.family_history) ? p.family_history : JSON.parse(p.family_history || '[]'));
+      const history = p.family_histories || p.family_history;
+      if (history) setFamilyHistory(Array.isArray(history) ? history : []);
       if (p.medical_history) setMedicalHistory(Array.isArray(p.medical_history) ? p.medical_history : JSON.parse(p.medical_history || '[]'));
       setError(null);
     } catch (err: any) {
@@ -76,6 +80,42 @@ const ProfilePage: React.FC = () => {
   }, [user]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  const saveContact = async () => {
+    if (!contactDraft.name.trim() || !contactDraft.phone.trim() || !contactDraft.relationship.trim()) return;
+    setSaving(true);
+    try {
+      await patientsAPI.addEmergencyContact(contactDraft);
+      setShowEmergencyDialog(false);
+      setContactDraft({ name: '', relationship: '', phone: '', email: '', is_primary: false });
+      await loadProfile();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the contact');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveAllergy = async () => {
+    if (!allergyDraft.allergen.trim()) return;
+    setSaving(true);
+    try {
+      await patientsAPI.addAllergy({
+        allergy_type: allergyDraft.allergy_type,
+        allergen: allergyDraft.allergen,
+        reaction: allergyDraft.reaction || null,
+        severity: allergyDraft.severity,
+        onset_date: allergyDraft.year ? `${allergyDraft.year}-01-01T00:00:00` : null,
+      });
+      setShowAllergyDialog(false);
+      setAllergyDraft({ allergen: '', allergy_type: 'Drug', severity: 'Mild', reaction: '', year: '' });
+      await loadProfile();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the allergy');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <AppLayout title="My Profile" subtitle="Manage your personal and medical information" navItems={patientNavItems} portalType="patient">
@@ -319,15 +359,15 @@ const ProfilePage: React.FC = () => {
             <Card sx={{ p: 3 }}>
               <SectionHeader title="Insurance Information" />
               <Stack spacing={2}>
-                <InfoRow label="Provider" value={profile.insuranceProvider} />
-                <InfoRow label="Policy Number" value={profile.insuranceId} />
-                <InfoRow label="Group Number" value="GRP-45678" />
-                <InfoRow label="Plan Type" value="PPO" />
-                <InfoRow label="Effective Date" value="January 1, 2025" />
-                <InfoRow label="Copay (Office Visit)" value="$25" />
-                <InfoRow label="Copay (Specialist)" value="$50" />
-                <InfoRow label="Deductible" value="$1,500" />
-                <InfoRow label="Out-of-Pocket Max" value="$5,000" />
+                <InfoRow label="Provider" value={profile.insuranceProvider || '—'} />
+                <InfoRow label="Policy Number" value={profile.insuranceId || '—'} />
+                <InfoRow label="Group Number" value="—" />
+                <InfoRow label="Plan Type" value="—" />
+                <InfoRow label="Effective Date" value="—" />
+                <InfoRow label="Copay (Office Visit)" value="—" />
+                <InfoRow label="Copay (Specialist)" value="—" />
+                <InfoRow label="Deductible" value="—" />
+                <InfoRow label="Out-of-Pocket Max" value="—" />
               </Stack>
             </Card>
           </Grid>
@@ -337,23 +377,23 @@ const ProfilePage: React.FC = () => {
               <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
                 <Avatar sx={{ width: 56, height: 56, bgcolor: '#e3f2fd', color: '#1565c0' }}>SS</Avatar>
                 <Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: 16 }}>{profile.pcp}</Typography>
-                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>Oncologist • Cancer Research Center</Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: 16 }}>{profile.pcp || 'No primary clinician recorded'}</Typography>
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{profile.pcp ? 'Recorded clinician' : '—'}</Typography>
                 </Box>
               </Stack>
               <Divider sx={{ mb: 2 }} />
               <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Phone sx={{ fontSize: 16, color: 'text.secondary' }} />
-                  <Typography sx={{ fontSize: 13 }}>{profile.pcpPhone}</Typography>
+                  <Typography sx={{ fontSize: 13 }}>{profile.pcpPhone || '—'}</Typography>
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Email sx={{ fontSize: 16, color: 'text.secondary' }} />
-                  <Typography sx={{ fontSize: 13 }}>dr.smith@cancerresearch.org</Typography>
+                  <Typography sx={{ fontSize: 13 }}>—</Typography>
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="center">
                   <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
-                  <Typography sx={{ fontSize: 13 }}>123 Medical Blvd, Suite 200</Typography>
+                  <Typography sx={{ fontSize: 13 }}>{profile.address || '—'}</Typography>
                 </Stack>
               </Stack>
               <Button variant="outlined" fullWidth sx={{ mt: 2 }}>Book Appointment</Button>
@@ -369,16 +409,16 @@ const ProfilePage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Add Emergency Contact</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Full Name" fullWidth size="small" />
-            <TextField label="Relationship" fullWidth size="small" />
-            <TextField label="Phone Number" fullWidth size="small" />
-            <TextField label="Email" fullWidth size="small" />
-            <FormControlLabel control={<Switch />} label="Set as primary contact" />
+            <TextField label="Full Name" fullWidth size="small" value={contactDraft.name} onChange={(e) => setContactDraft({ ...contactDraft, name: e.target.value })} />
+            <TextField label="Relationship" fullWidth size="small" value={contactDraft.relationship} onChange={(e) => setContactDraft({ ...contactDraft, relationship: e.target.value })} />
+            <TextField label="Phone Number" fullWidth size="small" value={contactDraft.phone} onChange={(e) => setContactDraft({ ...contactDraft, phone: e.target.value })} />
+            <TextField label="Email" fullWidth size="small" value={contactDraft.email} onChange={(e) => setContactDraft({ ...contactDraft, email: e.target.value })} />
+            <FormControlLabel control={<Switch checked={contactDraft.is_primary} onChange={(e) => setContactDraft({ ...contactDraft, is_primary: e.target.checked })} />} label="Set as primary contact" />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowEmergencyDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowEmergencyDialog(false)}>Add Contact</Button>
+          <Button variant="contained" disabled={saving} onClick={saveContact}>Add Contact</Button>
         </DialogActions>
       </Dialog>
 
@@ -387,10 +427,10 @@ const ProfilePage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Add Allergy</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Allergen" fullWidth size="small" />
+            <TextField label="Allergen" fullWidth size="small" value={allergyDraft.allergen} onChange={(e) => setAllergyDraft({ ...allergyDraft, allergen: e.target.value })} />
             <FormControl fullWidth size="small">
               <InputLabel>Type</InputLabel>
-              <Select label="Type" defaultValue="">
+              <Select label="Type" value={allergyDraft.allergy_type} onChange={(e) => setAllergyDraft({ ...allergyDraft, allergy_type: e.target.value })}>
                 <MenuItem value="Drug">Drug</MenuItem>
                 <MenuItem value="Food">Food</MenuItem>
                 <MenuItem value="Environmental">Environmental</MenuItem>
@@ -398,19 +438,19 @@ const ProfilePage: React.FC = () => {
             </FormControl>
             <FormControl fullWidth size="small">
               <InputLabel>Severity</InputLabel>
-              <Select label="Severity" defaultValue="">
+              <Select label="Severity" value={allergyDraft.severity} onChange={(e) => setAllergyDraft({ ...allergyDraft, severity: e.target.value })}>
                 <MenuItem value="Mild">Mild</MenuItem>
                 <MenuItem value="Moderate">Moderate</MenuItem>
                 <MenuItem value="Severe">Severe</MenuItem>
               </Select>
             </FormControl>
-            <TextField label="Reaction" fullWidth size="small" />
-            <TextField label="Year Diagnosed" fullWidth size="small" type="number" />
+            <TextField label="Reaction" fullWidth size="small" value={allergyDraft.reaction} onChange={(e) => setAllergyDraft({ ...allergyDraft, reaction: e.target.value })} />
+            <TextField label="Year Diagnosed" fullWidth size="small" type="number" value={allergyDraft.year} onChange={(e) => setAllergyDraft({ ...allergyDraft, year: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowAllergyDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowAllergyDialog(false)}>Add Allergy</Button>
+          <Button variant="contained" disabled={saving} onClick={saveAllergy}>Add Allergy</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

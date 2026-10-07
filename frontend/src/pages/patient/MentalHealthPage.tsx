@@ -19,6 +19,7 @@ import AppLayout from '../../components/common/AppLayout';
 import { StatCard, GlassCard, SectionHeader, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
 import { mentalHealthAPI } from '../../services/api';
+import { useDoctorOptions } from '../../components/common/DoctorOptions';
 
 const MentalHealthPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -33,6 +34,10 @@ const MentalHealthPage: React.FC = () => {
   const [therapySessions, setTherapySessions] = useState<any[]>([]);
   const [copingActivities, setCopingActivities] = useState<any[]>([]);
   const [supportResources, setSupportResources] = useState<any[]>([]);
+  const [moodNotes, setMoodNotes] = useState('');
+  const [sessionDraft, setSessionDraft] = useState({ session_type: 'individual', therapist_user_id: '', preferred_date: '', notes: '' });
+  const [saving, setSaving] = useState(false);
+  const doctors = useDoctorOptions();
 
   const iconMap: Record<string, any> = { Meditation: <SelfImprovement />, Journaling: <Book />, 'Deep Breathing': <Spa />, Yoga: <FitnessCenter />, Music: <MusicNote />, Nature: <EmojiNature />, Phone: <Phone />, Video: <VideoCall />, Chat: <Chat />, Group: <Group /> };
 
@@ -49,7 +54,7 @@ const MentalHealthPage: React.FC = () => {
       if (moodRes?.data) {
         const d = moodRes.data;
         const history = Array.isArray(d) ? d : (d.history ?? d.mood_history ?? []);
-        setMoodHistory(history.map((m: any) => ({ date: m.date ?? m.day ?? '', mood: m.mood ?? m.mood_score ?? 0, anxiety: m.anxiety ?? m.anxiety_score ?? 0, energy: m.energy ?? 0, sleep: m.sleep ?? m.sleep_quality ?? 0 })));
+        setMoodHistory(history.map((m: any) => ({ date: m.date ?? m.day ?? m.screening_date ?? '', mood: m.mood ?? m.mood_score ?? m.total_score ?? null, anxiety: m.anxiety ?? m.anxiety_score ?? null, energy: m.energy ?? null, sleep: m.sleep ?? m.sleep_quality ?? null })));
         if (d.wellness_radar ?? d.wellness) setWellnessRadar((d.wellness_radar ?? d.wellness ?? []).map((w: any) => ({ dimension: w.dimension ?? w.name ?? '', score: w.score ?? 0, benchmark: w.benchmark ?? w.average ?? 0 })));
         if (d.coping_activities ?? d.activities) setCopingActivities((d.coping_activities ?? d.activities ?? []).map((c: any) => ({ name: c.name ?? '', icon: iconMap[c.name] ?? <SelfImprovement />, duration: c.duration ?? '', frequency: c.frequency ?? '', benefit: c.benefit ?? '', color: c.color ?? '#ae52d4', completed: c.completed ?? 0, target: c.target ?? 0 })));
       }
@@ -70,6 +75,44 @@ const MentalHealthPage: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const saveMood = async () => {
+    setSaving(true);
+    try {
+      const notes = [`Anxiety ${anxietyValue}/10`, moodNotes].filter(Boolean).join('. ');
+      await mentalHealthAPI.submitAssessment({ tool_name: 'mood', total_score: moodValue, notes: notes || null });
+      setShowMoodDialog(false);
+      setMoodNotes('');
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the mood entry');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveSession = async () => {
+    if (!sessionDraft.therapist_user_id) {
+      setError('Select a recorded clinician before booking.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await mentalHealthAPI.bookSession({
+        session_type: sessionDraft.session_type,
+        therapist_user_id: sessionDraft.therapist_user_id,
+        notes: sessionDraft.notes || null,
+        preferred_date: sessionDraft.preferred_date ? `${sessionDraft.preferred_date}T09:00:00` : null,
+      });
+      setShowSessionDialog(false);
+      setSessionDraft({ session_type: 'individual', therapist_user_id: '', preferred_date: '', notes: '' });
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not book the session');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getMoodEmoji = (val: number) => val >= 8 ? '😊' : val >= 6 ? '🙂' : val >= 4 ? '😐' : '😟';
 
   return (
@@ -83,16 +126,16 @@ const MentalHealthPage: React.FC = () => {
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Mood />} label="Today's Mood" value={`${getMoodEmoji(7)} 7/10`} change="+2" color="#4caf50" subtitle="Improving trend" />
+            <StatCard icon={<Mood />} label="Today's Mood" value={moodHistory[0]?.mood != null ? String(moodHistory[0].mood) : '—'} color="#4caf50" subtitle="Latest saved screening" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Psychology />} label="Anxiety Level" value="Low" change="-15%" color="#5e92f3" subtitle="Well managed" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<NightsStay />} label="Sleep Quality" value="7.2/10" change="+8%" color="#ae52d4" subtitle="7.5 hours avg" />
+            <StatCard icon={<NightsStay />} label="Sleep Quality" value="Not available" color="#ae52d4" subtitle="Sleep is not scored here" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<SelfImprovement />} label="Coping Score" value="85%" change="+5%" color="#ff9800" subtitle="Above average" />
+            <StatCard icon={<SelfImprovement />} label="Coping Score" value="Not available" color="#ff9800" subtitle="Coping is not scored" />
           </Grid>
         </Grid>
 
@@ -190,7 +233,7 @@ const MentalHealthPage: React.FC = () => {
               <Card sx={{ p: 3, mb: 2.5 }}>
                 <SectionHeader title="Overall Wellness" icon={<Favorite />} />
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                  <MetricGauge value={76} color="#4caf50" size={160} />
+                  <MetricGauge value={0} color="#4caf50" size={160} />
                 </Box>
                 <Typography variant="body2" textAlign="center" color="text.secondary">Your overall mental wellness score is <strong>above average</strong> for cancer patients. Your coping skills are particularly strong.</Typography>
               </Card>
@@ -305,8 +348,7 @@ const MentalHealthPage: React.FC = () => {
                   Suicide & Crisis Lifeline available 24/7
                 </Alert>
                 <Alert severity="info" sx={{ borderRadius: 2 }}>
-                  <strong>Cancer Distress Helpline</strong><br />
-                  1-800-XXX-XXXX • Specialized support for cancer patients
+                  A cancer-specific helpline number is not configured for this installation.
                 </Alert>
               </Card>
             </Grid>
@@ -330,18 +372,12 @@ const MentalHealthPage: React.FC = () => {
                 <Typography gutterBottom fontWeight={600}>Anxiety Level ({anxietyValue}/10)</Typography>
                 <Slider value={anxietyValue} onChange={(_, v) => setAnxietyValue(v as number)} min={0} max={10} valueLabelDisplay="auto" color="error" />
               </Box>
-              <TextField label="How did you sleep?" select fullWidth defaultValue="good">
-                <MenuItem value="excellent">Excellent (8+ hrs)</MenuItem>
-                <MenuItem value="good">Good (6-8 hrs)</MenuItem>
-                <MenuItem value="fair">Fair (4-6 hrs)</MenuItem>
-                <MenuItem value="poor">Poor (&lt;4 hrs)</MenuItem>
-              </TextField>
-              <TextField label="What's on your mind?" multiline rows={3} fullWidth placeholder="Share your thoughts..." />
+              <TextField label="What's on your mind?" multiline rows={3} fullWidth placeholder="Share your thoughts..." value={moodNotes} onChange={(e) => setMoodNotes(e.target.value)} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowMoodDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowMoodDialog(false)}>Save Entry</Button>
+            <Button variant="contained" disabled={saving} onClick={saveMood}>Save Entry</Button>
           </DialogActions>
         </Dialog>
 
@@ -350,24 +386,24 @@ const MentalHealthPage: React.FC = () => {
           <DialogTitle>Book Therapy Session</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Session Type" fullWidth defaultValue="individual">
+              <TextField select label="Session Type" fullWidth value={sessionDraft.session_type} onChange={(e) => setSessionDraft({ ...sessionDraft, session_type: e.target.value })}>
                 <MenuItem value="individual">Individual Therapy</MenuItem>
                 <MenuItem value="group">Group Support Session</MenuItem>
                 <MenuItem value="couples">Couples/Family Session</MenuItem>
                 <MenuItem value="online">Online Session</MenuItem>
               </TextField>
-              <TextField select label="Therapist" fullWidth defaultValue="chen">
-                <MenuItem value="chen">Dr. Sarah Chen - CBT Specialist</MenuItem>
-                <MenuItem value="kumar">Dr. Raj Kumar - Cancer Psychology</MenuItem>
-                <MenuItem value="group">Support Group Facilitator</MenuItem>
+              <TextField select label="Therapist" fullWidth value={sessionDraft.therapist_user_id} onChange={(e) => setSessionDraft({ ...sessionDraft, therapist_user_id: e.target.value })}>
+                {doctors.length === 0 ? <MenuItem value="" disabled>No doctors recorded</MenuItem> : doctors.map((doctor) => (
+                  <MenuItem key={doctor.id} value={doctor.user_id || ''}>{doctor.name}</MenuItem>
+                ))}
               </TextField>
-              <TextField label="Preferred Date" type="date" fullWidth InputLabelProps={{ shrink: true }} />
-              <TextField label="Concerns to Discuss" multiline rows={2} fullWidth />
+              <TextField label="Preferred Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={sessionDraft.preferred_date} onChange={(e) => setSessionDraft({ ...sessionDraft, preferred_date: e.target.value })} />
+              <TextField label="Concerns to Discuss" multiline rows={2} fullWidth value={sessionDraft.notes} onChange={(e) => setSessionDraft({ ...sessionDraft, notes: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowSessionDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowSessionDialog(false)}>Book Session</Button>
+            <Button variant="contained" disabled={saving} onClick={saveSession}>Book Session</Button>
           </DialogActions>
         </Dialog>
       </Box>

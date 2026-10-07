@@ -60,9 +60,9 @@ const AIModelManagement: React.FC = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="Active Models" value={models.filter(m => m.status === 'production').length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="Best Accuracy" value="94.7%" color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Timer />} label="Avg Inference" value="105ms" color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<DataUsage />} label="Training Data" value="1.2M" color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="Best Accuracy" value="Not available" color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Timer />} label="Avg Inference" value="Not available" color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<DataUsage />} label="Training Data" value="Not available" color="#7b1fa2" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
@@ -195,12 +195,9 @@ const AIModelManagement: React.FC = () => {
       {activeTab === 4 && (
         <Card sx={{ p: 2.5 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 16, mb: 2 }}>A/B Testing Results</Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>Currently testing: Ensemble v3.2 (Control) vs CNN v1.4 (Variant) - 80/20 traffic split</Alert>
+          <Alert severity="info" sx={{ mb: 2 }}>No A/B test is running. Accuracy, latency, and prediction counts are not available without a trained model.</Alert>
           <Grid container spacing={2}>
-            {[
-              { name: 'Control: Ensemble v3.2', traffic: 80, accuracy: 94.7, latency: '250ms', predictions: 6480, color: '#1565c0' },
-              { name: 'Variant: CNN v1.4', traffic: 20, accuracy: 93.5, latency: '180ms', predictions: 1620, color: '#9c27b0' },
-            ].map(v => (
+            {[].map((v: any) => (
               <Grid item xs={12} sm={6} key={v.name}>
                 <Box sx={{ p: 2, bgcolor: `${v.color}08`, borderRadius: 2, border: `1px solid ${v.color}20` }}>
                   <Typography sx={{ fontWeight: 700, fontSize: 15, color: v.color }}>{v.name}</Typography>

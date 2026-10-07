@@ -13,6 +13,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import AppLayout from '../../components/common/AppLayout';
+import DoctorOptions from '../../components/common/DoctorOptions';
 import { StatCard, SectionHeader, StatusBadge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
 import { surgeryAPI } from '../../services/api';
@@ -57,6 +58,13 @@ const SurgeryManagementPage: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const todayLabel = new Date().toDateString();
+  const todayCount = surgeries.filter((s) => s.scheduled_at && new Date(s.scheduled_at).toDateString() === todayLabel).length;
+  const durations = surgeries.map((s) => Number(s.duration)).filter((d) => Number.isFinite(d) && d > 0);
+  const avgDuration = durations.length ? `${Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)} min` : '—';
+  const busyRooms = orStatus.filter((r) => String(r.status || '').toLowerCase() === 'in_use').length;
+  const orUtil = orStatus.length ? `${Math.round((busyRooms / orStatus.length) * 100)}%` : '—';
+
   if (loading) {
     return (
       <AppLayout title="Surgery Management" navItems={hospitalNavItems} portalType="hospital" subtitle="Operating room scheduling & tracking">
@@ -73,16 +81,16 @@ const SurgeryManagementPage: React.FC = () => {
         {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<LocalHospital />} label="Today's Surgeries" value="6" change="+2" color="#5e92f3" subtitle="3 cancer-related" />
+            <StatCard icon={<LocalHospital />} label="Today's Surgeries" value={todayCount} color="#5e92f3" subtitle="Scheduled today" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Timer />} label="Avg Duration" value="2.5h" change="-10%" color="#4caf50" subtitle="This week" />
+            <StatCard icon={<Timer />} label="Avg Duration" value={avgDuration} color="#4caf50" subtitle="From scheduled surgeries" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<AirlineSeatFlat />} label="OR Utilization" value="67%" change="+5%" color="#ff9800" subtitle="4/6 rooms active" />
+            <StatCard icon={<AirlineSeatFlat />} label="OR Utilization" value={orUtil} color="#ff9800" subtitle="Rooms marked in use" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CheckCircle />} label="Success Rate" value="98.5%" change="+0.2%" color="#4caf50" subtitle="Last 30 days" />
+            <StatCard icon={<CheckCircle />} label="Success Rate" value="Not available" color="#4caf50" subtitle="Outcomes are not stored" />
           </Grid>
         </Grid>
 
@@ -220,9 +228,7 @@ const SurgeryManagementPage: React.FC = () => {
               <TextField label="Patient Name" fullWidth />
               <TextField label="Procedure" fullWidth />
               <TextField select label="Surgeon" fullWidth defaultValue="">
-                <MenuItem value="miller">Dr. James Miller</MenuItem>
-                <MenuItem value="roberts">Dr. Emily Roberts</MenuItem>
-                <MenuItem value="smith">Dr. Smith</MenuItem>
+                <DoctorOptions />
               </TextField>
               <TextField select label="Operating Room" fullWidth defaultValue="">
                 {orStatus.filter(or => or.status === 'Available').map(or => (

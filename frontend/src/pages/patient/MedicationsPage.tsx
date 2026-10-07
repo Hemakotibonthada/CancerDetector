@@ -25,6 +25,8 @@ const MedicationsPage: React.FC = () => {
   const [medications, setMedications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [medDraft, setMedDraft] = useState({ medication_name: '', dosage: '', frequency: '', purpose: '', prescribed_by: '' });
+  const [saving, setSaving] = useState(false);
 
   const loadMedications = useCallback(async () => {
     try {
@@ -43,7 +45,7 @@ const MedicationsPage: React.FC = () => {
         endDate: p.end_date || '',
         refillsLeft: p.refills_remaining ?? p.refills ?? 0,
         sideEffects: p.side_effects ? (Array.isArray(p.side_effects) ? p.side_effects : [p.side_effects]) : [],
-        adherence: p.adherence ?? 85,
+        adherence: p.adherence ?? null,
         nextDose: '',
         taken: false,
         category: p.category || p.medication?.category || 'General',
@@ -59,6 +61,21 @@ const MedicationsPage: React.FC = () => {
   }, []);
 
   useEffect(() => { loadMedications(); }, [loadMedications]);
+
+  const saveMedication = async () => {
+    if (!medDraft.medication_name.trim()) return;
+    setSaving(true);
+    try {
+      await pharmacyAPI.reportMedication(medDraft);
+      setShowAddDialog(false);
+      setMedDraft({ medication_name: '', dosage: '', frequency: '', purpose: '', prescribed_by: '' });
+      await loadMedications();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the medication');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const interactions: any[] = [];
   const schedule = medications.length > 0 ? [
@@ -78,7 +95,7 @@ const MedicationsPage: React.FC = () => {
       {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box> : <>
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<MedIcon />} label="Active Meds" value={medications.length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Avg. Adherence" value={medications.length > 0 ? `${Math.round(medications.reduce((a, m) => a + m.adherence, 0) / medications.length)}%` : '0%'} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Avg. Adherence" value={medications.some((m) => m.adherence != null) ? `${Math.round(medications.reduce((a, m) => a + (m.adherence || 0), 0) / medications.filter((m) => m.adherence != null).length)}%` : '—'} color="#4caf50" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Low Refills" value={medications.filter(m => m.refillsLeft <= 2).length} color="#f57c00" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<WarningAmber />} label="Interactions" value={interactions.length} color="#c62828" /></Grid>
       </Grid>
@@ -278,25 +295,18 @@ const MedicationsPage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Add Medication</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Medication Name" fullWidth size="small" />
+            <TextField label="Medication Name" fullWidth size="small" value={medDraft.medication_name} onChange={(e) => setMedDraft({ ...medDraft, medication_name: e.target.value })} />
             <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="Dosage" fullWidth size="small" placeholder="e.g., 500mg" /></Grid>
-              <Grid item xs={6}><TextField label="Frequency" fullWidth size="small" placeholder="e.g., Twice daily" /></Grid>
+              <Grid item xs={6}><TextField label="Dosage" fullWidth size="small" placeholder="e.g., 500mg" value={medDraft.dosage} onChange={(e) => setMedDraft({ ...medDraft, dosage: e.target.value })} /></Grid>
+              <Grid item xs={6}><TextField label="Frequency" fullWidth size="small" placeholder="e.g., Twice daily" value={medDraft.frequency} onChange={(e) => setMedDraft({ ...medDraft, frequency: e.target.value })} /></Grid>
             </Grid>
-            <TextField label="Purpose" fullWidth size="small" />
-            <TextField label="Prescribed By" fullWidth size="small" />
-            <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="Start Date" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} /></Grid>
-              <Grid item xs={6}><TextField label="End Date (optional)" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} /></Grid>
-            </Grid>
-            <TextField label="Side Effects" fullWidth size="small" placeholder="Comma-separated" />
-            <FormControlLabel control={<Switch />} label="Set refill reminders" />
-            <FormControlLabel control={<Switch defaultChecked />} label="Set dose reminders" />
+            <TextField label="Purpose" fullWidth size="small" value={medDraft.purpose} onChange={(e) => setMedDraft({ ...medDraft, purpose: e.target.value })} />
+            <TextField label="Prescribed By" fullWidth size="small" value={medDraft.prescribed_by} onChange={(e) => setMedDraft({ ...medDraft, prescribed_by: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowAddDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowAddDialog(false)}>Add Medication</Button>
+          <Button variant="contained" disabled={saving} onClick={saveMedication}>Add Medication</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

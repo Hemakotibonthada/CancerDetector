@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box, Grid, Card, Typography, Stack, Chip, Button, Tabs, Tab,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
@@ -13,42 +13,52 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { StatCard, SectionHeader } from '../../components/common/SharedComponents';
+import { goalsAPI } from '../../services/api';
 
 const HealthGoalsPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
   const [showGoalDialog, setShowGoalDialog] = useState(false);
+  const [goals, setGoals] = useState<any[]>([]);
+  const [draft, setDraft] = useState({ title: '', target: '', unit: '', category: 'general' });
 
-  const activeGoals = [
-    { id: '1', title: 'Walk 10,000 steps daily', icon: <DirectionsWalk />, category: 'Exercise', target: 10000, current: 8432, unit: 'steps', streak: 5, startDate: 'Jan 15, 2026', endDate: 'Mar 15, 2026', progress: 84, color: '#2e7d32' },
-    { id: '2', title: 'Drink 8 glasses of water', icon: <LocalDrink />, category: 'Nutrition', target: 8, current: 6, unit: 'glasses', streak: 12, startDate: 'Feb 01, 2026', endDate: 'Apr 01, 2026', progress: 75, color: '#1565c0' },
-    { id: '3', title: 'Sleep 8 hours nightly', icon: <Bedtime />, category: 'Sleep', target: 8, current: 7.5, unit: 'hours', streak: 3, startDate: 'Feb 01, 2026', endDate: 'Apr 01, 2026', progress: 94, color: '#7b1fa2' },
-    { id: '4', title: 'Meditate 15 minutes daily', icon: <SelfImprovement />, category: 'Mental Health', target: 15, current: 10, unit: 'minutes', streak: 8, startDate: 'Jan 20, 2026', endDate: 'Mar 20, 2026', progress: 67, color: '#00897b' },
-    { id: '5', title: 'Exercise 5 days per week', icon: <FitnessCenter />, category: 'Exercise', target: 5, current: 3, unit: 'days', streak: 2, startDate: 'Feb 10, 2026', endDate: 'May 10, 2026', progress: 60, color: '#c62828' },
-    { id: '6', title: 'Eat 5 servings of fruits/veggies', icon: <Fastfood />, category: 'Nutrition', target: 5, current: 4, unit: 'servings', streak: 7, startDate: 'Feb 01, 2026', endDate: 'Apr 01, 2026', progress: 80, color: '#f57c00' },
-  ];
+  const loadGoals = () => {
+    goalsAPI.list().then((res) => {
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setGoals(rows);
+    }).catch(() => setGoals([]));
+  };
+  useEffect(() => { loadGoals(); }, []);
 
-  const completedGoals = [
-    { id: '7', title: 'Complete annual health checkup', completedDate: 'Feb 15, 2026', reward: '🏆 Health Champion' },
-    { id: '8', title: 'Reduce sugar for 30 days', completedDate: 'Jan 31, 2026', reward: '⭐ Sugar-Free Champion' },
-    { id: '9', title: 'Walk 100,000 steps in January', completedDate: 'Jan 28, 2026', reward: '🎯 Step Master' },
-  ];
+  const activeGoals = goals.filter((g) => (g.status || 'active') !== 'completed').map((g) => ({
+    id: g.id,
+    title: g.goal_description || g.title,
+    icon: <Flag />,
+    category: g.goal_category || 'general',
+    target: g.target_frequency || '—',
+    current: g.progress ?? 0,
+    unit: g.measurement_method || '',
+    streak: null,
+    endDate: g.target_date ? new Date(g.target_date).toLocaleDateString() : '—',
+    progress: Math.min(100, Number(g.progress) || 0),
+    color: '#1565c0',
+  }));
+  const completedGoals = goals.filter((g) => g.status === 'completed').map((g) => ({
+    id: g.id,
+    title: g.goal_description,
+    completedDate: g.last_updated ? new Date(g.last_updated).toLocaleDateString() : '—',
+    reward: g.status,
+  }));
+  const challenges: any[] = [];
+  const milestones: any[] = [];
 
-  const challenges = [
-    { id: '1', title: '7-Day Hydration Challenge', desc: 'Drink 8 glasses of water daily for 7 consecutive days', participants: 1243, difficulty: 'Easy', reward: '50 Health Points', daysLeft: 5, joined: true },
-    { id: '2', title: '30-Day Cancer Prevention', desc: 'Follow daily cancer prevention habits for 30 days', participants: 867, difficulty: 'Medium', reward: '200 Health Points', daysLeft: 22, joined: true },
-    { id: '3', title: 'Sleep Quality Sprint', desc: 'Achieve 85+ sleep score for 14 consecutive days', participants: 456, difficulty: 'Hard', reward: '150 Health Points', daysLeft: 14, joined: false },
-    { id: '4', title: 'Move More March', desc: 'Walk 15,000 steps daily throughout March', participants: 2341, difficulty: 'Hard', reward: '300 Health Points', daysLeft: 30, joined: false },
-  ];
-
-  const milestones = [
-    { title: 'First Week Streak', desc: '7-day consecutive goal streak', achieved: true, date: 'Feb 08, 2026', icon: '🔥' },
-    { title: '100K Steps', desc: 'Walk 100,000 total steps', achieved: true, date: 'Feb 12, 2026', icon: '👟' },
-    { title: 'Health Score 80+', desc: 'Achieve health score above 80', achieved: true, date: 'Feb 15, 2026', icon: '💪' },
-    { title: '30-Day Streak', desc: '30-day consecutive goal streak', achieved: false, date: '', icon: '🏆' },
-    { title: 'Cancer Screening Complete', desc: 'Complete all recommended screenings', achieved: false, date: '', icon: '🎯' },
-    { title: 'Perfect Month', desc: 'Achieve all daily goals for an entire month', achieved: false, date: '', icon: '⭐' },
-  ];
+  const createGoal = async () => {
+    if (!draft.title.trim()) return;
+    await goalsAPI.create({ title: draft.title, category: draft.category || 'general', target: draft.target || null, unit: draft.unit || null });
+    setShowGoalDialog(false);
+    setDraft({ title: '', target: '', unit: '', category: 'general' });
+    loadGoals();
+  };
 
   return (
     <AppLayout title="Health Goals" subtitle="Set, track, and achieve your wellness goals" navItems={patientNavItems} portalType="patient">
@@ -56,7 +66,7 @@ const HealthGoalsPage: React.FC = () => {
         <Grid item xs={6} sm={3}><StatCard icon={<Flag />} label="Active Goals" value={activeGoals.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Completed" value={completedGoals.length} color="#4caf50" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<EmojiEvents />} label="Milestones" value={`${milestones.filter(m => m.achieved).length}/${milestones.length}`} color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Star />} label="Health Points" value="450" color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Star />} label="Health Points" value="Not available" color="#7b1fa2" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
@@ -102,8 +112,7 @@ const HealthGoalsPage: React.FC = () => {
 
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack direction="row" spacing={0.5} alignItems="center">
-                      <Typography sx={{ fontSize: 16 }}>🔥</Typography>
-                      <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{goal.streak} day streak</Typography>
+                      <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Streak not tracked</Typography>
                     </Stack>
                     <Stack direction="row" spacing={0.5} alignItems="center">
                       <Timer sx={{ fontSize: 14, color: 'text.secondary' }} />
@@ -189,22 +198,17 @@ const HealthGoalsPage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Create New Goal</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Goal Title" fullWidth size="small" placeholder="e.g., Walk 10,000 steps daily" />
+            <TextField label="Goal Title" fullWidth size="small" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
             <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="Target Value" fullWidth size="small" type="number" /></Grid>
-              <Grid item xs={6}><TextField label="Unit" fullWidth size="small" placeholder="e.g., steps, glasses" /></Grid>
+              <Grid item xs={6}><TextField label="Target" fullWidth size="small" value={draft.target} onChange={(e) => setDraft({ ...draft, target: e.target.value })} /></Grid>
+              <Grid item xs={6}><TextField label="Unit" fullWidth size="small" value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value })} /></Grid>
             </Grid>
-            <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="Start Date" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} /></Grid>
-              <Grid item xs={6}><TextField label="End Date" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} /></Grid>
-            </Grid>
-            <TextField label="Category" fullWidth size="small" placeholder="e.g., Exercise, Nutrition, Sleep" />
-            <TextField label="Notes" multiline rows={2} fullWidth size="small" />
+            <TextField label="Category" fullWidth size="small" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowGoalDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowGoalDialog(false)}>Create Goal</Button>
+          <Button variant="contained" onClick={createGoal}>Create Goal</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

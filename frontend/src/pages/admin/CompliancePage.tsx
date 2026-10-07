@@ -71,7 +71,7 @@ const CompliancePage: React.FC = () => {
 
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Shield />} label="Compliance Score" value={`${overallScore}%`} change="+3%" color="#4caf50" subtitle="Overall rating" />
+            <StatCard icon={<Shield />} label="Compliance Score" value={complianceItems.length ? `${overallScore}%` : '—'} color="#4caf50" subtitle="Share of recorded items marked compliant" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<CheckCircle />} label="Compliant" value={compliant.toString()} color="#4caf50" subtitle={`of ${complianceItems.length} requirements`} />

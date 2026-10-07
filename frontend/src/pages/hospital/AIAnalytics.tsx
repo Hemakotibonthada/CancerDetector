@@ -30,6 +30,7 @@ const AIAnalytics: React.FC = () => {
   const [modelPerformance, setModelPerformance] = useState<any[]>([]);
   const [populationHealth, setPopulationHealth] = useState<any[]>([]);
   const [featureImportance, setFeatureImportance] = useState<any[]>([]);
+  const [overview, setOverview] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -47,6 +48,7 @@ const AIAnalytics: React.FC = () => {
       setCancerTypeDetection(overview.cancer_type_detection ?? overview.cancerTypeDetection ?? []);
       setModelPerformance(overview.model_performance ?? overview.modelPerformance ?? []);
       setPopulationHealth(overview.population_health ?? overview.populationHealth ?? []);
+      setOverview(overview);
       setFeatureImportance(overview.feature_importance ?? overview.featureImportance ?? []);
       setError('');
     } catch {
@@ -64,10 +66,10 @@ const AIAnalytics: React.FC = () => {
     <AppLayout title="AI & Analytics" subtitle="AI-powered predictions and insights" navItems={hospitalNavItems} portalType="hospital">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="Model Accuracy" value="94.7%" color="#1565c0" change="+1.2%" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Groups />} label="Patients Screened" value="1,660" color="#4caf50" change="+15%" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="Predictions Today" value="89" color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="High Risk Found" value="27" color="#d32f2f" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="Model Accuracy" value="Not available" color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Groups />} label="Patients Screened" value={overview.total_screenings ?? 0} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="Predictions Today" value={overview.ai_predictions_today ?? 0} color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="High Risk Found" value={overview.high_risk_patients ?? 0} color="#d32f2f" /></Grid>
       </Grid>
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -131,10 +133,10 @@ const AIAnalytics: React.FC = () => {
               <Typography sx={{ fontWeight: 700, fontSize: 16, mb: 2 }}>AI Insights Summary</Typography>
               <Grid container spacing={2}>
                 {[
-                  { title: 'Early Detection Rate', value: '87.3%', change: '+5.2%', desc: 'Cancers detected at Stage I/II', icon: <CheckCircle />, color: '#4caf50' },
-                  { title: 'False Positive Rate', value: '3.2%', change: '-0.8%', desc: 'Reduced unnecessary procedures', icon: <TrendingUp />, color: '#2196f3' },
-                  { title: 'Prediction Confidence', value: '92.1%', change: '+1.5%', desc: 'Average model confidence score', icon: <Psychology />, color: '#9c27b0' },
-                  { title: 'Risk Stratification', value: '96.5%', change: '+2.1%', desc: 'Correct risk level assignment', icon: <Assessment />, color: '#f57c00' },
+                  { title: 'Early Detection Rate', value: 'Not available', change: '', desc: 'Stage at detection is not stored', icon: <CheckCircle />, color: '#4caf50' },
+                  { title: 'False Positive Rate', value: 'Not available', change: '', desc: 'Not calculated', icon: <TrendingUp />, color: '#2196f3' },
+                  { title: 'Prediction Confidence', value: 'Not available', change: '', desc: 'No validated model confidence', icon: <Psychology />, color: '#9c27b0' },
+                  { title: 'Risk Stratification', value: 'Not available', change: '', desc: 'Not calculated', icon: <Assessment />, color: '#f57c00' },
                 ].map(item => (
                   <Grid item xs={12} sm={6} md={3} key={item.title}>
                     <Box sx={{ p: 2, bgcolor: `${item.color}08`, borderRadius: 2, border: `1px solid ${item.color}20` }}>

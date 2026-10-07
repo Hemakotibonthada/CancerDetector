@@ -19,10 +19,10 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.routing import Match, Route
 
 from app.config import get_settings, BASE_DIR, PROJECT_DIR
-from app.database import init_db, close_db, check_db_health, get_db_context
-from app.services.seed_service import SeedService
+from app.database import init_db, close_db, check_db_health
 
 logger = logging.getLogger(__name__)
 
@@ -47,19 +47,9 @@ async def lifespan(app: FastAPI):
     if settings.is_production and not os.getenv("AUTH_SECRET_KEY"):
         raise RuntimeError("AUTH_SECRET_KEY is required in production")
     
-    # Initialize database
+    # Initialize database. Demo rows are never inserted on startup.
     await init_db()
     logger.info("Database initialized")
-    
-    # Seed data in development
-    if settings.is_development:
-        try:
-            async with get_db_context() as session:
-                seed_service = SeedService(session)
-                await seed_service.seed_all()
-        except Exception as e:
-            logger.warning(f"Seed data error (non-critical): {e}")
-    
     logger.info(f"{settings.app_name} started successfully!")
     
     yield
@@ -119,6 +109,7 @@ def create_application() -> FastAPI:
         clinical_trials_v2_router, radiology_enhanced_router, pharmacy_enhanced_router,
         education_router, social_determinants_router, wearable_enhanced_router,
         emergency_router, workforce_router, documents_router,
+        lifestyle_router, surgery_router,
     )
     
     api_prefix = settings.api_prefix
@@ -160,6 +151,8 @@ def create_application() -> FastAPI:
     app.include_router(emergency_router, prefix=api_prefix)
     app.include_router(workforce_router, prefix=api_prefix)
     app.include_router(documents_router, prefix=api_prefix)
+    app.include_router(lifestyle_router, prefix=api_prefix)
+    app.include_router(surgery_router, prefix=api_prefix)
     
     # ========================================================================
     # Root & Health Endpoints
@@ -210,11 +203,9 @@ def create_application() -> FastAPI:
     if frontend_build.exists():
         app.mount("/static", StaticFiles(directory=str(frontend_build / "static")), name="static")
         
-        # Catch-all for SPA routing
-        @app.get("/{full_path:path}")
+        # SPA fallback must not claim /api requests. A GET catch-all otherwise
+        # partial-matches API POSTs and returns 405 before slash redirects run.
         async def serve_spa(full_path: str):
-            if full_path.startswith("api/"):
-                return JSONResponse({"detail": "Not found"}, status_code=404)
             requested = (frontend_build / full_path).resolve()
             if requested.is_relative_to(frontend_build.resolve()) and requested.is_file():
                 return FileResponse(str(requested))
@@ -222,6 +213,17 @@ def create_application() -> FastAPI:
             if index_file.exists():
                 return FileResponse(str(index_file))
             return JSONResponse({"error": "Not found"}, status_code=404)
+
+        class SpaRoute(Route):
+            def matches(self, scope):
+                if scope.get("type") != "http" or scope.get("method") != "GET":
+                    return Match.NONE, {}
+                path = scope.get("path", "")
+                if path == "/api" or path.startswith("/api/"):
+                    return Match.NONE, {}
+                return super().matches(scope)
+
+        app.router.routes.append(SpaRoute("/{full_path:path}", endpoint=serve_spa, methods=["GET"]))
     
     return app
 

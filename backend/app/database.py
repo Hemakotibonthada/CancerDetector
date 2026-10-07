@@ -261,25 +261,9 @@ async def init_db() -> None:
     """Initialize the database by creating all tables."""
     engine = get_engine()
     
-    # Import all models to register them with Base
-    from app.models import (  # noqa: F401
-        user,
-        patient,
-        hospital,
-        health_record,
-        blood_sample,
-        smartwatch_data,
-        medication,
-        appointment,
-        cancer_screening,
-        notification,
-        audit_log,
-        vital_signs,
-        lab_result,
-        medical_image,
-        insurance,
-        report,
-    )
+    # Import every model module so create_all adds missing tables only.
+    import app.models  # noqa: F401
+    import app.models.operations  # noqa: F401
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

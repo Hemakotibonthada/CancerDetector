@@ -104,7 +104,7 @@ const NutritionEnhancedPage: React.FC = () => {
                         <Grid item xs={4} key={m}>
                           <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
                             <Typography variant="h6" sx={{ color: ['#4caf50', '#ff9800', '#f44336'][i] }}>
-                              {plan[`${m.toLowerCase()}_grams`] || [120, 250, 65][i]}g
+                              {plan[`${m.toLowerCase()}_grams`] ?? '—'}g
                             </Typography>
                             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>{m}</Typography>
                           </Box>

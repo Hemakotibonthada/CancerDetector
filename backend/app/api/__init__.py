@@ -36,3 +36,5 @@ from app.api.wearable_enhanced import router as wearable_enhanced_router
 from app.api.emergency import router as emergency_router
 from app.api.workforce import router as workforce_router
 from app.api.documents import router as documents_router
+from app.api.lifestyle import router as lifestyle_router
+from app.api.surgery import router as surgery_router

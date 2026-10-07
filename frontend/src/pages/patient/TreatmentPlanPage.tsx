@@ -35,6 +35,8 @@ const TreatmentPlanPage: React.FC = () => {
   const [responseTracking, setResponseTracking] = useState<any[]>([]);
   const [clinicalTrials, setClinicalTrials] = useState<any[]>([]);
   const [secondOpinions, setSecondOpinions] = useState<any[]>([]);
+  const [opinionDraft, setOpinionDraft] = useState({ original_diagnosis: '', notes: '', urgency: 'routine' });
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -68,15 +70,15 @@ const TreatmentPlanPage: React.FC = () => {
         const trials = Array.isArray(trialsRes.data) ? trialsRes.data : (trialsRes.data.trials ?? []);
         setClinicalTrials(trials.map((t: any) => ({
           id: t.id ?? t.trial_id ?? '', title: t.title ?? '', phase: t.phase ?? '',
-          status: t.status ?? '', match: t.match_score ?? t.match ?? 0, sponsor: t.sponsor ?? '',
+          status: t.status ?? '', match: t.match_score ?? t.match ?? null, sponsor: t.sponsor ?? '',
         })));
       }
       if (opinionsRes?.data) {
         const opinions = Array.isArray(opinionsRes.data) ? opinionsRes.data : (opinionsRes.data.requests ?? []);
         setSecondOpinions(opinions.map((o: any) => ({
           id: o.id ?? '', date: o.date ?? o.created_at ?? '', original: o.original_diagnosis ?? o.original ?? '',
-          reviewer: o.reviewer ?? '', hospital: o.hospital ?? '', status: o.status ?? '',
-          agreement: o.agreement ?? o.agreement_percentage ?? 0, recommendation: o.recommendation ?? '',
+          reviewer: o.reviewer_name || o.reviewer || 'Not assigned', hospital: o.hospital_name || o.hospital || '', status: o.status ?? 'requested',
+          agreement: o.agreement_recorded ?? o.agreement ?? o.agreement_percentage ?? null, recommendation: o.recommendation || '',
         })));
       }
     } catch (err: any) {
@@ -87,6 +89,25 @@ const TreatmentPlanPage: React.FC = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const saveOpinion = async () => {
+    const diagnosis = opinionDraft.original_diagnosis || `${treatmentPlan.cancer_type || ''} ${treatmentPlan.stage || ''}`.trim();
+    if (!diagnosis) return;
+    setSaving(true);
+    try {
+      await treatmentAPI.requestSecondOpinion({
+        original_diagnosis: diagnosis,
+        notes: [opinionDraft.urgency ? `Urgency: ${opinionDraft.urgency}` : '', opinionDraft.notes].filter(Boolean).join('. ') || null,
+      });
+      setShowSecondOpinionDialog(false);
+      setOpinionDraft({ original_diagnosis: '', notes: '', urgency: 'routine' });
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the request');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <AppLayout title="Treatment Plan" navItems={patientNavItems} portalType="patient" subtitle="Your personalized treatment journey">
@@ -189,15 +210,14 @@ const TreatmentPlanPage: React.FC = () => {
             <Grid item xs={12} md={4}>
               <Card sx={{ p: 3, mb: 2.5 }}>
                 <SectionHeader title="Treatment Response" icon={<CheckCircle />} />
-                <Alert severity="success" sx={{ borderRadius: 2, mb: 2 }}>
-                  <strong>Excellent Response!</strong><br />
-                  Tumor size reduced by 62.5% since treatment start.
+                <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+                  Treatment response percentages are not available. Tumor size and marker change are shown only when those measurements are saved.
                 </Alert>
                 <Stack spacing={2}>
                   {[
-                    { label: 'Tumor Reduction', value: '62.5%', color: '#4caf50' },
-                    { label: 'Marker Decline', value: '60%', color: '#5e92f3' },
-                    { label: 'Overall Response', value: 'Excellent', color: '#4caf50' },
+                    { label: 'Tumor Reduction', value: 'Not available', color: '#4caf50' },
+                    { label: 'Marker Decline', value: 'Not available', color: '#5e92f3' },
+                    { label: 'Overall Response', value: 'Not available', color: '#4caf50' },
                   ].map((item, i) => (
                     <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: '#f8fafc', borderRadius: 2 }}>
                       <Typography variant="body2" fontWeight={600}>{item.label}</Typography>
@@ -260,9 +280,11 @@ const TreatmentPlanPage: React.FC = () => {
         {/* Tab 3: Clinical Trials */}
         {activeTab === 3 && (
           <Card sx={{ p: 3 }}>
-            <SectionHeader title="Eligible Clinical Trials" subtitle="AI-matched trials based on your diagnosis" icon={<Science />} />
+            <SectionHeader title="Recorded Clinical Trials" subtitle="Protocols stored for this installation" icon={<Science />} />
             <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
-              <strong>4 clinical trials</strong> match your cancer type and treatment history. Discuss these options with your oncologist.
+              {clinicalTrials.length === 0
+                ? 'No trial protocols are stored. A match score is not calculated.'
+                : `${clinicalTrials.length} protocol${clinicalTrials.length === 1 ? '' : 's'} on file. A match score is not calculated.`}
             </Alert>
             <TableContainer>
               <Table>
@@ -287,10 +309,7 @@ const TreatmentPlanPage: React.FC = () => {
                       <TableCell><Chip label={`Phase ${trial.phase}`} size="small" sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 700 }} /></TableCell>
                       <TableCell><StatusBadge status={trial.status.toLowerCase()} /></TableCell>
                       <TableCell>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <LinearProgress variant="determinate" value={trial.match} sx={{ width: 50, height: 6, borderRadius: 3, '& .MuiLinearProgress-bar': { bgcolor: trial.match >= 85 ? '#4caf50' : '#ff9800' } }} />
-                          <Typography variant="body2" fontWeight={700} color={trial.match >= 85 ? 'success.main' : 'warning.main'}>{trial.match}%</Typography>
-                        </Stack>
+                        <Typography variant="body2">{trial.match == null ? 'Not available' : `${trial.match}%`}</Typography>
                       </TableCell>
                       <TableCell><Button size="small" variant="outlined">Learn More</Button></TableCell>
                     </TableRow>
@@ -320,7 +339,7 @@ const TreatmentPlanPage: React.FC = () => {
                     </Box>
                   </Stack>
                   <Stack direction="row" spacing={1}>
-                    <Chip label={`${opinion.agreement}% Agreement`} size="small" sx={{ bgcolor: opinion.agreement >= 85 ? '#e8f5e9' : '#fff3e0', color: opinion.agreement >= 85 ? '#2e7d32' : '#e65100', fontWeight: 700 }} />
+                    <Chip label={opinion.agreement == null ? 'Agreement not recorded' : `${opinion.agreement}% Agreement`} size="small" />
                     <StatusBadge status={opinion.status.toLowerCase()} />
                   </Stack>
                 </Stack>
@@ -338,23 +357,18 @@ const TreatmentPlanPage: React.FC = () => {
           <DialogTitle>Request Second Opinion</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Opinion Type" fullWidth defaultValue="expert">
-                <MenuItem value="expert">Expert Oncologist Review</MenuItem>
-                <MenuItem value="ai">AI Analysis</MenuItem>
-                <MenuItem value="both">Both Expert + AI</MenuItem>
-              </TextField>
-              <TextField label="Current Diagnosis" fullWidth defaultValue={`${treatmentPlan.cancer_type} - ${treatmentPlan.stage}`} />
-              <TextField label="Specific Questions" multiline rows={3} fullWidth placeholder="What aspects would you like reviewed?" />
-              <TextField select label="Urgency" fullWidth defaultValue="routine">
-                <MenuItem value="routine">Routine (5-7 days)</MenuItem>
-                <MenuItem value="priority">Priority (2-3 days)</MenuItem>
-                <MenuItem value="urgent">Urgent (24 hours)</MenuItem>
+              <TextField label="Current Diagnosis" fullWidth value={opinionDraft.original_diagnosis} onChange={(e) => setOpinionDraft({ ...opinionDraft, original_diagnosis: e.target.value })} placeholder={treatmentPlan.cancer_type || 'Diagnosis'} />
+              <TextField label="Specific Questions" multiline rows={3} fullWidth placeholder="What aspects would you like reviewed?" value={opinionDraft.notes} onChange={(e) => setOpinionDraft({ ...opinionDraft, notes: e.target.value })} />
+              <TextField select label="Urgency" fullWidth value={opinionDraft.urgency} onChange={(e) => setOpinionDraft({ ...opinionDraft, urgency: e.target.value })}>
+                <MenuItem value="routine">Routine</MenuItem>
+                <MenuItem value="priority">Priority</MenuItem>
+                <MenuItem value="urgent">Urgent</MenuItem>
               </TextField>
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowSecondOpinionDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowSecondOpinionDialog(false)}>Submit Request</Button>
+            <Button variant="contained" disabled={saving} onClick={saveOpinion}>Submit Request</Button>
           </DialogActions>
         </Dialog>
       </Box>

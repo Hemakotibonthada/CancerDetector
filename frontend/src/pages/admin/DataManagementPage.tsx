@@ -65,7 +65,7 @@ const DataManagementPage: React.FC = () => {
             <StatCard icon={<Storage />} label="Storage Used" value={`${totalGB} GB`} color="#5e92f3" subtitle={`of ${capacityGB} GB capacity`} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CloudDone />} label="Last Backup" value="6:15 AM" change="Success" color="#4caf50" subtitle="Incremental, 2.8 GB" />
+            <StatCard icon={<CloudDone />} label="Last Backup" value="Not available" color="#4caf50" subtitle="No backup record" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<BackupTable />} label="Total Backups" value={backups.length.toString()} color="#ff9800" subtitle="This week" />

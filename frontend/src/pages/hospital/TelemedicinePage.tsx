@@ -13,6 +13,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import AppLayout from '../../components/common/AppLayout';
+import DoctorOptions from '../../components/common/DoctorOptions';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
 import { telemedicineAPI } from '../../services/api';
@@ -68,13 +69,13 @@ const TelemedicinePage: React.FC = () => {
             <StatCard icon={<Videocam />} label="Today's Sessions" value={todaySessions.length.toString()} color="#5e92f3" subtitle="Scheduled & in-progress" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CheckCircle />} label="Completed" value={completed.length.toString()} change="+2" color="#4caf50" subtitle="This week" />
+            <StatCard icon={<CheckCircle />} label="Completed" value={completed.length.toString()} color="#4caf50" subtitle="Recorded sessions" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Star />} label="Avg Rating" value={avgRating.toFixed(1)} color="#ff9800" subtitle="User satisfaction" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Timer />} label="Avg Duration" value="30 min" color="#ae52d4" subtitle="Per session" />
+            <StatCard icon={<Timer />} label="Avg Duration" value="—" color="#ae52d4" subtitle="From recorded sessions" />
           </Grid>
         </Grid>
 
@@ -228,9 +229,7 @@ const TelemedicinePage: React.FC = () => {
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField label="Patient Name" fullWidth />
               <TextField select label="Doctor" fullWidth defaultValue="">
-                <MenuItem value="patel">Dr. Patel - Oncology</MenuItem>
-                <MenuItem value="kim">Dr. Kim - Radiation</MenuItem>
-                <MenuItem value="chen">Dr. Chen - Surgery</MenuItem>
+                <DoctorOptions />
               </TextField>
               <TextField select label="Session Type" fullWidth defaultValue="">
                 <MenuItem value="followup">Follow-up</MenuItem>

@@ -60,6 +60,7 @@ const HospitalDashboard: React.FC = () => {
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [appointmentTypes, setAppointmentTypes] = useState<any[]>([]);
+  const [overview, setOverview] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,11 +73,12 @@ const HospitalDashboard: React.FC = () => {
       ]);
       const overview = overviewRes.data ?? overviewRes;
 
+      setOverview(overview);
       setPatientStats(overview.patient_stats ?? overview.patientStats ?? []);
       setDepartmentStats(overview.department_stats ?? overview.departmentStats ?? []);
       setRiskPatients(overview.risk_patients ?? overview.riskPatients ?? []);
-      setRecentActivities(overview.recent_activities ?? overview.recentActivities ?? []);
-      setRevenueData(overview.revenue_data ?? overview.revenueData ?? []);
+      setRecentActivities(overview.recent_activities ?? overview.recent_activity ?? overview.recentActivities ?? []);
+      setRevenueData(overview.revenue_data ?? overview.monthly_revenue ?? overview.revenueData ?? []);
       setAppointmentTypes(overview.appointment_types ?? overview.appointmentTypes ?? []);
     } catch (err: any) {
       console.error('Failed to load dashboard data:', err);
@@ -100,18 +102,22 @@ const HospitalDashboard: React.FC = () => {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {/* Key Metrics */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={4} md={2}><StatCard icon={<People />} label="Total Patients" value="1,248" color="#1565c0" change={+5.2} /></Grid>
-        <Grid item xs={6} sm={4} md={2}><StatCard icon={<Bed />} label="Bed Occupancy" value="72%" color="#f57c00" change={-2.1} /></Grid>
-        <Grid item xs={6} sm={4} md={2}><StatCard icon={<MedicalServices />} label="Active Doctors" value="45" color="#2e7d32" /></Grid>
-        <Grid item xs={6} sm={4} md={2}><StatCard icon={<Science />} label="Pending Labs" value="23" color="#7b1fa2" /></Grid>
-        <Grid item xs={6} sm={4} md={2}><StatCard icon={<CalendarMonth />} label="Today's Appts" value="67" color="#00897b" /></Grid>
-        <Grid item xs={6} sm={4} md={2}><StatCard icon={<Warning />} label="Critical Alerts" value="3" color="#c62828" /></Grid>
+        <Grid item xs={6} sm={4} md={2}><StatCard icon={<People />} label="Total Patients" value={overview.total_patients ?? 0} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={4} md={2}><StatCard icon={<Bed />} label="Bed Occupancy" value={overview.bed_occupancy_percent == null ? '—' : `${overview.bed_occupancy_percent}%`} color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={4} md={2}><StatCard icon={<MedicalServices />} label="Active Doctors" value={overview.total_doctors ?? 0} color="#2e7d32" /></Grid>
+        <Grid item xs={6} sm={4} md={2}><StatCard icon={<Science />} label="Pending Labs" value={overview.pending_lab_results ?? 0} color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={4} md={2}><StatCard icon={<CalendarMonth />} label="Today's Appts" value={overview.today_appointments ?? 0} color="#00897b" /></Grid>
+        <Grid item xs={6} sm={4} md={2}><StatCard icon={<Warning />} label="Critical Alerts" value={overview.critical_alerts ?? 0} color="#c62828" /></Grid>
       </Grid>
 
-      {/* Alerts */}
-      <Alert severity="error" sx={{ mb: 2 }}>
-        <strong>ICU Alert:</strong> Bed occupancy at 90%. Consider transfer protocols for stable patients.
-      </Alert>
+      {overview.bed_occupancy_percent != null && overview.bed_occupancy_percent > 85 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Recorded bed occupancy is {overview.bed_occupancy_percent}%.
+        </Alert>
+      )}
+      {patientStats.length === 0 && riskPatients.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>No recorded activity yet. Counts stay at zero until patients, appointments, and beds are saved.</Alert>
+      )}
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>
         <Tab label="Overview" />

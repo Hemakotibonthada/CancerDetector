@@ -58,20 +58,8 @@ const LabManagement: React.FC = () => {
         critical: s.critical ?? s.is_critical ?? false,
       }));
       setLabOrders(rows);
-      setEquipment([
-        { name: 'Hematology Analyzer', model: 'Sysmex XN-1000', status: 'operational', lastCal: '2 hrs ago', tests: 89, uptime: 99.2 },
-        { name: 'Chemistry Analyzer', model: 'Roche Cobas 6000', status: 'operational', lastCal: '4 hrs ago', tests: 156, uptime: 98.5 },
-        { name: 'Immunoassay System', model: 'Abbott Architect', status: 'maintenance', lastCal: 'In progress', tests: 0, uptime: 95.1 },
-        { name: 'Blood Gas Analyzer', model: 'Radiometer ABL90', status: 'operational', lastCal: '1 hr ago', tests: 34, uptime: 99.8 },
-        { name: 'Coagulation Analyzer', model: 'Stago STA-R', status: 'operational', lastCal: '6 hrs ago', tests: 45, uptime: 97.3 },
-      ]);
-      setQcResults([
-        { test: 'CBC QC Level 1', result: 'Pass', shift: 'Morning', tech: 'Carlos R.', time: '06:30 AM' },
-        { test: 'CBC QC Level 2', result: 'Pass', shift: 'Morning', tech: 'Carlos R.', time: '06:35 AM' },
-        { test: 'Chemistry QC Normal', result: 'Pass', shift: 'Morning', tech: 'Lisa P.', time: '06:45 AM' },
-        { test: 'Chemistry QC Abnormal', result: 'Flag', shift: 'Morning', tech: 'Lisa P.', time: '06:50 AM' },
-        { test: 'Coag QC Level 1', result: 'Pass', shift: 'Morning', tech: 'James W.', time: '07:00 AM' },
-      ]);
+      setEquipment([]);
+      setQcResults([]);
     } catch (err: any) {
       console.error('Failed to load lab data:', err);
       setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load lab data');
@@ -104,7 +92,7 @@ const LabManagement: React.FC = () => {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="Today's Orders" value={labOrders.length} color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Timer />} label="Avg Turnaround" value="2.5h" color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Timer />} label="Avg Turnaround" value="Not available" color="#f57c00" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Completed" value={labOrders.filter(o => o.status === 'completed').length} color="#4caf50" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<ErrorOutline />} label="Critical" value={labOrders.filter(o => o.critical).length} color="#d32f2f" /></Grid>
       </Grid>

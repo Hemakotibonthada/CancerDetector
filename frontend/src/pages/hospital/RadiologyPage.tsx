@@ -68,16 +68,16 @@ const RadiologyPage: React.FC = () => {
         {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CameraAlt />} label="Today's Studies" value={imagingStudies.length.toString()} change="+3" color="#5e92f3" subtitle="All modalities" />
+            <StatCard icon={<CameraAlt />} label="Today's Studies" value={imagingStudies.length.toString()} color="#5e92f3" subtitle="Recorded studies" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Psychology />} label="AI Analyzed" value={aiAnalyzed.length.toString()} color="#ae52d4" subtitle={`${Math.round(aiAnalyzed.reduce((s, i) => s + i.ai_confidence, 0) / aiAnalyzed.length)}% avg confidence`} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Warning />} label="Suspicious Findings" value="1" color="#f44336" subtitle="Requires follow-up" />
+            <StatCard icon={<Warning />} label="Suspicious Findings" value="—" color="#f44336" subtitle="From recorded findings" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Timer />} label="Avg Report Time" value="2.5h" change="-18%" color="#4caf50" subtitle="Improving" />
+            <StatCard icon={<Timer />} label="Avg Report Time" value="Not available" color="#4caf50" subtitle="Report time is not stored" />
           </Grid>
         </Grid>
 

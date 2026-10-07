@@ -31,6 +31,7 @@ const SystemMonitoring: React.FC = () => {
   const [apiEndpoints, setApiEndpoints] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [cronJobs, setCronJobs] = useState<any[]>([]);
+  const [resources, setResources] = useState<any>({});
 
   const loadData = useCallback(async () => {
     try {
@@ -43,6 +44,7 @@ const SystemMonitoring: React.FC = () => {
       setApiEndpoints(d.api_endpoints ?? d.apiEndpoints ?? []);
       setAlerts(d.alerts ?? []);
       setCronJobs(d.cron_jobs ?? d.cronJobs ?? []);
+      setResources(d.resources ?? {});
     } catch {
       setError('Failed to load system monitoring data');
     } finally {
@@ -66,17 +68,17 @@ const SystemMonitoring: React.FC = () => {
     <AppLayout title="System Monitoring" subtitle="Real-time system health & performance" navItems={adminNavItems} portalType="admin">
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
 
-      {services.some(s => s.status !== 'running') && (
+      {services.some(s => s.status !== 'running' && s.status !== 'healthy') && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          <strong>Service Alert:</strong> {services.filter(s => s.status !== 'running').map(s => s.name).join(', ')} - performance issues detected
+          <strong>Service Alert:</strong> {services.filter(s => s.status !== 'running' && s.status !== 'healthy').map(s => s.name).join(', ')} - performance issues detected
         </Alert>
       )}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="CPU Usage" value="33%" color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Memory />} label="Memory" value="51%" color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Storage />} label="Disk" value="40%" color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<NetworkCheck />} label="Network I/O" value="20 MB/s" color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="CPU Usage" value="Not available" color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Memory />} label="Memory" value={resources.memory_percent == null ? "—" : `${resources.memory_percent}%`} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Storage />} label="Disk" value={resources.disk_percent == null ? "—" : `${resources.disk_percent}%`} color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<NetworkCheck />} label="Network I/O" value="Not available" color="#7b1fa2" /></Grid>
       </Grid>
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>

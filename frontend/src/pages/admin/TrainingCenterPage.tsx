@@ -83,7 +83,7 @@ const TrainingCenterPage: React.FC = () => {
             <StatCard icon={<Group />} label="Total Enrolled" value={totalEnrolled.toString()} color="#4caf50" subtitle="Across all courses" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<EmojiEvents />} label="Completions" value={totalCompleted.toString()} change="+52" color="#ff9800" subtitle="This period" />
+            <StatCard icon={<EmojiEvents />} label="Completions" value={totalCompleted.toString()} color="#ff9800" subtitle="Recorded completions" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Star />} label="Avg Rating" value={avgRating.toFixed(1)} color="#ae52d4" subtitle="Course satisfaction" />

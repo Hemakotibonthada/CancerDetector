@@ -12,6 +12,7 @@ import {
   TrendingUp, Assessment, QrCode, Print, Phone, Email, Favorite,
 } from '@mui/icons-material';
 import AppLayout from '../../components/common/AppLayout';
+import DoctorOptions from '../../components/common/DoctorOptions';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
 import { usersAPI } from '../../services/api';
@@ -253,7 +254,7 @@ const PatientManagement: React.FC = () => {
             <TextField label="Phone" fullWidth size="small" />
             <Grid container spacing={2}>
               <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Ward</InputLabel><Select label="Ward"><MenuItem value="oncology">Oncology</MenuItem><MenuItem value="cardiology">Cardiology</MenuItem><MenuItem value="neurology">Neurology</MenuItem><MenuItem value="surgery">Surgery</MenuItem><MenuItem value="icu">ICU</MenuItem></Select></FormControl></Grid>
-              <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Attending Doctor</InputLabel><Select label="Attending Doctor"><MenuItem value="dr_smith">Dr. Smith</MenuItem><MenuItem value="dr_lee">Dr. Lee</MenuItem><MenuItem value="dr_chen">Dr. Chen</MenuItem></Select></FormControl></Grid>
+              <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Attending Doctor</InputLabel><Select label="Attending Doctor"><DoctorOptions /></Select></FormControl></Grid>
             </Grid>
             <TextField label="Reason for Admission" multiline rows={2} fullWidth size="small" />
             <TextField label="Insurance Provider" fullWidth size="small" />
