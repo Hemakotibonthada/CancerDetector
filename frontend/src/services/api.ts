@@ -49,7 +49,8 @@ export const authAPI = {
 
 // Users API
 export const usersAPI = {
-  list: (params?: any) => api.get('/users', { params }),
+  list: (params?: any) => api.get('/users', { params: { page_size: 100, ...params } }),
+  create: (data: any) => api.post('/users', data),
   get: (id: string) => api.get(`/users/${id}`),
   update: (id: string, data: any) => api.put(`/users/${id}`, data),
   adminUpdate: (id: string, data: any) => api.put(`/users/${id}/admin`, data),
@@ -80,6 +81,7 @@ export const hospitalsAPI = {
   listBeds: (hospitalId?: string) => api.get('/hospitals/beds', { params: hospitalId ? { hospital_id: hospitalId } : {} }),
   createBed: (data: { hospital_id: string; ward: string; bed_code: string }) => api.post('/hospitals/beds', data),
   updateBed: (id: string, data: any) => api.put(`/hospitals/beds/${id}`, data),
+  admit: (data: any) => api.post('/hospitals/admissions', data),
 };
 
 // Health Records API
@@ -242,8 +244,14 @@ export const pharmacyAPI = {
 };
 
 // Radiology API
+export const labAPI = {
+  listOrders: () => api.get('/lab/orders'),
+  createOrder: (data: any) => api.post('/lab/orders', data),
+};
+
 export const radiologyAPI = {
   getStudies: (params?: any) => api.get('/radiology/studies', { params }),
+  createStudy: (data: any) => api.post('/radiology/studies', data),
   getStudy: (id: string) => api.get(`/radiology/studies/${id}`),
   requestAIAnalysis: (id: string) => api.post(`/radiology/studies/${id}/ai-analyze`),
   getAIResults: (id: string) => api.get(`/radiology/studies/${id}/ai-results`),
@@ -252,6 +260,7 @@ export const radiologyAPI = {
 // Emergency API
 export const emergencyAPI = {
   getCases: (params?: any) => api.get('/emergency/cases', { params }),
+  createCase: (data: any) => api.post('/emergency/cases', data),
   triage: (id: string, data: any) => api.put(`/emergency/cases/${id}/triage`, data),
   getDashboard: () => api.get('/emergency/dashboard'),
   updateStatus: (id: string, status: string) => api.put(`/emergency/cases/${id}/status`, { status }),
@@ -292,7 +301,7 @@ export const complianceAPI = {
 // Data Management API
 export const dataManagementAPI = {
   getBackups: () => api.get('/data/backups'),
-  createBackup: (data: any) => api.post('/data/backups', data),
+  createBackup: () => api.post('/data/backups', {}, { responseType: 'blob' }),
   getStorageStats: () => api.get('/data/storage'),
   getRetentionPolicies: () => api.get('/data/retention-policies'),
   getDataQuality: () => api.get('/data/quality'),
@@ -302,6 +311,7 @@ export const dataManagementAPI = {
 export const billingAPI = {
   getSubscriptions: () => api.get('/billing/subscriptions'),
   getInvoices: (params?: any) => api.get('/billing/invoices', { params }),
+  generateInvoice: (data: any) => api.post('/billing/hospital-invoices', data),
   getRevenue: () => api.get('/billing/revenue'),
   getUsageStats: () => api.get('/billing/usage'),
 };
@@ -318,6 +328,7 @@ export const integrationAPI = {
 // Training API
 export const trainingAPI = {
   getCourses: () => api.get('/training/courses'),
+  createCourse: (data: any) => api.post('/training/courses', data),
   enrollCourse: (id: string) => api.post(`/training/courses/${id}/enroll`),
   getCertifications: () => api.get('/training/certifications'),
   getProgress: () => api.get('/training/progress'),

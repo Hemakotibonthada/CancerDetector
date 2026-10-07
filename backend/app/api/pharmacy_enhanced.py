@@ -13,7 +13,8 @@ from app.models.pharmacy_enhanced import (
     CompoundedMedication, ControlledSubstanceLog, ClinicalPharmacyIntervention,
     AntibioticStewardship, AdverseReactionHistory,
 )
-from app.security import get_current_user_id
+from app.models.operations import PharmacyStockItem
+from app.security import get_current_user_id, require_pharmacy_write
 
 router = APIRouter(prefix="/pharmacy", tags=["Pharmacy"])
 
@@ -198,10 +199,114 @@ def _person_name(user) -> str:
     return f"{user.first_name} {user.last_name}".strip()
 
 
+def _stock_status(item: PharmacyStockItem) -> str:
+    expiry = item.expiry
+    if expiry is not None:
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        if expiry < datetime.now(timezone.utc):
+            return "expired"
+    if (item.quantity or 0) <= 0:
+        return "out_of_stock"
+    if (item.quantity or 0) <= (item.reorder_level or 0):
+        return "low_stock"
+    return "in_stock"
+
+
+def _stock_view(item: PharmacyStockItem) -> dict:
+    return {
+        "id": item.id,
+        "drug": item.drug_name,
+        "generic": item.generic_name,
+        "category": item.category,
+        "stock": item.quantity,
+        "quantity": item.quantity,
+        "reorder_level": item.reorder_level,
+        "price": item.unit_price or 0,
+        "batch": item.batch_number,
+        "expiry": item.expiry.date().isoformat() if item.expiry else None,
+        "status": _stock_status(item),
+    }
+
+
 @router.get("/inventory")
-async def list_inventory():
-    """On-hand stock is not stored. The list stays empty until quantities are recorded."""
-    return []
+async def list_inventory(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Patients do not see hospital stock. Clinical staff see recorded quantities."""
+    from app.models.user import User
+    from app.security import CLINICAL_ROLES
+
+    caller = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if caller is None:
+        raise HTTPException(401, "Not authenticated")
+    if caller.role == "patient":
+        return []
+    if caller.role not in CLINICAL_ROLES + ["system_admin", "super_admin"]:
+        raise HTTPException(403, "Insufficient permissions")
+    rows = (await db.execute(
+        select(PharmacyStockItem).where(PharmacyStockItem.is_deleted == False).order_by(PharmacyStockItem.drug_name)
+    )).scalars().all()
+    return [_stock_view(row) for row in rows]
+
+
+@router.post("/stock", status_code=201)
+async def receive_stock(
+    drug_name: str = Body(...),
+    quantity: int = Body(...),
+    generic_name: Optional[str] = Body(None),
+    category: Optional[str] = Body(None),
+    unit_price: Optional[float] = Body(None),
+    batch_number: Optional[str] = Body(None),
+    expiry: Optional[str] = Body(None),
+    token_data=Depends(require_pharmacy_write),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Record a quantity received. An existing drug name increases on-hand stock."""
+    from app.schemas.dates import parse_optional_datetime
+
+    name = drug_name.strip()
+    if not name:
+        raise HTTPException(400, "Drug name is required")
+    if quantity == 0:
+        raise HTTPException(400, "Quantity is required")
+    try:
+        expiry_at = parse_optional_datetime(expiry, naive=False)
+    except ValueError as exc:
+        raise HTTPException(400, "expiry must be a date or datetime") from exc
+    existing = (await db.execute(
+        select(PharmacyStockItem).where(
+            PharmacyStockItem.is_deleted == False,
+            func.lower(PharmacyStockItem.drug_name) == name.lower(),
+        )
+    )).scalars().first()
+    if existing:
+        existing.quantity = (existing.quantity or 0) + quantity
+        if generic_name:
+            existing.generic_name = generic_name
+        if category:
+            existing.category = category
+        if unit_price is not None:
+            existing.unit_price = unit_price
+        if batch_number:
+            existing.batch_number = batch_number
+        if expiry_at:
+            existing.expiry = expiry_at
+        await db.flush()
+        return _stock_view(existing)
+    item = PharmacyStockItem(
+        drug_name=name,
+        generic_name=generic_name,
+        category=category,
+        quantity=quantity,
+        unit_price=unit_price or 0,
+        batch_number=batch_number,
+        expiry=expiry_at,
+    )
+    db.add(item)
+    await db.flush()
+    return _stock_view(item)
 
 
 @router.get("/prescriptions")

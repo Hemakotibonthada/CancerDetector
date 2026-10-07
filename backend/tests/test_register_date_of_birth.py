@@ -18,6 +18,14 @@ os.environ["DB_SQLITE_PATH"] = str(_DB_PATH)
 os.environ.pop("DATABASE_URL", None)
 os.environ.setdefault("AUTH_SECRET_KEY", "test-secret-key-for-register-dob")
 
+from app.config import reset_settings
+import app.database as _database
+
+# Other test modules may import the app first and cache a different SQLite path.
+reset_settings()
+_database._engine = None
+_database._session_factory = None
+
 from fastapi.testclient import TestClient
 from sqlalchemy.dialects import postgresql
 
@@ -206,7 +214,8 @@ def test_add_allergy_accepts_date_only_onset(client):
 
     with sqlite3.connect(_DB_PATH) as conn:
         onset = conn.execute(
-            "SELECT onset_date FROM patient_allergies"
+            "SELECT onset_date FROM patient_allergies WHERE allergen = ?",
+            ("penicillin",),
         ).fetchone()
     assert onset is not None
     assert onset[0].startswith("2010-05-01")

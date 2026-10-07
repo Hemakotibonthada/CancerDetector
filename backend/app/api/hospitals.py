@@ -20,7 +20,7 @@ from app.schemas.hospital import (
     HospitalUpdate, DepartmentCreate, DoctorCreate, DoctorResponse,
     HospitalDashboard
 )
-from app.security import get_current_user_token, require_any_admin, get_current_user_id
+from app.security import get_current_user_token, require_any_admin, get_current_user_id, require_clinical_write
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/hospitals", tags=["Hospitals"])
@@ -148,7 +148,7 @@ async def create_bed(
 async def update_bed(
     bed_id: str,
     payload: BedUpdate,
-    token_data=Depends(get_current_user_token),
+    token_data=Depends(require_clinical_write),
     db: AsyncSession = Depends(get_db_session),
 ):
     bed = (await db.execute(select(HospitalBed).where(HospitalBed.id == bed_id))).scalar_one_or_none()
@@ -252,7 +252,12 @@ async def get_hospital_dashboard(
         hospital_name=hospital.name,
         total_patients=snapshot["total_patients"],
         total_doctors=snapshot["total_doctors"],
-        total_staff=hospital.total_staff or 0,
+        total_staff=(await db.execute(
+            select(func.count(HospitalStaff.id)).where(
+                HospitalStaff.hospital_id == hospital.id,
+                HospitalStaff.is_deleted == False,
+            )
+        )).scalar() or 0,
         total_beds=len(hospital_beds) or (hospital.total_beds or 0),
         occupied_beds=occupied,
         today_appointments=snapshot["today_appointments"],

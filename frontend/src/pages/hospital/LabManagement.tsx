@@ -15,7 +15,8 @@ import {
 import AppLayout from '../../components/common/AppLayout';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge } from '../../components/common/SharedComponents';
-import { bloodSamplesAPI } from '../../services/api';
+import DoctorOptions from '../../components/common/DoctorOptions';
+import { labAPI } from '../../services/api';
 
 const sampleTrackingSteps = [
   { step: 'Order Placed', completed: true },
@@ -35,12 +36,14 @@ const LabManagement: React.FC = () => {
   const [qcResults, setQcResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [orderForm, setOrderForm] = useState({ health_id: '', doctor_id: '', test_type: 'cbc', priority: 'routine', notes: '' });
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const samplesRes = await bloodSamplesAPI.getMySamples();
+      const samplesRes = await labAPI.listOrders();
       const samples = samplesRes.data ?? samplesRes ?? [];
       const rows = (Array.isArray(samples) ? samples : []).map((s: any, idx: number) => ({
         id: s.id ?? s.sample_id ?? `LAB-${5001 + idx}`,
@@ -285,18 +288,30 @@ const LabManagement: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>New Lab Order</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Patient Name / ID" fullWidth size="small" InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }} />
-            <TextField label="Ordering Physician" fullWidth size="small" />
-            <FormControl fullWidth size="small"><InputLabel>Test Type</InputLabel><Select label="Test Type">
+            <TextField label="Patient Health ID" fullWidth size="small" value={orderForm.health_id} onChange={(e) => setOrderForm({ ...orderForm, health_id: e.target.value })} InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }} />
+            <FormControl fullWidth size="small"><InputLabel>Ordering Physician</InputLabel><Select label="Ordering Physician" value={orderForm.doctor_id} onChange={(e) => setOrderForm({ ...orderForm, doctor_id: e.target.value })}><DoctorOptions /></Select></FormControl>
+            <FormControl fullWidth size="small"><InputLabel>Test Type</InputLabel><Select label="Test Type" value={orderForm.test_type} onChange={(e) => setOrderForm({ ...orderForm, test_type: e.target.value })}>
               <MenuItem value="cbc">Complete Blood Count</MenuItem><MenuItem value="tumor">Tumor Markers</MenuItem><MenuItem value="lipid">Lipid Panel</MenuItem><MenuItem value="biopsy">Biopsy</MenuItem><MenuItem value="genetic">Genetic Test</MenuItem><MenuItem value="urinalysis">Urinalysis</MenuItem>
             </Select></FormControl>
-            <FormControl fullWidth size="small"><InputLabel>Priority</InputLabel><Select label="Priority"><MenuItem value="routine">Routine</MenuItem><MenuItem value="urgent">Urgent</MenuItem><MenuItem value="stat">STAT</MenuItem></Select></FormControl>
-            <TextField label="Clinical Notes" fullWidth multiline rows={2} size="small" />
+            <FormControl fullWidth size="small"><InputLabel>Priority</InputLabel><Select label="Priority" value={orderForm.priority} onChange={(e) => setOrderForm({ ...orderForm, priority: e.target.value })}><MenuItem value="routine">Routine</MenuItem><MenuItem value="urgent">Urgent</MenuItem><MenuItem value="stat">STAT</MenuItem></Select></FormControl>
+            <TextField label="Clinical Notes" fullWidth multiline rows={2} size="small" value={orderForm.notes} onChange={(e) => setOrderForm({ ...orderForm, notes: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowNewOrder(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowNewOrder(false)}>Place Order</Button>
+          <Button variant="contained" disabled={saving} onClick={async () => {
+            try {
+              setSaving(true);
+              setError(null);
+              await labAPI.createOrder(orderForm);
+              setShowNewOrder(false);
+              await loadData();
+            } catch (err: any) {
+              setError(err?.response?.data?.detail || err.message || 'Could not place the order');
+            } finally {
+              setSaving(false);
+            }
+          }}>Place Order</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

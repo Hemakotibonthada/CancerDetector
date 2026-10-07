@@ -38,3 +38,15 @@ from app.api.workforce import router as workforce_router
 from app.api.documents import router as documents_router
 from app.api.lifestyle import router as lifestyle_router
 from app.api.surgery import router as surgery_router
+from app.api.staff_actions import (
+    training_router,
+    data_router,
+    integrations_router,
+    lab_router,
+    telemedicine_router,
+    radiology_orders_router,
+    emergency_cases_router,
+    trials_router,
+    admissions_router,
+    hospital_invoice_router,
+)

@@ -12,7 +12,7 @@ from app.models.research import (
     ResearchStudy, ResearchCohort, CohortPatient, ResearchPublication,
     ResearchDataset, IRBSubmission, BiostatisticsAnalysis,
 )
-from app.security import get_current_user_id
+from app.security import get_current_user_id, require_research_access
 
 router = APIRouter(prefix="/research", tags=["Research"])
 
@@ -141,7 +141,10 @@ async def create_analysis(study_id: str = Body(...), analysis_type: str = Body(.
     return analysis.to_dict()
 
 @router.get("/dashboard/stats")
-async def research_stats(db: AsyncSession = Depends(get_db_session)):
+async def research_stats(
+    token_data=Depends(require_research_access),
+    db: AsyncSession = Depends(get_db_session),
+):
     studies = await db.execute(select(func.count()).select_from(ResearchStudy).where(ResearchStudy.is_deleted == False))
     publications = await db.execute(select(func.count()).select_from(ResearchPublication).where(ResearchPublication.is_deleted == False))
     datasets = await db.execute(select(func.count()).select_from(ResearchDataset).where(ResearchDataset.is_deleted == False))

@@ -30,6 +30,8 @@ const RadiologyPage: React.FC = () => {
   const [aiAccuracyTrend, setAiAccuracyTrend] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [studyForm, setStudyForm] = useState({ health_id: '', modality: 'ct', body_part: '', priority: 'routine', clinical_indication: '' });
 
   const loadData = useCallback(async () => {
     try {
@@ -132,7 +134,7 @@ const RadiologyPage: React.FC = () => {
                           fontWeight: 700, fontSize: 10,
                         }} />
                       </TableCell>
-                      <TableCell><StatusBadge status={study.status.replace('_', ' ')} /></TableCell>
+                      <TableCell><StatusBadge status={String(study.status || 'ordered').replace('_', ' ')} /></TableCell>
                       <TableCell>
                         {study.ai_status === 'completed' ? (
                           <Chip label={`AI: ${study.ai_confidence}%`} size="small" sx={{ bgcolor: study.ai_confidence >= 90 ? '#e8f5e9' : '#fff3e0', color: study.ai_confidence >= 90 ? '#2e7d32' : '#e65100', fontWeight: 700, fontSize: 10 }} />
@@ -263,8 +265,8 @@ const RadiologyPage: React.FC = () => {
           <DialogTitle>Order Imaging Study</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Patient Name" fullWidth />
-              <TextField select label="Modality" fullWidth defaultValue="">
+              <TextField label="Patient Health ID" fullWidth value={studyForm.health_id} onChange={(e) => setStudyForm({ ...studyForm, health_id: e.target.value })} />
+              <TextField select label="Modality" fullWidth value={studyForm.modality} onChange={(e) => setStudyForm({ ...studyForm, modality: e.target.value })}>
                 <MenuItem value="ct">CT Scan</MenuItem>
                 <MenuItem value="mri">MRI</MenuItem>
                 <MenuItem value="xray">X-Ray</MenuItem>
@@ -272,19 +274,31 @@ const RadiologyPage: React.FC = () => {
                 <MenuItem value="pet">PET Scan</MenuItem>
                 <MenuItem value="mammography">Mammography</MenuItem>
               </TextField>
-              <TextField label="Body Part" fullWidth />
-              <TextField select label="Priority" fullWidth defaultValue="routine">
+              <TextField label="Body Part" fullWidth value={studyForm.body_part} onChange={(e) => setStudyForm({ ...studyForm, body_part: e.target.value })} />
+              <TextField select label="Priority" fullWidth value={studyForm.priority} onChange={(e) => setStudyForm({ ...studyForm, priority: e.target.value })}>
                 <MenuItem value="routine">Routine</MenuItem>
                 <MenuItem value="urgent">Urgent</MenuItem>
                 <MenuItem value="stat">Stat</MenuItem>
               </TextField>
-              <TextField label="Clinical Indication" multiline rows={2} fullWidth />
-              <Alert severity="info" sx={{ borderRadius: 2 }}>AI analysis will automatically run on completed studies.</Alert>
+              <TextField label="Clinical Indication" multiline rows={2} fullWidth value={studyForm.clinical_indication} onChange={(e) => setStudyForm({ ...studyForm, clinical_indication: e.target.value })} />
+              <Alert severity="info" sx={{ borderRadius: 2 }}>This records an order only. No image file is uploaded, and no AI analysis runs.</Alert>
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowOrderDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowOrderDialog(false)}>Order Study</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await radiologyAPI.createStudy(studyForm);
+                setShowOrderDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not order the study');
+              } finally {
+                setSaving(false);
+              }
+            }}>Order Study</Button>
           </DialogActions>
         </Dialog>
       </Box>

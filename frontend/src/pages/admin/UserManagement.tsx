@@ -25,6 +25,10 @@ const UserManagement: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    first_name: '', last_name: '', email: '', phone_number: '', role: 'patient', password: '', must_change_password: true,
+  });
 
   const [users, setUsers] = useState<any[]>([]);
   const [loginHistory, setLoginHistory] = useState<any[]>([]);
@@ -36,7 +40,14 @@ const UserManagement: React.FC = () => {
       const res = await usersAPI.list();
       const d = res.data ?? res;
       const userList = Array.isArray(d) ? d : (d.users ?? []);
-      setUsers(userList);
+      setUsers(userList.map((u: any) => ({
+        ...u,
+        name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+        avatar: (u.first_name || u.email || '?').charAt(0).toUpperCase(),
+        twoFA: Boolean(u.two_factor_enabled),
+        lastLogin: u.last_login || '—',
+        sessions: u.sessions ?? '—',
+      })));
       setLoginHistory(d.login_history ?? d.loginHistory ?? []);
     } catch {
       setError('Failed to load user data');
@@ -245,21 +256,32 @@ const UserManagement: React.FC = () => {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="First Name" fullWidth size="small" /></Grid>
-              <Grid item xs={6}><TextField label="Last Name" fullWidth size="small" /></Grid>
+              <Grid item xs={6}><TextField label="First Name" fullWidth size="small" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} /></Grid>
+              <Grid item xs={6}><TextField label="Last Name" fullWidth size="small" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} /></Grid>
             </Grid>
-            <TextField label="Email" fullWidth size="small" type="email" />
-            <TextField label="Phone" fullWidth size="small" />
-            <FormControl fullWidth size="small"><InputLabel>Role</InputLabel><Select label="Role"><MenuItem value="patient">Patient</MenuItem><MenuItem value="doctor">Doctor</MenuItem><MenuItem value="staff">Staff</MenuItem><MenuItem value="admin">Admin</MenuItem></Select></FormControl>
-            <TextField label="Temporary Password" fullWidth size="small" type="password" />
-            <FormControlLabel control={<Checkbox />} label={<Typography sx={{ fontSize: 13 }}>Require password change on first login</Typography>} />
-            <FormControlLabel control={<Checkbox />} label={<Typography sx={{ fontSize: 13 }}>Enable two-factor authentication</Typography>} />
-            <FormControlLabel control={<Checkbox defaultChecked />} label={<Typography sx={{ fontSize: 13 }}>Send welcome email</Typography>} />
+            <TextField label="Email" fullWidth size="small" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <TextField label="Phone" fullWidth size="small" value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} />
+            <FormControl fullWidth size="small"><InputLabel>Role</InputLabel><Select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><MenuItem value="patient">Patient</MenuItem><MenuItem value="doctor">Doctor</MenuItem><MenuItem value="staff">Staff</MenuItem><MenuItem value="admin">Admin</MenuItem></Select></FormControl>
+            <TextField label="Temporary Password" fullWidth size="small" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <FormControlLabel control={<Checkbox checked={form.must_change_password} onChange={(e) => setForm({ ...form, must_change_password: e.target.checked })} />} label={<Typography sx={{ fontSize: 13 }}>Require password change on first login</Typography>} />
+            <Alert severity="info" sx={{ fontSize: 12 }}>Two-factor authentication is not turned on here, and no welcome email is sent. Share the temporary password with the user directly.</Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowAddUser(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowAddUser(false)}>Create User</Button>
+          <Button variant="contained" disabled={saving} onClick={async () => {
+            try {
+              setSaving(true);
+              setError(null);
+              await usersAPI.create(form);
+              setShowAddUser(false);
+              await loadData();
+            } catch (err: any) {
+              setError(err?.response?.data?.detail || err.message || 'Could not create the user');
+            } finally {
+              setSaving(false);
+            }
+          }}>Create User</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

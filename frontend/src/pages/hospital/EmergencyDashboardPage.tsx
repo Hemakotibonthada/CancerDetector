@@ -31,6 +31,10 @@ const EmergencyDashboardPage: React.FC = () => {
   const [hourlyArrivals, setHourlyArrivals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [triageForm, setTriageForm] = useState({
+    health_id: '', triage_level: 'Urgent', chief_complaint: '', heart_rate: '', blood_pressure: '', spo2: '', temperature: '', assigned_doctor_id: '',
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -254,30 +258,47 @@ const EmergencyDashboardPage: React.FC = () => {
           <DialogTitle sx={{ color: '#d32f2f' }}>New Emergency Triage</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Patient Name" fullWidth />
+              <TextField label="Patient Health ID" fullWidth value={triageForm.health_id} onChange={(e) => setTriageForm({ ...triageForm, health_id: e.target.value })} />
+              <TextField select label="Triage Level" fullWidth value={triageForm.triage_level} onChange={(e) => setTriageForm({ ...triageForm, triage_level: e.target.value })}>
+                {triageLevels.map(l => <MenuItem key={l} value={l}>{l}</MenuItem>)}
+              </TextField>
+              <TextField label="Chief Complaint" multiline rows={2} fullWidth value={triageForm.chief_complaint} onChange={(e) => setTriageForm({ ...triageForm, chief_complaint: e.target.value })} />
               <Grid container spacing={2}>
-                <Grid item xs={6}><TextField label="Age" type="number" fullWidth /></Grid>
-                <Grid item xs={6}>
-                  <TextField select label="Triage Level" fullWidth defaultValue="">
-                    {triageLevels.map(l => <MenuItem key={l} value={l}>{l}</MenuItem>)}
-                  </TextField>
-                </Grid>
+                <Grid item xs={6}><TextField label="Heart Rate (bpm)" type="number" fullWidth value={triageForm.heart_rate} onChange={(e) => setTriageForm({ ...triageForm, heart_rate: e.target.value })} /></Grid>
+                <Grid item xs={6}><TextField label="Blood Pressure" fullWidth value={triageForm.blood_pressure} onChange={(e) => setTriageForm({ ...triageForm, blood_pressure: e.target.value })} /></Grid>
+                <Grid item xs={6}><TextField label="SpO2 (%)" type="number" fullWidth value={triageForm.spo2} onChange={(e) => setTriageForm({ ...triageForm, spo2: e.target.value })} /></Grid>
+                <Grid item xs={6}><TextField label="Temperature (°C)" type="number" fullWidth value={triageForm.temperature} onChange={(e) => setTriageForm({ ...triageForm, temperature: e.target.value })} /></Grid>
               </Grid>
-              <TextField label="Chief Complaint" multiline rows={2} fullWidth />
-              <Grid container spacing={2}>
-                <Grid item xs={6}><TextField label="Heart Rate (bpm)" type="number" fullWidth /></Grid>
-                <Grid item xs={6}><TextField label="Blood Pressure" fullWidth /></Grid>
-                <Grid item xs={6}><TextField label="SpO2 (%)" type="number" fullWidth /></Grid>
-                <Grid item xs={6}><TextField label="Temperature (°C)" type="number" fullWidth /></Grid>
-              </Grid>
-              <TextField select label="Assign To" fullWidth defaultValue="">
+              <TextField select label="Assign To" fullWidth value={triageForm.assigned_doctor_id} onChange={(e) => setTriageForm({ ...triageForm, assigned_doctor_id: e.target.value })}>
+                <MenuItem value="">Unassigned</MenuItem>
                 <DoctorOptions />
               </TextField>
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowTriageDialog(false)}>Cancel</Button>
-            <Button variant="contained" color="error" onClick={() => setShowTriageDialog(false)}>Register & Triage</Button>
+            <Button variant="contained" color="error" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError('');
+                await emergencyAPI.createCase({
+                  health_id: triageForm.health_id,
+                  triage_level: triageForm.triage_level,
+                  chief_complaint: triageForm.chief_complaint,
+                  heart_rate: triageForm.heart_rate === '' ? null : Number(triageForm.heart_rate),
+                  blood_pressure: triageForm.blood_pressure || null,
+                  spo2: triageForm.spo2 === '' ? null : Number(triageForm.spo2),
+                  temperature: triageForm.temperature === '' ? null : Number(triageForm.temperature),
+                  assigned_doctor_id: triageForm.assigned_doctor_id || null,
+                });
+                setShowTriageDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not record triage');
+              } finally {
+                setSaving(false);
+              }
+            }}>Record triage</Button>
           </DialogActions>
         </Dialog>
       </Box>

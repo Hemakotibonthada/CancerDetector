@@ -68,3 +68,64 @@ class SecondOpinionRequest(Base):
     hospital_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     recommendation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     agreement_recorded: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+
+
+class PharmacyStockItem(Base):
+    """On-hand pharmacy stock. Quantities are recorded by staff, not estimated."""
+
+    __tablename__ = "pharmacy_stock_items"
+
+    hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital.id"), nullable=True, index=True)
+    drug_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    generic_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reorder_level: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    unit_price: Mapped[float] = mapped_column(Float, default=0.0)
+    batch_number: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    expiry: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class IntegrationConnection(Base):
+    """Saved integration settings. Connecting does not call the remote endpoint."""
+
+    __tablename__ = "integration_connections"
+
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    integration_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    endpoint_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    api_key_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    sync_frequency: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="configured", nullable=False)
+    records_synced: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("user.id"), nullable=True)
+
+
+class DatabaseExportLog(Base):
+    """Metadata for an on-demand JSON export. The dump itself is not stored."""
+
+    __tablename__ = "database_export_logs"
+
+    requested_by: Mapped[str] = mapped_column(String(36), ForeignKey("user.id"), nullable=False)
+    export_type: Mapped[str] = mapped_column(String(40), default="json", nullable=False)
+    byte_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    table_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    row_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="completed", nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PlatformInvoice(Base):
+    """A hospital billing invoice. Patient invoices stay on the invoice table."""
+
+    __tablename__ = "platform_invoices"
+
+    invoice_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    hospital_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    plan_name: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    created_by: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("user.id"), nullable=True)

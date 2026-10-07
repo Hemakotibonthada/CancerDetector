@@ -134,7 +134,10 @@ from app.models.emergency import (
 from app.models.workforce import (
     StaffProfile, ShiftSchedule, LeaveRequest, CredentialingRecord, PerformanceReview, StaffingMetrics,
 )
-from app.models.operations import HospitalBed, OperatingRoom, ExerciseSession, SecondOpinionRequest
+from app.models.operations import (
+    HospitalBed, OperatingRoom, ExerciseSession, SecondOpinionRequest,
+    PharmacyStockItem, IntegrationConnection, DatabaseExportLog, PlatformInvoice,
+)
 
 __all__ = [
     # Original models
@@ -235,4 +238,5 @@ __all__ = [
     # Workforce
     "StaffProfile", "ShiftSchedule", "LeaveRequest", "CredentialingRecord", "PerformanceReview", "StaffingMetrics",
     "HospitalBed", "OperatingRoom", "ExerciseSession", "SecondOpinionRequest",
+    "PharmacyStockItem", "IntegrationConnection", "DatabaseExportLog", "PlatformInvoice",
 ]

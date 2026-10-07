@@ -14,20 +14,90 @@ from app.models.billing_enhanced import (
     PriorAuthorization, CostEstimate, ChargeCapture, ClaimSubmission,
     DenialManagement, FinancialCounseling,
 )
-from app.security import get_current_user_id
+from app.security import get_current_user_id, require_billing_access
 
 router = APIRouter(prefix="/billing", tags=["Billing & Revenue"])
 
+def _invoice_view(row: Invoice, hospital_name: Optional[str] = None) -> dict:
+    issued = row.service_date or row.created_at
+    return {
+        **row.to_dict(),
+        "hospital": hospital_name or "—",
+        "plan": "services",
+        "amount": row.total_amount or 0,
+        "date": issued.isoformat() if issued else None,
+        "dueDate": row.due_date.isoformat() if row.due_date else None,
+    }
+
+
 @router.get("/invoices")
 async def list_invoices(patient_id: Optional[str] = None, status: Optional[str] = None, skip: int = 0, limit: int = 50,
+                        token_data=Depends(require_billing_access),
                         db: AsyncSession = Depends(get_db_session)):
+    from app.models.hospital import Hospital
+    from app.models.operations import PlatformInvoice
+
     q = select(Invoice).where(Invoice.is_deleted == False)
     if patient_id:
         q = q.where(Invoice.patient_id == patient_id)
     if status:
         q = q.where(Invoice.status == status)
     result = await db.execute(q.offset(skip).limit(limit))
-    return [r.to_dict() for r in result.scalars().all()]
+    rows = []
+    for invoice in result.scalars().all():
+        hospital_name = None
+        if invoice.hospital_id:
+            hospital = await db.get(Hospital, invoice.hospital_id)
+            hospital_name = hospital.name if hospital else None
+        rows.append(_invoice_view(invoice, hospital_name))
+
+    platform_q = select(PlatformInvoice).where(PlatformInvoice.is_deleted == False)
+    if status:
+        platform_q = platform_q.where(PlatformInvoice.status == status)
+    for invoice in (await db.execute(platform_q.order_by(PlatformInvoice.created_at.desc()))).scalars().all():
+        issued = invoice.created_at
+        rows.append({
+            **invoice.to_dict(),
+            "id": invoice.invoice_number,
+            "hospital": invoice.hospital_name,
+            "plan": invoice.plan_name or "—",
+            "amount": invoice.amount or 0,
+            "total_amount": invoice.amount or 0,
+            "paid_amount": invoice.amount if invoice.status == "paid" else 0,
+            "date": issued.isoformat() if issued else None,
+            "dueDate": invoice.due_date.isoformat() if invoice.due_date else None,
+        })
+    return rows
+
+
+@router.get("/subscriptions")
+async def list_subscriptions(token_data=Depends(require_billing_access)):
+    """No subscription product is stored. The list stays empty instead of 404."""
+    return []
+
+
+@router.get("/revenue")
+async def billing_revenue(token_data=Depends(require_billing_access), db: AsyncSession = Depends(get_db_session)):
+    """Monthly paid amounts from invoices. Months with no payments are omitted."""
+    from app.models.operations import PlatformInvoice
+
+    buckets: dict[str, float] = {}
+    for invoice in (await db.execute(select(Invoice).where(Invoice.is_deleted == False))).scalars().all():
+        when = invoice.service_date or invoice.created_at
+        if when is None:
+            continue
+        key = when.strftime("%Y-%m")
+        buckets[key] = buckets.get(key, 0) + float(invoice.paid_amount or 0)
+    for invoice in (await db.execute(select(PlatformInvoice).where(PlatformInvoice.is_deleted == False, PlatformInvoice.status == "paid"))).scalars().all():
+        when = invoice.created_at
+        if when is None:
+            continue
+        key = when.strftime("%Y-%m")
+        buckets[key] = buckets.get(key, 0) + float(invoice.amount or 0)
+    return {
+        "revenue_trend": [{"month": key, "revenue": buckets[key]} for key in sorted(buckets)],
+        "plan_distribution": [],
+    }
 
 @router.post("/invoices")
 async def create_invoice(patient_id: str = Body(...), amount: float = Body(...), description: str = Body(None),
@@ -203,7 +273,10 @@ async def list_counseling_sessions(patient_id: Optional[str] = None, db: AsyncSe
     return [r.to_dict() for r in result.scalars().all()]
 
 @router.get("/dashboard/stats")
-async def billing_stats(db: AsyncSession = Depends(get_db_session)):
+async def billing_stats(
+    token_data=Depends(require_billing_access),
+    db: AsyncSession = Depends(get_db_session),
+):
     invoices = await db.execute(select(func.count()).select_from(Invoice).where(Invoice.is_deleted == False))
     pending = await db.execute(select(func.count()).select_from(Invoice).where(Invoice.status == "pending", Invoice.is_deleted == False))
     total_revenue = await db.execute(select(func.sum(PaymentTransaction.amount)).where(PaymentTransaction.status == "completed"))

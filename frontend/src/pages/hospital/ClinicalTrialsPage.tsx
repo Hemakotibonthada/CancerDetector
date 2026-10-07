@@ -30,6 +30,10 @@ const ClinicalTrialsPage: React.FC = () => {
   const [cancerTypes, setCancerTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [trialForm, setTrialForm] = useState({
+    title: '', phase: 'Phase II', target_enrollment: '', principal_investigator: '', sponsor: '', cancer_type: '', primary_endpoint: '', start_date: '', end_date: '', arms: '',
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -37,7 +41,7 @@ const ClinicalTrialsPage: React.FC = () => {
       const [trialsRes] = await Promise.all([
         clinicalTrialsAPI.list().catch(() => ({ data: [] })),
       ]);
-      const trialsData = trialsRes.data || [];
+      const trialsData = Array.isArray(trialsRes.data) ? trialsRes.data : [];
       setTrials(trialsData);
 
       // Derive enrollment trend from trials data
@@ -143,9 +147,9 @@ const ClinicalTrialsPage: React.FC = () => {
                     <Box sx={{ flex: 1 }}>
                       <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
                         <Typography variant="caption" color="text.secondary">Enrollment: {trial.enrolled}/{trial.target}</Typography>
-                        <Typography variant="caption" fontWeight={600}>{Math.round((trial.enrolled / trial.target) * 100)}%</Typography>
+                        <Typography variant="caption" fontWeight={600}>{trial.target ? Math.round(((trial.enrolled ?? 0) / trial.target) * 100) : 0}%</Typography>
                       </Stack>
-                      <LinearProgress variant="determinate" value={(trial.enrolled / trial.target) * 100} sx={{ height: 8, borderRadius: 4, bgcolor: '#f0f0f0', '& .MuiLinearProgress-bar': { borderRadius: 4, bgcolor: trial.enrollment_rate >= 80 ? '#4caf50' : '#ff9800' } }} />
+                      <LinearProgress variant="determinate" value={trial.target ? ((trial.enrolled ?? 0) / trial.target) * 100 : 0} sx={{ height: 8, borderRadius: 4, bgcolor: '#f0f0f0', '& .MuiLinearProgress-bar': { borderRadius: 4, bgcolor: trial.enrollment_rate >= 80 ? '#4caf50' : '#ff9800' } }} />
                     </Box>
                     <Stack direction="row" spacing={1}>
                       {trial.arms.map((arm, ai) => (
@@ -289,29 +293,44 @@ const ClinicalTrialsPage: React.FC = () => {
           <DialogTitle>Register New Clinical Trial</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Trial Title" fullWidth />
+              <TextField label="Trial Title" fullWidth value={trialForm.title} onChange={(e) => setTrialForm({ ...trialForm, title: e.target.value })} />
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <TextField select label="Phase" fullWidth defaultValue="">
+                  <TextField select label="Phase" fullWidth value={trialForm.phase} onChange={(e) => setTrialForm({ ...trialForm, phase: e.target.value })}>
                     {phaseSteps.map(p => <MenuItem key={p} value={p}>{p}</MenuItem>)}
                   </TextField>
                 </Grid>
-                <Grid item xs={6}><TextField label="Target Enrollment" type="number" fullWidth /></Grid>
+                <Grid item xs={6}><TextField label="Target Enrollment" type="number" fullWidth value={trialForm.target_enrollment} onChange={(e) => setTrialForm({ ...trialForm, target_enrollment: e.target.value })} /></Grid>
               </Grid>
-              <TextField label="Principal Investigator" fullWidth />
-              <TextField label="Sponsor" fullWidth />
-              <TextField label="Cancer Type" fullWidth />
-              <TextField label="Primary Endpoint" fullWidth />
+              <TextField label="Principal Investigator" fullWidth value={trialForm.principal_investigator} onChange={(e) => setTrialForm({ ...trialForm, principal_investigator: e.target.value })} />
+              <TextField label="Sponsor" fullWidth value={trialForm.sponsor} onChange={(e) => setTrialForm({ ...trialForm, sponsor: e.target.value })} />
+              <TextField label="Cancer Type" fullWidth value={trialForm.cancer_type} onChange={(e) => setTrialForm({ ...trialForm, cancer_type: e.target.value })} />
+              <TextField label="Primary Endpoint" fullWidth value={trialForm.primary_endpoint} onChange={(e) => setTrialForm({ ...trialForm, primary_endpoint: e.target.value })} />
               <Grid container spacing={2}>
-                <Grid item xs={6}><TextField label="Start Date" type="date" fullWidth InputLabelProps={{ shrink: true }} /></Grid>
-                <Grid item xs={6}><TextField label="End Date" type="date" fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+                <Grid item xs={6}><TextField label="Start Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={trialForm.start_date} onChange={(e) => setTrialForm({ ...trialForm, start_date: e.target.value })} /></Grid>
+                <Grid item xs={6}><TextField label="End Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={trialForm.end_date} onChange={(e) => setTrialForm({ ...trialForm, end_date: e.target.value })} /></Grid>
               </Grid>
-              <TextField label="Arms / Groups" multiline rows={2} fullWidth placeholder="One arm per line" />
+              <TextField label="Arms / Groups" multiline rows={2} fullWidth placeholder="One arm per line" value={trialForm.arms} onChange={(e) => setTrialForm({ ...trialForm, arms: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowCreateDialog(false)}>Register Trial</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError('');
+                await clinicalTrialsAPI.create({
+                  ...trialForm,
+                  target_enrollment: Number(trialForm.target_enrollment) || 0,
+                });
+                setShowCreateDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not register the trial');
+              } finally {
+                setSaving(false);
+              }
+            }}>Register Trial</Button>
           </DialogActions>
         </Dialog>
       </Box>

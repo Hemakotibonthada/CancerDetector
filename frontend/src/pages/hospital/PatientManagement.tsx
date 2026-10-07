@@ -15,7 +15,7 @@ import AppLayout from '../../components/common/AppLayout';
 import DoctorOptions from '../../components/common/DoctorOptions';
 import { hospitalNavItems } from './HospitalDashboard';
 import { StatCard, StatusBadge, SectionHeader } from '../../components/common/SharedComponents';
-import { usersAPI } from '../../services/api';
+import { hospitalsAPI, usersAPI } from '../../services/api';
 
 const PatientManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -25,16 +25,19 @@ const PatientManagement: React.FC = () => {
   const [patients, setPatients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [admitForm, setAdmitForm] = useState({ health_id: '', ward: 'oncology', doctor_id: '', reason: '' });
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const res = await usersAPI.list();
-      const data = res.data ?? res ?? [];
-      const rows = (Array.isArray(data) ? data : []).map((u: any, idx: number) => ({
-        id: u.id ?? u.patient_id ?? `P-${String(idx + 1).padStart(3, '0')}`,
-        healthId: u.health_id ?? u.healthId ?? `CG-2026-${String(idx + 1).padStart(6, '0')}`,
+      const data = res.data ?? res ?? {};
+      const list = Array.isArray(data) ? data : (data.users ?? []);
+      const rows = list.map((u: any, idx: number) => ({
+        id: u.id ?? u.patient_id ?? String(idx + 1),
+        healthId: u.health_id ?? u.healthId ?? '—',
         name: u.full_name ?? u.name ?? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() ?? 'Unknown',
         age: u.age ?? '-',
         gender: u.gender ?? '-',
@@ -84,7 +87,7 @@ const PatientManagement: React.FC = () => {
         <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Patients" value={patients.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Admitted" value={patients.filter(p => p.status === 'admitted' || p.status === 'icu' || p.status === 'surgery').length} color="#2e7d32" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="High Risk" value={patients.filter(p => p.riskScore > 70).length} color="#c62828" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Discharged Today" value={1} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<CheckCircle />} label="Discharged Today" value={patients.filter(p => p.status === 'discharged').length} color="#4caf50" /></Grid>
       </Grid>
 
       {/* Search & Filter Bar */}
@@ -242,27 +245,30 @@ const PatientManagement: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>New Patient Admission</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Health ID / Search Patient" fullWidth size="small" InputProps={{ endAdornment: <InputAdornment position="end"><QrCode sx={{ cursor: 'pointer' }} /></InputAdornment> }} />
-            <Divider>Or Register New Patient</Divider>
+            <TextField label="Existing patient Health ID" fullWidth size="small" value={admitForm.health_id} onChange={(e) => setAdmitForm({ ...admitForm, health_id: e.target.value })} />
+            <Alert severity="info">Admission uses a patient who already has an account. This form does not create a login.</Alert>
             <Grid container spacing={2}>
-              <Grid item xs={6}><TextField label="First Name" fullWidth size="small" /></Grid>
-              <Grid item xs={6}><TextField label="Last Name" fullWidth size="small" /></Grid>
-              <Grid item xs={4}><TextField label="Age" type="number" fullWidth size="small" /></Grid>
-              <Grid item xs={4}><FormControl fullWidth size="small"><InputLabel>Gender</InputLabel><Select label="Gender"><MenuItem value="M">Male</MenuItem><MenuItem value="F">Female</MenuItem></Select></FormControl></Grid>
-              <Grid item xs={4}><FormControl fullWidth size="small"><InputLabel>Blood Type</InputLabel><Select label="Blood Type"><MenuItem value="O+">O+</MenuItem><MenuItem value="O-">O-</MenuItem><MenuItem value="A+">A+</MenuItem><MenuItem value="A-">A-</MenuItem><MenuItem value="B+">B+</MenuItem><MenuItem value="B-">B-</MenuItem><MenuItem value="AB+">AB+</MenuItem><MenuItem value="AB-">AB-</MenuItem></Select></FormControl></Grid>
+              <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Ward</InputLabel><Select label="Ward" value={admitForm.ward} onChange={(e) => setAdmitForm({ ...admitForm, ward: e.target.value })}><MenuItem value="oncology">Oncology</MenuItem><MenuItem value="cardiology">Cardiology</MenuItem><MenuItem value="neurology">Neurology</MenuItem><MenuItem value="surgery">Surgery</MenuItem><MenuItem value="icu">ICU</MenuItem></Select></FormControl></Grid>
+              <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Attending Doctor</InputLabel><Select label="Attending Doctor" value={admitForm.doctor_id} onChange={(e) => setAdmitForm({ ...admitForm, doctor_id: e.target.value })}><DoctorOptions /></Select></FormControl></Grid>
             </Grid>
-            <TextField label="Phone" fullWidth size="small" />
-            <Grid container spacing={2}>
-              <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Ward</InputLabel><Select label="Ward"><MenuItem value="oncology">Oncology</MenuItem><MenuItem value="cardiology">Cardiology</MenuItem><MenuItem value="neurology">Neurology</MenuItem><MenuItem value="surgery">Surgery</MenuItem><MenuItem value="icu">ICU</MenuItem></Select></FormControl></Grid>
-              <Grid item xs={6}><FormControl fullWidth size="small"><InputLabel>Attending Doctor</InputLabel><Select label="Attending Doctor"><DoctorOptions /></Select></FormControl></Grid>
-            </Grid>
-            <TextField label="Reason for Admission" multiline rows={2} fullWidth size="small" />
-            <TextField label="Insurance Provider" fullWidth size="small" />
+            <TextField label="Reason for Admission" multiline rows={2} fullWidth size="small" value={admitForm.reason} onChange={(e) => setAdmitForm({ ...admitForm, reason: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowAdmitDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowAdmitDialog(false)}>Admit Patient</Button>
+          <Button variant="contained" disabled={saving} onClick={async () => {
+            try {
+              setSaving(true);
+              setError(null);
+              await hospitalsAPI.admit(admitForm);
+              setShowAdmitDialog(false);
+              await loadData();
+            } catch (err: any) {
+              setError(err?.response?.data?.detail || err.message || 'Could not admit the patient');
+            } finally {
+              setSaving(false);
+            }
+          }}>Admit Patient</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>
