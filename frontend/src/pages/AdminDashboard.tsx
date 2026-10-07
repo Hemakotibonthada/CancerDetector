@@ -102,7 +102,7 @@ const AdminDashboard: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1b1b2f', flex: 1 }}>System Administration</Typography>
             <Stack direction="row" spacing={2} alignItems="center">
               <Chip label="SUPER ADMIN" color="warning" size="small" sx={{ fontWeight: 700 }} />
-              <IconButton><Badge badgeContent={12} color="error"><NotifIcon /></Badge></IconButton>
+              <IconButton><Badge color="error"><NotifIcon /></Badge></IconButton>
               <Avatar sx={{ bgcolor: '#ff6f00' }}>{user?.first_name?.[0]}</Avatar>
             </Stack>
           </Toolbar>

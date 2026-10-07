@@ -64,7 +64,7 @@ const Configuration: React.FC = () => {
     <AppLayout title="Configuration" subtitle="System settings and integrations" navItems={adminNavItems} portalType="admin">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<Settings />} label="Settings" value="22" color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Settings />} label="Settings" value={systemSettings.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Flag />} label="Feature Flags" value={featureFlags.filter(f => f.enabled).length} color="#4caf50" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Email />} label="Templates" value={emailTemplates.length} color="#f57c00" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<IntegrationInstructions />} label="Integrations" value={integrations.filter(i => i.status === 'connected').length} color="#9c27b0" /></Grid>

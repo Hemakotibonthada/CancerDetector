@@ -51,6 +51,7 @@ const AdminDashboard: React.FC = () => {
   const [systemHealth, setSystemHealth] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [userDistribution, setUserDistribution] = useState<any[]>([]);
+  const [dash, setDash] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -66,6 +67,7 @@ const AdminDashboard: React.FC = () => {
       setPlatformStats(dash.platformStats ?? dash.platform_stats ?? []);
       setSystemHealth(health.services ?? health.system_health ?? []);
       setRecentActivity(dash.recentActivity ?? dash.recent_activity ?? []);
+      setDash(dash);
       setUserDistribution(dash.userDistribution ?? dash.user_distribution ?? []);
       setError('');
     } catch {
@@ -90,10 +92,10 @@ const AdminDashboard: React.FC = () => {
       )}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Users" value="6,200" color="#1565c0" change="+12.7%" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Hospitals" value="22" color="#4caf50" change="+2" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="AI Predictions" value="8,100" color="#f57c00" change="+12.5%" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="System Uptime" value="99.9%" color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Users" value={dash.total_users ?? 0} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Hospitals" value={dash.total_hospitals ?? 0} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Psychology />} label="AI Predictions" value={dash.total_predictions ?? 0} color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="System Uptime" value="Not available" color="#7b1fa2" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>

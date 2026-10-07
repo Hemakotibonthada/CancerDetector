@@ -16,6 +16,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, AreaChart, Area, RadarChart, Radar, PolarGrid,
   PolarAngleAxis, PolarRadiusAxis, Legend, BarChart, Bar } from 'recharts';
 import AppLayout from '../../components/common/AppLayout';
+import DoctorOptions from '../../components/common/DoctorOptions';
 import { StatCard, GlassCard, SectionHeader, MetricGauge } from '../../components/common/SharedComponents';
 import { patientNavItems } from './PatientDashboard';
 import { mentalHealthAPI } from '../../services/api';
@@ -49,7 +50,7 @@ const MentalHealthPage: React.FC = () => {
       if (moodRes?.data) {
         const d = moodRes.data;
         const history = Array.isArray(d) ? d : (d.history ?? d.mood_history ?? []);
-        setMoodHistory(history.map((m: any) => ({ date: m.date ?? m.day ?? '', mood: m.mood ?? m.mood_score ?? 0, anxiety: m.anxiety ?? m.anxiety_score ?? 0, energy: m.energy ?? 0, sleep: m.sleep ?? m.sleep_quality ?? 0 })));
+        setMoodHistory(history.map((m: any) => ({ date: m.date ?? m.day ?? m.screening_date ?? '', mood: m.mood ?? m.mood_score ?? m.total_score ?? null, anxiety: m.anxiety ?? m.anxiety_score ?? null, energy: m.energy ?? null, sleep: m.sleep ?? m.sleep_quality ?? null })));
         if (d.wellness_radar ?? d.wellness) setWellnessRadar((d.wellness_radar ?? d.wellness ?? []).map((w: any) => ({ dimension: w.dimension ?? w.name ?? '', score: w.score ?? 0, benchmark: w.benchmark ?? w.average ?? 0 })));
         if (d.coping_activities ?? d.activities) setCopingActivities((d.coping_activities ?? d.activities ?? []).map((c: any) => ({ name: c.name ?? '', icon: iconMap[c.name] ?? <SelfImprovement />, duration: c.duration ?? '', frequency: c.frequency ?? '', benefit: c.benefit ?? '', color: c.color ?? '#ae52d4', completed: c.completed ?? 0, target: c.target ?? 0 })));
       }
@@ -83,16 +84,16 @@ const MentalHealthPage: React.FC = () => {
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Mood />} label="Today's Mood" value={`${getMoodEmoji(7)} 7/10`} change="+2" color="#4caf50" subtitle="Improving trend" />
+            <StatCard icon={<Mood />} label="Today's Mood" value={moodHistory[0]?.mood != null ? String(moodHistory[0].mood) : '—'} color="#4caf50" subtitle="Latest saved screening" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Psychology />} label="Anxiety Level" value="Low" change="-15%" color="#5e92f3" subtitle="Well managed" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<NightsStay />} label="Sleep Quality" value="7.2/10" change="+8%" color="#ae52d4" subtitle="7.5 hours avg" />
+            <StatCard icon={<NightsStay />} label="Sleep Quality" value="Not available" color="#ae52d4" subtitle="Sleep is not scored here" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<SelfImprovement />} label="Coping Score" value="85%" change="+5%" color="#ff9800" subtitle="Above average" />
+            <StatCard icon={<SelfImprovement />} label="Coping Score" value="Not available" color="#ff9800" subtitle="Coping is not scored" />
           </Grid>
         </Grid>
 
@@ -190,7 +191,7 @@ const MentalHealthPage: React.FC = () => {
               <Card sx={{ p: 3, mb: 2.5 }}>
                 <SectionHeader title="Overall Wellness" icon={<Favorite />} />
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                  <MetricGauge value={76} color="#4caf50" size={160} />
+                  <MetricGauge value={0} color="#4caf50" size={160} />
                 </Box>
                 <Typography variant="body2" textAlign="center" color="text.secondary">Your overall mental wellness score is <strong>above average</strong> for cancer patients. Your coping skills are particularly strong.</Typography>
               </Card>
@@ -357,8 +358,7 @@ const MentalHealthPage: React.FC = () => {
                 <MenuItem value="online">Online Session</MenuItem>
               </TextField>
               <TextField select label="Therapist" fullWidth defaultValue="chen">
-                <MenuItem value="chen">Dr. Sarah Chen - CBT Specialist</MenuItem>
-                <MenuItem value="kumar">Dr. Raj Kumar - Cancer Psychology</MenuItem>
+                <DoctorOptions />
                 <MenuItem value="group">Support Group Facilitator</MenuItem>
               </TextField>
               <TextField label="Preferred Date" type="date" fullWidth InputLabelProps={{ shrink: true }} />

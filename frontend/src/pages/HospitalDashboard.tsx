@@ -43,21 +43,15 @@ const HospitalDashboard: React.FC = () => {
   };
 
   const stats = [
-    { icon: <PeopleIcon />, label: 'Total Patients', value: '1,234', color: '#1565c0' },
-    { icon: <PersonIcon />, label: 'Active Doctors', value: '48', color: '#00897b' },
-    { icon: <BedIcon />, label: 'Available Beds', value: '126', color: '#7b1fa2' },
-    { icon: <CalendarIcon />, label: "Today's Appointments", value: '87', color: '#f57c00' },
-    { icon: <WarningIcon />, label: 'High Risk Patients', value: '23', color: '#d32f2f' },
-    { icon: <ScienceIcon />, label: 'AI Predictions Today', value: '156', color: '#00695c' },
+    { icon: <PeopleIcon />, label: 'Total Patients', value: '—', color: '#1565c0' },
+    { icon: <PersonIcon />, label: 'Active Doctors', value: '—', color: '#00897b' },
+    { icon: <BedIcon />, label: 'Available Beds', value: '—', color: '#7b1fa2' },
+    { icon: <CalendarIcon />, label: "Today's Appointments", value: '—', color: '#f57c00' },
+    { icon: <WarningIcon />, label: 'High Risk Patients', value: '—', color: '#d32f2f' },
+    { icon: <ScienceIcon />, label: 'AI Predictions Today', value: '—', color: '#00695c' },
   ];
 
-  const recentPatients = [
-    { name: 'Jane Doe', healthId: 'CG-A1B2-C3D4-EF', risk: 'moderate', lastVisit: '2026-02-21' },
-    { name: 'John Smith', healthId: 'CG-X1Y2-Z3W4-AB', risk: 'high', lastVisit: '2026-02-20' },
-    { name: 'Alice Johnson', healthId: 'CG-M1N2-O3P4-QR', risk: 'low', lastVisit: '2026-02-19' },
-    { name: 'Bob Williams', healthId: 'CG-E1F2-G3H4-IJ', risk: 'very_high', lastVisit: '2026-02-18' },
-    { name: 'Diana Brown', healthId: 'CG-K1L2-M3N4-OP', risk: 'low', lastVisit: '2026-02-17' },
-  ];
+  const recentPatients: { name: string; healthId: string; risk: string; lastVisit: string }[] = [];
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7fa' }}>

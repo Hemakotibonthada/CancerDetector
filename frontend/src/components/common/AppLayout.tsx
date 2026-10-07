@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, AppBar, Toolbar, Typography, IconButton, Avatar, Badge, Stack, Chip,
@@ -15,6 +15,7 @@ import {
   Dashboard as DashIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { notificationsAPI } from '../../services/api';
 
 export interface NavItem {
   icon: React.ReactNode;
@@ -65,7 +66,27 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const colors = portalColors[portalType];
+
+  useEffect(() => {
+    let active = true;
+    notificationsAPI.list().then((res) => {
+      if (!active) return;
+      const data = res.data ?? {};
+      const items = Array.isArray(data) ? data : (data.notifications ?? []);
+      setNotifications(items);
+      const unread = data.unread_count ?? data.unread;
+      setUnreadCount(typeof unread === 'number' ? unread : items.filter((n: any) => !n.is_read).length);
+    }).catch(() => {
+      if (active) {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   const toggleSection = (section: string) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -344,7 +365,7 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
             {/* Notifications */}
             <Tooltip title="Notifications">
               <IconButton onClick={(e) => setNotifMenuAnchor(e.currentTarget)} size="small">
-                <Badge badgeContent={3} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 18, minWidth: 18 } }}>
+                <Badge badgeContent={unreadCount || undefined} color="error" sx={{ '& .MuiBadge-badge': { fontSize: 10, height: 18, minWidth: 18 } }}>
                   <NotifIcon />
                 </Badge>
               </IconButton>
@@ -358,17 +379,18 @@ const AppLayout = ({ children, title, navItems, portalType, subtitle }: AppLayou
               <Box sx={{ p: 2, borderBottom: '1px solid #f0f0f0' }}>
                 <Typography sx={{ fontWeight: 700, fontSize: 16 }}>Notifications</Typography>
               </Box>
-              {[
-                { title: 'Cancer Risk Assessment Updated', msg: 'Your latest risk score has been calculated.', time: '2m ago', color: '#1565c0' },
-                { title: 'Blood Test Results Ready', msg: 'Your CBC panel results are now available.', time: '1h ago', color: '#00897b' },
-                { title: 'Appointment Reminder', msg: 'Dr. Smith consultation tomorrow at 10:00 AM.', time: '3h ago', color: '#f57c00' },
-              ].map((n, i) => (
-                <MenuItem key={i} onClick={() => setNotifMenuAnchor(null)} sx={{ py: 1.5, px: 2, whiteSpace: 'normal' }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: n.color, mr: 1.5, mt: 0.5, flexShrink: 0 }} />
+              {notifications.length === 0 && (
+                <MenuItem disabled sx={{ whiteSpace: 'normal' }}>
+                  <Typography sx={{ fontSize: 13, color: 'text.secondary' }}>No notifications yet.</Typography>
+                </MenuItem>
+              )}
+              {notifications.slice(0, 8).map((n: any) => (
+                <MenuItem key={n.id} onClick={() => setNotifMenuAnchor(null)} sx={{ py: 1.5, px: 2, whiteSpace: 'normal' }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: n.is_read ? '#bdbdbd' : '#1565c0', mr: 1.5, mt: 0.5, flexShrink: 0 }} />
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{n.title}</Typography>
-                    <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{n.msg}</Typography>
-                    <Typography sx={{ fontSize: 11, color: 'text.disabled', mt: 0.5 }}>{n.time}</Typography>
+                    <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{n.message || n.body || ''}</Typography>
+                    <Typography sx={{ fontSize: 11, color: 'text.disabled', mt: 0.5 }}>{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</Typography>
                   </Box>
                 </MenuItem>
               ))}

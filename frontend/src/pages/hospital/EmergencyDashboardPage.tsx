@@ -13,6 +13,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, AreaChart, Area } from 'recharts';
 import AppLayout from '../../components/common/AppLayout';
+import DoctorOptions from '../../components/common/DoctorOptions';
 import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../components/common/SharedComponents';
 import { hospitalNavItems } from './HospitalDashboard';
 import { emergencyAPI } from '../../services/api';
@@ -110,10 +111,10 @@ const EmergencyDashboardPage: React.FC = () => {
             <StatCard icon={<Warning />} label="Critical" value={criticalCount.toString()} color="#d32f2f" subtitle="Immediate attention" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Timer />} label="Avg Wait Time" value="12 min" change="-3 min" color="#ff9800" subtitle="For triage" />
+            <StatCard icon={<Timer />} label="Avg Wait Time" value="—" color="#ff9800" subtitle="Wait time is not stored" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<MonitorHeart />} label="Beds Available" value="4/12" color="#4caf50" subtitle="Emergency bays" />
+            <StatCard icon={<MonitorHeart />} label="Beds Available" value="—" color="#4caf50" subtitle="No emergency bay inventory" />
           </Grid>
         </Grid>
 
@@ -270,9 +271,7 @@ const EmergencyDashboardPage: React.FC = () => {
                 <Grid item xs={6}><TextField label="Temperature (°C)" type="number" fullWidth /></Grid>
               </Grid>
               <TextField select label="Assign To" fullWidth defaultValue="">
-                <MenuItem value="rivera">Dr. Rivera</MenuItem>
-                <MenuItem value="kumar">Dr. Kumar</MenuItem>
-                <MenuItem value="chen">Dr. Chen</MenuItem>
+                <DoctorOptions />
               </TextField>
             </Stack>
           </DialogContent>

@@ -69,7 +69,7 @@ const StaffDirectory: React.FC = () => {
         <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Staff" value={staffMembers.length} color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<Groups />} label="On Duty" value={staffMembers.filter(s => s.status === 'on_duty').length} color="#4caf50" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<AccessTime />} label="On Leave" value={staffMembers.filter(s => s.status === 'on_leave').length} color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Verified />} label="Avg Attendance" value="95%" color="#7b1fa2" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Verified />} label="Avg Attendance" value="Not available" color="#7b1fa2" /></Grid>
       </Grid>
 
       <Card sx={{ p: 2, mb: 3 }}>

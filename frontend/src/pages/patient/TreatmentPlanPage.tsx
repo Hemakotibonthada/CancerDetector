@@ -189,15 +189,14 @@ const TreatmentPlanPage: React.FC = () => {
             <Grid item xs={12} md={4}>
               <Card sx={{ p: 3, mb: 2.5 }}>
                 <SectionHeader title="Treatment Response" icon={<CheckCircle />} />
-                <Alert severity="success" sx={{ borderRadius: 2, mb: 2 }}>
-                  <strong>Excellent Response!</strong><br />
-                  Tumor size reduced by 62.5% since treatment start.
+                <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+                  Treatment response percentages are not available. Tumor size and marker change are shown only when those measurements are saved.
                 </Alert>
                 <Stack spacing={2}>
                   {[
-                    { label: 'Tumor Reduction', value: '62.5%', color: '#4caf50' },
-                    { label: 'Marker Decline', value: '60%', color: '#5e92f3' },
-                    { label: 'Overall Response', value: 'Excellent', color: '#4caf50' },
+                    { label: 'Tumor Reduction', value: 'Not available', color: '#4caf50' },
+                    { label: 'Marker Decline', value: 'Not available', color: '#5e92f3' },
+                    { label: 'Overall Response', value: 'Not available', color: '#4caf50' },
                   ].map((item, i) => (
                     <Stack key={i} direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.5, bgcolor: '#f8fafc', borderRadius: 2 }}>
                       <Typography variant="body2" fontWeight={600}>{item.label}</Typography>

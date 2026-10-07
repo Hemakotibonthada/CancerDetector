@@ -131,16 +131,23 @@ const DashboardRouter: React.FC = () => {
 
   if (!user) return <Navigate to="/login" />;
 
-  const adminRoles = ['system_admin', 'super_admin'];
-  const hospitalRoles = ['hospital_admin', 'doctor', 'nurse', 'oncologist', 'surgeon', 'radiologist', 'pathologist', 'general_practitioner', 'specialist'];
-
-  if (adminRoles.includes(user.role)) return <Navigate to="/admin" />;
-  if (hospitalRoles.includes(user.role)) return <Navigate to="/hospital" />;
+  if (ADMIN_ROLES.includes(user.role)) return <Navigate to="/admin" />;
+  if (HOSPITAL_ROLES.includes(user.role)) return <Navigate to="/hospital" />;
+  if (user.role === 'data_analyst') return <Navigate to="/admin/analytics" />;
+  if (user.role === 'researcher') return <Navigate to="/admin/research" />;
+  if (user.role === 'insurance_agent') return <Navigate to="/admin/billing" />;
   return <Navigate to="/patient" />;
 };
 
 const ADMIN_ROLES = ['system_admin', 'super_admin'];
-const HOSPITAL_ROLES = ['hospital_admin', 'doctor', 'nurse', 'oncologist', 'surgeon', 'radiologist', 'pathologist', 'general_practitioner', 'specialist'];
+const HOSPITAL_ROLES = [
+  'hospital_admin', 'doctor', 'nurse', 'oncologist', 'surgeon', 'radiologist', 'pathologist',
+  'general_practitioner', 'specialist', 'cardiologist', 'neurologist', 'dermatologist',
+  'emergency_physician', 'anesthesiologist', 'lab_technician', 'pharmacist', 'receptionist', 'support_staff',
+];
+const ANALYTICS_ROLES = [...ADMIN_ROLES, 'data_analyst'];
+const RESEARCH_ROLES = [...ADMIN_ROLES, 'researcher'];
+const BILLING_ROLES = [...ADMIN_ROLES, 'insurance_agent'];
 
 function App() {
   return (
@@ -234,17 +241,17 @@ function App() {
               <Route path="/admin/system" element={<ProtectedRoute roles={ADMIN_ROLES}><SystemMonitoring /></ProtectedRoute>} />
               <Route path="/admin/ai-models" element={<ProtectedRoute roles={ADMIN_ROLES}><AIModelManagement /></ProtectedRoute>} />
               <Route path="/admin/security" element={<ProtectedRoute roles={ADMIN_ROLES}><SecurityPage /></ProtectedRoute>} />
-              <Route path="/admin/analytics" element={<ProtectedRoute roles={ADMIN_ROLES}><PlatformAnalytics /></ProtectedRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedRoute roles={ANALYTICS_ROLES}><PlatformAnalytics /></ProtectedRoute>} />
               <Route path="/admin/audit-logs" element={<ProtectedRoute roles={ADMIN_ROLES}><AuditLogs /></ProtectedRoute>} />
               <Route path="/admin/reports" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminReports /></ProtectedRoute>} />
               <Route path="/admin/config" element={<ProtectedRoute roles={ADMIN_ROLES}><Configuration /></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute roles={ADMIN_ROLES}><AdminNotifications /></ProtectedRoute>} />
               <Route path="/admin/compliance" element={<ProtectedRoute roles={ADMIN_ROLES}><CompliancePage /></ProtectedRoute>} />
               <Route path="/admin/data-management" element={<ProtectedRoute roles={ADMIN_ROLES}><DataManagementPage /></ProtectedRoute>} />
-              <Route path="/admin/billing" element={<ProtectedRoute roles={ADMIN_ROLES}><BillingManagementPage /></ProtectedRoute>} />
+              <Route path="/admin/billing" element={<ProtectedRoute roles={BILLING_ROLES}><BillingManagementPage /></ProtectedRoute>} />
               <Route path="/admin/integrations" element={<ProtectedRoute roles={ADMIN_ROLES}><IntegrationHubPage /></ProtectedRoute>} />
               <Route path="/admin/training" element={<ProtectedRoute roles={ADMIN_ROLES}><TrainingCenterPage /></ProtectedRoute>} />
-              <Route path="/admin/research" element={<ProtectedRoute roles={ADMIN_ROLES}><ResearchPortalPage /></ProtectedRoute>} />
+              <Route path="/admin/research" element={<ProtectedRoute roles={RESEARCH_ROLES}><ResearchPortalPage /></ProtectedRoute>} />
               <Route path="/admin/workforce" element={<ProtectedRoute roles={ADMIN_ROLES}><WorkforceManagementPage /></ProtectedRoute>} />
               <Route path="/admin/population-health" element={<ProtectedRoute roles={ADMIN_ROLES}><PopulationHealthAdminPage /></ProtectedRoute>} />
               <Route path="/admin/quality-dashboard" element={<ProtectedRoute roles={ADMIN_ROLES}><QualityDashboardPage /></ProtectedRoute>} />

@@ -144,9 +144,23 @@ async def analyze_blood_sample(
     abnormal = sum(1 for b in biomarkers if b.result_flag != "normal")
     cancer_markers_elevated = sum(1 for b in biomarkers if b.is_cancer_marker and b.result_flag in ["high", "critical_high"])
     
-    risk_score = 0.0
-    if total > 0:
-        risk_score = (abnormal / total) * 0.5 + (cancer_markers_elevated / max(total, 1)) * 0.5
+    # Documented heuristic: share of non-normal flags, with extra weight on
+    # elevated cancer markers. This is not a trained model and is withheld
+    # when the sample has no recorded biomarker results.
+    if total == 0:
+        return BloodAnalysisResult(
+            sample_id=sample_id,
+            patient_id=sample.patient_id,
+            analysis_date=datetime.now(timezone.utc),
+            overall_cancer_risk=0.0,
+            risk_category="not_available",
+            abnormal_biomarkers=[],
+            ai_recommendations=["Not available: record biomarker results before a flag-ratio summary can be computed. This is not a cancer test."],
+            model_confidence=0.0,
+            model_version="not_available",
+        )
+
+    risk_score = (abnormal / total) * 0.5 + (cancer_markers_elevated / total) * 0.5
     
     risk_category = "very_low"
     if risk_score >= 0.8:
@@ -174,8 +188,11 @@ async def analyze_blood_sample(
         risk_category=risk_category,
         abnormal_biomarkers=abnormal_biomarkers,
         ai_recommendations=[
-            "Regular monitoring recommended" if risk_category == "low" else "Consult oncologist immediately" if risk_category in ["high", "critical"] else "Follow-up in 3 months"
+            "Flag-ratio summary only: "
+            f"{abnormal} of {total} recorded biomarkers are outside the stored normal flag, "
+            f"including {cancer_markers_elevated} elevated cancer markers. "
+            "This is not a diagnosis or a validated probability."
         ],
-        model_confidence=0.87,
-        model_version="1.0.0",
+        model_confidence=0.0,
+        model_version="heuristic-flag-ratio",
     )

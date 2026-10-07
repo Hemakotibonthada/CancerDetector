@@ -29,6 +29,7 @@ const GeneticProfilePage: React.FC = () => {
   const [pharmacogenomics, setPharmacogenomics] = useState<any[]>([]);
   const [ancestry, setAncestry] = useState<any[]>([]);
   const [cancerRiskRadar, setCancerRiskRadar] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -42,6 +43,7 @@ const GeneticProfilePage: React.FC = () => {
 
       if (profileRes?.data) {
         const p = profileRes.data;
+        setProfile(p);
         if (Array.isArray(p.ancestry)) setAncestry(p.ancestry.map((a: any) => ({ name: a.name ?? a.region ?? '', value: a.value ?? a.percentage ?? 0, fill: a.fill ?? a.color ?? '#5e92f3' })));
         if (Array.isArray(p.cancer_risk_radar ?? p.cancer_risks)) setCancerRiskRadar((p.cancer_risk_radar ?? p.cancer_risks).map((c: any) => ({ cancer: c.cancer ?? c.cancer_type ?? '', risk: c.risk ?? 0, average: c.average ?? c.population_average ?? 0 })));
       }
@@ -52,6 +54,7 @@ const GeneticProfilePage: React.FC = () => {
       if (pharmaRes?.data) {
         const pharma = Array.isArray(pharmaRes.data) ? pharmaRes.data : (pharmaRes.data.pharmacogenomics ?? []);
         setPharmacogenomics(pharma.map((p: any) => ({ drug: p.drug ?? p.drug_name ?? '', gene: p.gene ?? '', metabolism: p.metabolism ?? p.metabolizer_status ?? '', recommendation: p.recommendation ?? '' })));
+        setProfile((prev: any) => ({ ...prev, drug_count: pharma.length }));
       }
     } catch (err: any) {
       setError(err?.response?.data?.detail || err?.message || 'Failed to load genetic data');
@@ -73,16 +76,16 @@ const GeneticProfilePage: React.FC = () => {
         {/* Top Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Biotech />} label="Genes Analyzed" value="247" change="+12" color="#5e92f3" subtitle="Last updated: Nov 2024" />
+            <StatCard icon={<Biotech />} label="Genes Analyzed" value={profile.genes_analyzed ?? 0} color="#5e92f3" subtitle="Recorded variants" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Warning />} label="Risk Variants" value="2" color="#f44336" subtitle="1 high, 1 moderate" />
+            <StatCard icon={<Warning />} label="Risk Variants" value={profile.risk_variants ?? 0} color="#f44336" subtitle="Pathogenic or likely pathogenic" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Science />} label="Genetic Risk Score" value="32%" color="#ff9800" subtitle="Above average" />
+            <StatCard icon={<Science />} label="Genetic Risk Score" value="Not available" color="#ff9800" subtitle="A genetic risk score is not calculated" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<LocalPharmacy />} label="Drug Sensitivity" value="1" change="Alert" color="#ae52d4" subtitle="Dose adjustment needed" />
+            <StatCard icon={<LocalPharmacy />} label="Drug Sensitivity" value={profile.drug_count ?? 0} color="#ae52d4" subtitle="Recorded pharmacogenomic rows" />
           </Grid>
         </Grid>
 
@@ -90,7 +93,7 @@ const GeneticProfilePage: React.FC = () => {
         <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }} action={
           <Button size="small" variant="outlined" onClick={() => setShowRequestDialog(true)}>Request New Test</Button>
         }>
-          <strong>Genetic Counseling Recommended</strong> — Based on your BRCA1 variant, we recommend scheduling a genetic counseling session for personalized risk management strategies.
+          Genetic counseling is not automatically recommended. A counseling note appears only when a pathogenic variant is stored on your profile.
         </Alert>
 
         {/* Tabs */}

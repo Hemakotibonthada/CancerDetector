@@ -57,14 +57,14 @@ const SmartwatchPage: React.FC = () => {
 
   const latest = watchData.length > 0 ? watchData[0] : null;
   const heartRateData = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
-    time: `D${i+1}`, rate: d.avg_heart_rate || 70, min: d.min_heart_rate || 55, max: d.max_heart_rate || 90,
+    time: `D${i+1}`, rate: d.avg_heart_rate ?? null, min: d.min_heart_rate ?? null, max: d.max_heart_rate ?? null,
   }));
 
   const sleepData = latest ? [
-    { stage: 'Awake', duration: latest.awake_time || 0.5, color: '#ef5350', pct: latest.awake_pct || 6 },
-    { stage: 'REM', duration: latest.rem_sleep || 1.8, color: '#7b1fa2', pct: latest.rem_pct || 23 },
-    { stage: 'Light', duration: latest.light_sleep || 3.2, color: '#42a5f5', pct: latest.light_pct || 41 },
-    { stage: 'Deep', duration: latest.deep_sleep || 2.3, color: '#1565c0', pct: latest.deep_pct || 30 },
+    { stage: 'Awake', duration: latest.awake_time ?? 0, color: '#ef5350', pct: latest.awake_pct ?? 0 },
+    { stage: 'REM', duration: latest.rem_sleep ?? 0, color: '#7b1fa2', pct: latest.rem_pct ?? 0 },
+    { stage: 'Light', duration: latest.light_sleep ?? 0, color: '#42a5f5', pct: latest.light_pct ?? 0 },
+    { stage: 'Deep', duration: latest.deep_sleep ?? 0, color: '#1565c0', pct: latest.deep_pct ?? 0 },
   ] : [];
 
   const weeklySteps = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
@@ -72,11 +72,11 @@ const SmartwatchPage: React.FC = () => {
   }));
 
   const spo2Data = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
-    time: `D${i+1}`, value: d.avg_spo2 || d.spo2 || 97,
+    time: `D${i+1}`, value: d.avg_spo2 ?? d.spo2 ?? null,
   }));
 
   const stressData = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
-    time: `D${i+1}`, level: d.stress_level || d.avg_stress || 30,
+    time: `D${i+1}`, level: d.stress_level ?? d.avg_stress ?? null,
   }));
 
   const weeklyActivity = watchData.slice(0, 7).reverse().map((d: any, i: number) => ({
@@ -211,10 +211,10 @@ const SmartwatchPage: React.FC = () => {
             <Card sx={{ p: 3, mb: 2 }}>
               <Typography sx={{ fontWeight: 700, fontSize: 14, mb: 2 }}>Today's Summary</Typography>
               {[
-                { label: 'Resting HR', value: '62 bpm', icon: <Favorite sx={{ fontSize: 16, color: '#4caf50' }} />, desc: 'Normal range' },
-                { label: 'Average HR', value: '78 bpm', icon: <MonitorHeart sx={{ fontSize: 16, color: '#1565c0' }} />, desc: 'Good' },
-                { label: 'Max HR', value: '132 bpm', icon: <TrendingUp sx={{ fontSize: 16, color: '#f57c00' }} />, desc: 'During workout' },
-                { label: 'Min HR', value: '56 bpm', icon: <TrendingDown sx={{ fontSize: 16, color: '#7b1fa2' }} />, desc: 'During sleep' },
+                { label: 'Resting HR', value: latest?.heart_rate_resting != null ? `${latest.heart_rate_resting} bpm` : '—', icon: <Favorite sx={{ fontSize: 16, color: '#4caf50' }} />, desc: 'Recorded' },
+                { label: 'Average HR', value: latest?.avg_heart_rate != null ? `${latest.avg_heart_rate} bpm` : '—', icon: <MonitorHeart sx={{ fontSize: 16, color: '#1565c0' }} />, desc: 'Recorded' },
+                { label: 'Max HR', value: latest?.max_heart_rate != null ? `${latest.max_heart_rate} bpm` : '—', icon: <TrendingUp sx={{ fontSize: 16, color: '#f57c00' }} />, desc: 'Recorded' },
+                { label: 'Min HR', value: latest?.min_heart_rate != null ? `${latest.min_heart_rate} bpm` : '—', icon: <TrendingDown sx={{ fontSize: 16, color: '#7b1fa2' }} />, desc: 'Recorded' },
               ].map((item) => (
                 <Stack key={item.label} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 1.5, borderBottom: '1px solid #f0f0f0' }}>
                   <Stack direction="row" spacing={1} alignItems="center">
@@ -232,7 +232,7 @@ const SmartwatchPage: React.FC = () => {
               <Stack direction="row" spacing={1} alignItems="center">
                 <Info sx={{ fontSize: 18, color: '#2e7d32' }} />
                 <Typography sx={{ fontSize: 12, color: '#2e7d32', fontWeight: 500 }}>
-                  Your heart rate variability has improved by 12% this week.
+                  Heart-rate change is shown only from saved watch readings.
                 </Typography>
               </Stack>
             </Card>

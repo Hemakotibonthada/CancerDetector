@@ -28,6 +28,7 @@ const ExerciseFitnessPage: React.FC = () => {
   const [fitnessGoals, setFitnessGoals] = useState<any[]>([]);
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
   const [monthlyProgress, setMonthlyProgress] = useState<any[]>([]);
+  const [sessionStats, setSessionStats] = useState<any>({});
 
   const iconMap: Record<string, any> = { Walking: <DirectionsRun />, Yoga: <SelfImprovement />, Swimming: <Pool />, Cycling: <DirectionsBike />, Stretching: <AccessibilityNew />, Resistance: <FitnessCenter /> };
 
@@ -46,6 +47,7 @@ const ExerciseFitnessPage: React.FC = () => {
         setWeeklyExercise(sessions.map((s: any) => ({ day: s.day ?? s.date ?? '', minutes: s.duration ?? s.minutes ?? 0, calories: s.calories_burned ?? s.calories ?? 0, type: s.exercise_type ?? s.type ?? 'Rest', heartRate: s.avg_heart_rate ?? s.heartRate ?? 0 })));
         if (sessionsRes.data.heart_rate_zones) setHeartRateZones(sessionsRes.data.heart_rate_zones);
         if (sessionsRes.data.monthly_progress) setMonthlyProgress(sessionsRes.data.monthly_progress);
+        if (!Array.isArray(sessionsRes.data)) setSessionStats(sessionsRes.data);
       }
       if (goalsRes?.data) {
         const goals = Array.isArray(goalsRes.data) ? goalsRes.data : (goalsRes.data.goals ?? []);
@@ -75,16 +77,16 @@ const ExerciseFitnessPage: React.FC = () => {
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<DirectionsRun />} label="Steps Today" value="8,420" change="+12%" color="#5e92f3" subtitle="Goal: 10,000" />
+            <StatCard icon={<DirectionsRun />} label="Steps Today" value={sessionStats.steps_today ?? 0} color="#5e92f3" subtitle="From logged sessions" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Timer />} label="Active Minutes" value="120" change="+8%" color="#4caf50" subtitle="Weekly: 150 target" />
+            <StatCard icon={<Timer />} label="Active Minutes" value={sessionStats.active_minutes ?? 0} color="#4caf50" subtitle="Logged sessions" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<LocalFireDepartment />} label="Calories Burned" value="1,610" change="+15%" color="#f44336" subtitle="Weekly total" />
+            <StatCard icon={<LocalFireDepartment />} label="Calories Burned" value={sessionStats.calories_burned ?? 0} color="#f44336" subtitle="Logged sessions" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Favorite />} label="Avg Heart Rate" value="72 bpm" change="-3" color="#ae52d4" subtitle="Resting" />
+            <StatCard icon={<Favorite />} label="Avg Heart Rate" value={sessionStats.avg_heart_rate == null ? '—' : `${sessionStats.avg_heart_rate} bpm`} color="#ae52d4" subtitle="Logged sessions" />
           </Grid>
         </Grid>
 
@@ -240,7 +242,7 @@ const ExerciseFitnessPage: React.FC = () => {
               <Card sx={{ p: 3, mb: 2.5 }}>
                 <SectionHeader title="Fitness Score" icon={<EmojiEvents />} />
                 <Box sx={{ textAlign: 'center', py: 2 }}>
-                  <MetricGauge value={72} color="#5e92f3" size={140} />
+                  <MetricGauge value={0} color="#5e92f3" size={140} />
                   <Typography variant="body2" fontWeight={600} sx={{ mt: 1 }}>Good Fitness Level</Typography>
                   <Typography variant="caption" color="text.secondary">Improved 8% from last month</Typography>
                 </Box>

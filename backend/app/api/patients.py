@@ -4,7 +4,7 @@ Patients API Endpoints
 from __future__ import annotations
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
+from sqlalchemy import func, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.models.user import User
@@ -130,16 +130,40 @@ async def get_my_health_summary(
     if not patient:
         raise HTTPException(status_code=404, detail="Patient profile not found")
     
+    from app.models.health_record import HealthRecord
+    from app.models.blood_sample import BloodSample
+    from app.models.medication import Prescription
+    from app.models.notification import Notification
+
+    records = (await db.execute(
+        select(func.count(HealthRecord.id)).where(HealthRecord.patient_id == patient.id, HealthRecord.is_deleted == False)
+    )).scalar() or 0
+    blood_tests = (await db.execute(
+        select(func.count(BloodSample.id)).where(BloodSample.patient_id == patient.id)
+    )).scalar() or 0
+    medications = (await db.execute(
+        select(func.count(Prescription.id)).where(
+            Prescription.patient_id == patient.id,
+            Prescription.status == "active",
+        )
+    )).scalar() or 0
+    alerts = (await db.execute(
+        select(func.count(Notification.id)).where(
+            Notification.user_id == user_id,
+            Notification.is_read == False,
+        )
+    )).scalar() or 0
+
     return PatientHealthSummary(
         patient_id=patient.id,
         health_id=patient.health_id,
         cancer_risk_level=patient.overall_cancer_risk,
         cancer_risk_score=patient.cancer_risk_score,
         smartwatch_connected=patient.has_smartwatch,
-        total_health_records=0,
-        total_blood_tests=0,
-        active_medications=0,
-        active_alerts=0,
+        total_health_records=records,
+        total_blood_tests=blood_tests,
+        active_medications=medications,
+        active_alerts=alerts,
     )
 
 

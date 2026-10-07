@@ -70,14 +70,7 @@ const PharmacyManagementPage: React.FC = () => {
       invRows.forEach((item: any) => { catMap[item.category] = (catMap[item.category] ?? 0) + 1; });
       const colors = ['#f44336', '#ae52d4', '#ff9800', '#5e92f3', '#4caf50', '#9e9e9e'];
       const cats = Object.entries(catMap).map(([name, value], i) => ({ name, value, fill: colors[i % colors.length] }));
-      setCategoryData(cats.length > 0 ? cats : [
-        { name: 'Chemotherapy', value: 35, fill: '#f44336' },
-        { name: 'Immunotherapy', value: 15, fill: '#ae52d4' },
-        { name: 'Hormone Therapy', value: 10, fill: '#ff9800' },
-        { name: 'Pain Management', value: 20, fill: '#5e92f3' },
-        { name: 'Anti-emetics', value: 12, fill: '#4caf50' },
-        { name: 'Other', value: 8, fill: '#9e9e9e' },
-      ]);
+      setCategoryData(cats);
     } catch (err: any) {
       console.error('Failed to load pharmacy data:', err);
       setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load pharmacy data');
@@ -118,7 +111,7 @@ const PharmacyManagementPage: React.FC = () => {
             <StatCard icon={<Delete />} label="Out of Stock" value={outOfStockCount.toString()} color="#f44336" subtitle="Critical shortage" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<ShoppingCart />} label="Prescriptions Today" value={prescriptions.filter(p => p.date === new Date().toISOString().split('T')[0]).length.toString()} change="+3" color="#4caf50" subtitle="Pending: 2" />
+            <StatCard icon={<ShoppingCart />} label="Prescriptions Today" value={prescriptions.filter(p => String(p.date).startsWith(new Date().toISOString().split('T')[0])).length.toString()} color="#4caf50" subtitle={`${prescriptions.filter(p => p.status === 'pending').length} pending`} />
           </Grid>
         </Grid>
 

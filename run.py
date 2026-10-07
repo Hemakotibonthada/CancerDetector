@@ -39,14 +39,8 @@ def main():
     print(f"  API Docs: http://localhost:{settings.port}/docs")
     print(f"  Database: {'SQLite' if settings.database.use_sqlite else 'PostgreSQL'}")
     print("=" * 60 + "\n")
-    
-    print("  Demo Accounts:")
-    print("  ─────────────────────────────────────────")
-    print("  Patient:        patient@cancerguard.ai / Patient@123456")
-    print("  Doctor:         doctor@cancerguard.ai / Doctor@123456")
-    print("  Hospital Admin: hospital.admin@cancerguard.ai / Hospital@123456")
-    print("  System Admin:   admin@cancerguard.ai / Admin@123456")
-    print("  ─────────────────────────────────────────\n")
+    print("  Demo accounts are not created on startup.")
+    print("  Create real users through registration or an administrator.\n")
     
     uvicorn.run(
         "backend.app.main:app",
@@ -62,7 +56,11 @@ if __name__ == "__main__":
     if "--seed" in sys.argv:
         async def seed():
             from backend.app.database import init_db, get_db_context
-            from backend.app.services.seed_service import SeedService
+            from backend.app.services.seed_service import SeedService, demo_seed_allowed
+            if not demo_seed_allowed():
+                print("Demo seeding is off. Set SEED_DEMO_DATA=true to run python run.py --seed.")
+                print("Do not set that flag against a database that already holds real accounts.")
+                return
             await init_db()
             async with get_db_context() as session:
                 seed_service = SeedService(session)
@@ -71,6 +69,11 @@ if __name__ == "__main__":
         asyncio.run(seed())
     elif "--reset-db" in sys.argv:
         async def reset():
+            from backend.app.config import get_settings
+            settings = get_settings()
+            if settings.is_production or os.getenv("RESET_DATABASE", "").strip().lower() not in {"1", "true", "yes"}:
+                print("Refusing to drop tables. Set RESET_DATABASE=true and run outside production.")
+                return
             from backend.app.database import DatabaseManager
             await DatabaseManager.reset_database()
             print("Database reset successfully!")

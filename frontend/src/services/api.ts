@@ -75,6 +75,10 @@ export const hospitalsAPI = {
   update: (id: string, data: any) => api.put(`/hospitals/${id}`, data),
   getDashboard: (id: string) => api.get(`/hospitals/${id}/dashboard`),
   getDoctors: (id: string, params?: any) => api.get(`/hospitals/${id}/doctors`, { params }),
+  listDoctors: () => api.get('/hospitals/doctors'),
+  listBeds: (hospitalId?: string) => api.get('/hospitals/beds', { params: hospitalId ? { hospital_id: hospitalId } : {} }),
+  createBed: (data: { hospital_id: string; ward: string; bed_code: string }) => api.post('/hospitals/beds', data),
+  updateBed: (id: string, data: any) => api.put(`/hospitals/beds/${id}`, data),
 };
 
 // Health Records API
@@ -130,6 +134,7 @@ export const adminAPI = {
   getRiskDistribution: () => api.get('/admin/risk-distribution'),
   seedData: () => api.post('/admin/seed-data'),
   systemHealth: () => api.get('/admin/system-health'),
+  getAuditLogs: () => api.get('/admin/audit-logs'),
 };
 
 // Reports API
@@ -140,7 +145,14 @@ export const reportsAPI = {
 // Analytics API
 export const analyticsAPI = {
   getOverview: () => api.get('/analytics/overview'),
+  getOperations: () => api.get('/analytics/operations'),
   getRiskTrends: () => api.get('/analytics/risk-trends'),
+};
+
+export const goalsAPI = {
+  list: () => api.get('/goals'),
+  create: (data: any) => api.post('/goals', data),
+  update: (id: string, data: any) => api.put(`/goals/${id}`, data),
 };
 
 // Genetic Profile API

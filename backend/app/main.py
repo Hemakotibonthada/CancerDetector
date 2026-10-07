@@ -21,8 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import get_settings, BASE_DIR, PROJECT_DIR
-from app.database import init_db, close_db, check_db_health, get_db_context
-from app.services.seed_service import SeedService
+from app.database import init_db, close_db, check_db_health
 
 logger = logging.getLogger(__name__)
 
@@ -47,19 +46,9 @@ async def lifespan(app: FastAPI):
     if settings.is_production and not os.getenv("AUTH_SECRET_KEY"):
         raise RuntimeError("AUTH_SECRET_KEY is required in production")
     
-    # Initialize database
+    # Initialize database. Demo rows are never inserted on startup.
     await init_db()
     logger.info("Database initialized")
-    
-    # Seed data in development
-    if settings.is_development:
-        try:
-            async with get_db_context() as session:
-                seed_service = SeedService(session)
-                await seed_service.seed_all()
-        except Exception as e:
-            logger.warning(f"Seed data error (non-critical): {e}")
-    
     logger.info(f"{settings.app_name} started successfully!")
     
     yield
@@ -119,6 +108,7 @@ def create_application() -> FastAPI:
         clinical_trials_v2_router, radiology_enhanced_router, pharmacy_enhanced_router,
         education_router, social_determinants_router, wearable_enhanced_router,
         emergency_router, workforce_router, documents_router,
+        lifestyle_router, surgery_router,
     )
     
     api_prefix = settings.api_prefix
@@ -160,6 +150,8 @@ def create_application() -> FastAPI:
     app.include_router(emergency_router, prefix=api_prefix)
     app.include_router(workforce_router, prefix=api_prefix)
     app.include_router(documents_router, prefix=api_prefix)
+    app.include_router(lifestyle_router, prefix=api_prefix)
+    app.include_router(surgery_router, prefix=api_prefix)
     
     # ========================================================================
     # Root & Health Endpoints

@@ -93,14 +93,15 @@ const FamilyHealthPage: React.FC = () => {
             <StatCard icon={<Science />} label="Genetic Testing" value={`${geneticTestedCount}/${familyMembers.length}`} color="#ae52d4" subtitle="Members tested" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<TrendingUp />} label="Hereditary Risk" value="Elevated" color="#ff9800" subtitle="Based on family history" />
+            <StatCard icon={<TrendingUp />} label="Hereditary Risk" value="Not available" color="#ff9800" subtitle="A percentage is not calculated" />
           </Grid>
         </Grid>
 
-        <Alert severity="warning" sx={{ mb: 3, borderRadius: 3 }}>
-          <strong>Hereditary Pattern Detected:</strong> Multiple first-degree relatives with breast and ovarian cancer suggest a possible BRCA gene mutation.
-          We recommend genetic counseling for untested family members.
-        </Alert>
+        {familyMembers.length === 0 && (
+          <Alert severity="info" sx={{ mb: 3, borderRadius: 3 }}>
+            No family history is recorded yet. Add a relative to see stored conditions. A hereditary risk percentage is not calculated.
+          </Alert>
+        )}
 
         <Grid container spacing={2.5}>
           {/* Family Members */}
@@ -187,13 +188,7 @@ const FamilyHealthPage: React.FC = () => {
             <Card sx={{ p: 3 }}>
               <SectionHeader title="Recommendations" icon={<HealthAndSafety />} />
               <Stack spacing={1.5}>
-                {[
-                  { text: 'Get BRCA1/BRCA2 testing', priority: 'High', done: true },
-                  { text: 'Earlier mammography screening', priority: 'High', done: true },
-                  { text: 'Recommend sibling genetic testing', priority: 'Medium', done: false },
-                  { text: 'Consider risk-reducing medications', priority: 'Medium', done: false },
-                  { text: 'Annual ovarian cancer screening', priority: 'High', done: false },
-                ].map((rec, i) => (
+                {[].map((rec: any, i: number) => (
                   <Stack key={i} direction="row" spacing={1} alignItems="center" sx={{ p: 1, bgcolor: '#f8fafc', borderRadius: 2, opacity: rec.done ? 0.6 : 1 }}>
                     <CheckCircle sx={{ fontSize: 16, color: rec.done ? '#4caf50' : '#e0e0e0' }} />
                     <Box sx={{ flex: 1 }}>

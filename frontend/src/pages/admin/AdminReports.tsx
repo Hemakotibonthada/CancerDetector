@@ -27,6 +27,7 @@ const AdminReports: React.FC = () => {
   const [platformReports, setPlatformReports] = useState<any[]>([]);
   const [scheduledReports, setScheduledReports] = useState<any[]>([]);
   const [reportCategories, setReportCategories] = useState<any[]>([]);
+  const [reportCount, setReportCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -38,6 +39,7 @@ const AdminReports: React.FC = () => {
       setPlatformReports(data.reports ?? data.platform_reports ?? []);
       setScheduledReports(data.scheduled ?? data.scheduled_reports ?? []);
       setReportCategories(data.categories ?? data.report_categories ?? []);
+      setReportCount(data.total_reports ?? (data.reports ?? data.platform_reports ?? []).length ?? 0);
       setError('');
     } catch {
       setError('Failed to load data');
@@ -57,10 +59,10 @@ const AdminReports: React.FC = () => {
       ) : <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<Assessment />} label="Total Reports" value="38" color="#1565c0" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Schedule />} label="Scheduled" value="5" color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Download />} label="Downloads (Month)" value="156" color="#f57c00" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Email />} label="Auto-Sent" value="42" color="#9c27b0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Assessment />} label="Total Reports" value={reportCount} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Schedule />} label="Scheduled" value="—" color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Download />} label="Downloads (Month)" value="—" color="#f57c00" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Email />} label="Auto-Sent" value="—" color="#9c27b0" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>

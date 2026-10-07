@@ -228,11 +228,24 @@ class RoleChecker:
         return token_data
 
 
+DOCTOR_ROLES = [
+    "doctor", "oncologist", "surgeon", "radiologist", "pathologist",
+    "general_practitioner", "specialist", "cardiologist", "neurologist",
+    "dermatologist", "emergency_physician", "anesthesiologist",
+]
+HOSPITAL_STAFF_ROLES = [
+    "hospital_admin", "nurse", "lab_technician", "pharmacist",
+    "receptionist", "support_staff",
+]
+CLINICAL_ROLES = DOCTOR_ROLES + HOSPITAL_STAFF_ROLES
+ANALYTICS_ROLES = CLINICAL_ROLES + ["system_admin", "super_admin", "data_analyst", "researcher"]
+
 # Common role checkers
 require_patient = RoleChecker(["patient"])
-require_doctor = RoleChecker(["doctor", "oncologist", "surgeon", "general_practitioner", "specialist", "cardiologist", "neurologist", "dermatologist", "radiologist", "pathologist"])
+require_doctor = RoleChecker(DOCTOR_ROLES)
 require_hospital_admin = RoleChecker(["hospital_admin", "system_admin", "super_admin"])
 require_system_admin = RoleChecker(["system_admin", "super_admin"])
 require_super_admin = RoleChecker(["super_admin"])
-require_medical_staff = RoleChecker(["doctor", "nurse", "oncologist", "surgeon", "radiologist", "pathologist", "pharmacist", "lab_technician", "general_practitioner", "specialist"])
+require_medical_staff = RoleChecker(DOCTOR_ROLES + ["nurse", "pharmacist", "lab_technician"])
 require_any_admin = RoleChecker(["hospital_admin", "system_admin", "super_admin"])
+require_analytics_access = RoleChecker(ANALYTICS_ROLES)

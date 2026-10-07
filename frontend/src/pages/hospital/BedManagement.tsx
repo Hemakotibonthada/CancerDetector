@@ -19,21 +19,20 @@ const BedManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedBed, setSelectedBed] = useState<any>(null);
   const [showTransfer, setShowTransfer] = useState(false);
-  const [wards, setWards] = useState<any[]>([]);
+  const [beds, setBeds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [hospitalsRes] = await Promise.all([
-        hospitalsAPI.list().catch(() => ({ data: [] })),
-      ]);
-      const data = hospitalsRes.data || [];
-      setWards(Array.isArray(data) ? data : data.wards ?? []);
+      const bedsRes = await hospitalsAPI.listBeds();
+      const data = bedsRes.data || [];
+      setBeds(Array.isArray(data) ? data : []);
       setError('');
     } catch {
-      setError('Failed to load data');
+      setBeds([]);
+      setError('Failed to load beds');
     } finally {
       setLoading(false);
     }
@@ -43,25 +42,21 @@ const BedManagement: React.FC = () => {
 
   type BedStatus = 'occupied' | 'available' | 'maintenance' | 'reserved' | 'discharge_pending';
 
-  const beds: {id: string; ward: string; status: BedStatus; patient?: string; patientId?: string; admitDate?: string; diagnosis?: string; doctor?: string; acuity?: string}[] = [
-    { id: 'ICU-01', ward: 'ICU', status: 'occupied', patient: 'Alice Johnson', patientId: 'P-1234', admitDate: '3 days ago', diagnosis: 'Post-surgery monitoring', doctor: 'Dr. Smith', acuity: 'critical' },
-    { id: 'ICU-02', ward: 'ICU', status: 'occupied', patient: 'Bob Williams', patientId: 'P-2345', admitDate: '1 day ago', diagnosis: 'Cardiac event', doctor: 'Dr. Lee', acuity: 'critical' },
-    { id: 'ICU-03', ward: 'ICU', status: 'available' },
-    { id: 'ICU-04', ward: 'ICU', status: 'maintenance' },
-    { id: 'ONC-01', ward: 'Oncology Ward', status: 'occupied', patient: 'Carmen Davis', patientId: 'P-3456', admitDate: '5 days ago', diagnosis: 'Chemotherapy cycle 3', doctor: 'Dr. Smith', acuity: 'moderate' },
-    { id: 'ONC-02', ward: 'Oncology Ward', status: 'occupied', patient: 'David Martinez', patientId: 'P-4567', admitDate: '2 days ago', diagnosis: 'Radiation therapy', doctor: 'Dr. Johnson', acuity: 'low' },
-    { id: 'ONC-03', ward: 'Oncology Ward', status: 'discharge_pending', patient: 'Elena Foster', patientId: 'P-5678', admitDate: '7 days ago', diagnosis: 'Post-biopsy recovery', doctor: 'Dr. Smith', acuity: 'low' },
-    { id: 'ONC-04', ward: 'Oncology Ward', status: 'available' },
-    { id: 'GEN-01', ward: 'General Ward A', status: 'occupied', patient: 'Frank Green', patientId: 'P-6789', admitDate: '1 day ago', diagnosis: 'Observation', doctor: 'Dr. Wilson', acuity: 'low' },
-    { id: 'GEN-02', ward: 'General Ward A', status: 'available' },
-    { id: 'GEN-03', ward: 'General Ward A', status: 'reserved' },
-    { id: 'SUR-01', ward: 'Surgery Ward', status: 'occupied', patient: 'Grace Kim', patientId: 'P-7890', admitDate: '4 hrs ago', diagnosis: 'Pre-surgery prep', doctor: 'Dr. Wilson', acuity: 'moderate' },
-  ];
+  const wards: any[] = Object.values(beds.reduce((acc: Record<string, any>, bed) => {
+    const name = bed.ward || 'Unassigned';
+    if (!acc[name]) acc[name] = { name, floor: '', color: '#1565c0', total: 0, occupied: 0, available: 0, maintenance: 0 };
+    acc[name].total += 1;
+    if (bed.status === 'occupied' || bed.status === 'discharge_pending') acc[name].occupied += 1;
+    else if (bed.status === 'available') acc[name].available += 1;
+    else if (bed.status === 'maintenance') acc[name].maintenance += 1;
+    return acc;
+  }, {}));
 
-  const totalBeds = wards.reduce((a, w) => a + w.total, 0);
-  const totalOccupied = wards.reduce((a, w) => a + w.occupied, 0);
-  const totalAvail = wards.reduce((a, w) => a + w.available, 0);
-  const occupancyRate = Math.round((totalOccupied / totalBeds) * 100);
+  const totalBeds = beds.length;
+  const totalOccupied = beds.filter(b => b.status === 'occupied' || b.status === 'discharge_pending').length;
+  const totalAvail = beds.filter(b => b.status === 'available').length;
+  const occupancyRate = totalBeds ? Math.round((totalOccupied / totalBeds) * 100) : 0;
+  const transfers = beds.filter(b => b.transfer_status && b.transfer_status !== 'completed');
 
   const getBedColor = (s: BedStatus) => {
     const m: Record<string, string> = { occupied: '#d32f2f', available: '#4caf50', maintenance: '#9e9e9e', reserved: '#ff9800', discharge_pending: '#2196f3' };
@@ -103,9 +98,9 @@ const BedManagement: React.FC = () => {
                     <Typography sx={{ fontWeight: 700, fontSize: 16 }}>{w.name}</Typography>
                     <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{w.floor}</Typography>
                   </Box>
-                  <Chip label={`${Math.round((w.occupied / w.total) * 100)}%`} size="small" color={w.occupied / w.total > 0.85 ? 'error' : w.occupied / w.total > 0.6 ? 'warning' : 'success'} sx={{ fontWeight: 700, fontSize: 11 }} />
+                  <Chip label={`${w.total ? Math.round((w.occupied / w.total) * 100) : 0}%`} size="small" color={w.total && w.occupied / w.total > 0.85 ? 'error' : w.total && w.occupied / w.total > 0.6 ? 'warning' : 'success'} sx={{ fontWeight: 700, fontSize: 11 }} />
                 </Stack>
-                <LinearProgress variant="determinate" value={(w.occupied / w.total) * 100} sx={{ height: 8, borderRadius: 4, mb: 2 }} color={w.occupied / w.total > 0.85 ? 'error' : w.occupied / w.total > 0.6 ? 'warning' : 'success'} />
+                <LinearProgress variant="determinate" value={w.total ? (w.occupied / w.total) * 100 : 0} sx={{ height: 8, borderRadius: 4, mb: 2 }} color={w.total && w.occupied / w.total > 0.85 ? 'error' : w.total && w.occupied / w.total > 0.6 ? 'warning' : 'success'} />
                 <Grid container spacing={1}>
                   <Grid item xs={3}><Box sx={{ textAlign: 'center' }}><Typography sx={{ fontSize: 18, fontWeight: 700 }}>{w.total}</Typography><Typography sx={{ fontSize: 9, color: 'text.secondary' }}>Total</Typography></Box></Grid>
                   <Grid item xs={3}><Box sx={{ textAlign: 'center' }}><Typography sx={{ fontSize: 18, fontWeight: 700, color: '#d32f2f' }}>{w.occupied}</Typography><Typography sx={{ fontSize: 9, color: 'text.secondary' }}>Occupied</Typography></Box></Grid>
@@ -179,21 +174,18 @@ const BedManagement: React.FC = () => {
       {activeTab === 3 && (
         <Card sx={{ p: 3 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 18, mb: 2 }}>Transfer Requests</Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>2 pending transfer requests</Alert>
-          {[
-            { patient: 'Alice Johnson', from: 'ICU-01', to: 'General Ward A', reason: 'Stable condition - step down', status: 'pending', doctor: 'Dr. Smith' },
-            { patient: 'Grace Kim', from: 'Surgery Ward', to: 'ICU', reason: 'Post-op complications', status: 'urgent', doctor: 'Dr. Wilson' },
-          ].map((t, i) => (
-            <Card key={i} sx={{ p: 2, mb: 1.5, bgcolor: '#f8f9ff' }}>
+          {transfers.length === 0 && <Alert severity="info" sx={{ mb: 2 }}>No transfer requests are recorded.</Alert>}
+          {transfers.map((t) => (
+            <Card key={t.record_id || t.id} sx={{ p: 2, mb: 1.5, bgcolor: '#f8f9ff' }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{t.patient}</Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{t.patient || 'Unassigned'}</Typography>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip label={t.from} size="small" color="error" variant="outlined" sx={{ fontSize: 10 }} />
+                    <Chip label={t.id} size="small" color="error" variant="outlined" sx={{ fontSize: 10 }} />
                     <SwapHoriz sx={{ fontSize: 16 }} />
-                    <Chip label={t.to} size="small" color="success" variant="outlined" sx={{ fontSize: 10 }} />
+                    <Chip label={t.transfer_to_ward || '—'} size="small" color="success" variant="outlined" sx={{ fontSize: 10 }} />
                   </Stack>
-                  <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{t.reason} • {t.doctor}</Typography>
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{t.transfer_reason || t.transfer_status}{t.doctor ? ` • ${t.doctor}` : ''}</Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
                   <Button size="small" variant="contained">Approve</Button>

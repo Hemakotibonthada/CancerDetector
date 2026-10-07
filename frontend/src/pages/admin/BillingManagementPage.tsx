@@ -50,7 +50,10 @@ const BillingManagementPage: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const totalMRR = subscriptions.filter(s => s.status === 'active').reduce((s, sub) => s + sub.amount, 0);
+  const totalMRR = subscriptions.filter(s => s.status === 'active').reduce((s, sub) => s + (Number(sub.amount) || 0), 0);
+  const billed = invoices.reduce((s, i) => s + (Number(i.total_amount ?? i.amount) || 0), 0);
+  const paid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (Number(i.paid_amount ?? i.amount) || 0), 0);
+  const collectionLabel = billed ? `${Math.round((paid / billed) * 100)}%` : '—';
   const paidInvoices = invoices.filter(i => i.status === 'paid');
   const pendingInvoices = invoices.filter(i => i.status === 'pending');
 
@@ -63,7 +66,7 @@ const BillingManagementPage: React.FC = () => {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<AttachMoney />} label="Monthly Revenue" value={`$${totalMRR.toLocaleString()}`} change="+45%" color="#4caf50" subtitle="MRR" />
+            <StatCard icon={<AttachMoney />} label="Monthly Revenue" value={`$${totalMRR.toLocaleString()}`} color="#4caf50" subtitle="Active subscriptions" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Business />} label="Active Subscriptions" value={subscriptions.filter(s => s.status === 'active').length.toString()} color="#5e92f3" subtitle="Hospital accounts" />
@@ -72,7 +75,7 @@ const BillingManagementPage: React.FC = () => {
             <StatCard icon={<Receipt />} label="Pending Invoices" value={pendingInvoices.length.toString()} color="#ff9800" subtitle={`$${pendingInvoices.reduce((s, i) => s + i.amount, 0).toLocaleString()}`} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CreditCard />} label="Collection Rate" value="96%" change="+2%" color="#ae52d4" subtitle="Payment success" />
+            <StatCard icon={<CreditCard />} label="Collection Rate" value={collectionLabel} color="#ae52d4" subtitle="Paid divided by billed" />
           </Grid>
         </Grid>
 

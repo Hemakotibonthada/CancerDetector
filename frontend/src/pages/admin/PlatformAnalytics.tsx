@@ -29,6 +29,7 @@ const PlatformAnalytics: React.FC = () => {
   const [dailyActive, setDailyActive] = useState<any[]>([]);
   const [deviceBreakdown, setDeviceBreakdown] = useState<any[]>([]);
   const [kpis, setKpis] = useState<any[]>([]);
+  const [overview, setOverview] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ const PlatformAnalytics: React.FC = () => {
       setGeoDistribution(overview.geo_distribution ?? []);
       setDailyActive(trends.daily_active ?? overview.daily_active ?? []);
       setDeviceBreakdown(overview.device_breakdown ?? []);
+      setOverview(overview);
       setKpis(overview.kpis ?? []);
     } catch (err) {
       setError('Failed to load analytics data');
@@ -65,10 +67,10 @@ const PlatformAnalytics: React.FC = () => {
         <>
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Users" value="7,070" color="#1565c0" change="+12%" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Hospitals" value="18" color="#4caf50" change="+2" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="AI Predictions" value="45.2K" color="#9c27b0" change="+18%" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="Engagement" value="78%" color="#f57c00" change="+5%" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<People />} label="Total Users" value={overview.total_users ?? 0} color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<LocalHospital />} label="Hospitals" value={overview.total_hospitals ?? 0} color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Science />} label="AI Predictions" value={overview.total_predictions ?? 0} color="#9c27b0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Speed />} label="Engagement" value="Not available" color="#f57c00" /></Grid>
       </Grid>
 
       <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} sx={{ mb: 3, '& .MuiTab-root': { textTransform: 'none', fontWeight: 600 } }}>

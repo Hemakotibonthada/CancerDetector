@@ -74,8 +74,8 @@ const SecurityPage: React.FC = () => {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}><StatCard icon={<Warning />} label="Active Threats" value={securityEvents.filter(e => !e.resolved && (e.severity === 'critical' || e.severity === 'high')).length} color="#d32f2f" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<Shield />} label="Attacks Blocked" value="249" color="#4caf50" /></Grid>
-        <Grid item xs={6} sm={3}><StatCard icon={<VerifiedUser />} label="Compliance Score" value="94%" color="#1565c0" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<Shield />} label="Attacks Blocked" value="Not available" color="#4caf50" /></Grid>
+        <Grid item xs={6} sm={3}><StatCard icon={<VerifiedUser />} label="Compliance Score" value="Not available" color="#1565c0" /></Grid>
         <Grid item xs={6} sm={3}><StatCard icon={<BugReport />} label="Open Vulns" value={vulnScan.filter(v => v.status !== 'fixed').length} color="#f57c00" /></Grid>
       </Grid>
 

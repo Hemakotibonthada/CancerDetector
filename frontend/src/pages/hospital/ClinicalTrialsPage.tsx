@@ -72,7 +72,7 @@ const ClinicalTrialsPage: React.FC = () => {
         cancerCounts[cancer] = (cancerCounts[cancer] || 0) + 1;
       });
       setCancerTypes(Object.entries(cancerCounts).map(([name, value]) => ({
-        name, value, fill: cancerColors[name] ?? '#' + Math.floor(Math.random()*16777215).toString(16),
+        name, value, fill: cancerColors[name] ?? '#90a4ae',
       })));
 
       setError('');
@@ -97,13 +97,13 @@ const ClinicalTrialsPage: React.FC = () => {
             <StatCard icon={<Science />} label="Active Trials" value={activeTrials.length.toString()} color="#5e92f3" subtitle="Currently running" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Group />} label="Total Enrolled" value={totalEnrolled.toString()} change="+7" color="#4caf50" subtitle="All trials combined" />
+            <StatCard icon={<Group />} label="Total Enrolled" value={totalEnrolled.toString()} color="#4caf50" subtitle="All recorded trials" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<TrendingUp />} label="Avg Enrollment" value="74%" color="#ff9800" subtitle="Of target capacity" />
+            <StatCard icon={<TrendingUp />} label="Avg Enrollment" value="—" color="#ff9800" subtitle="Computed only when a target exists" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<MedicalServices />} label="New This Month" value="7" color="#ae52d4" subtitle="Patients enrolled" />
+            <StatCard icon={<MedicalServices />} label="New This Month" value="—" color="#ae52d4" subtitle="From recorded enrollments" />
           </Grid>
         </Grid>
 

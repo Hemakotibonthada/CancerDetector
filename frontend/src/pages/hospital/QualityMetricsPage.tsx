@@ -52,18 +52,7 @@ const QualityMetricsPage: React.FC = () => {
         trend: m.trend ?? 'stable',
         benchmark: m.benchmark ?? 0,
       }));
-      setQualityMetrics(mRows.length > 0 ? mRows : [
-        { category: 'Patient Safety', metric: 'Medication Error Rate', value: 0.8, target: 1.0, unit: '%', trend: 'improving', benchmark: 1.2 },
-        { category: 'Patient Safety', metric: 'Hospital-Acquired Infections', value: 1.2, target: 1.5, unit: 'per 1000 days', trend: 'stable', benchmark: 2.0 },
-        { category: 'Clinical Outcomes', metric: '30-Day Readmission Rate', value: 8.5, target: 10.0, unit: '%', trend: 'improving', benchmark: 12.0 },
-        { category: 'Clinical Outcomes', metric: 'Cancer Treatment Success Rate', value: 78, target: 75, unit: '%', trend: 'improving', benchmark: 72 },
-        { category: 'Patient Experience', metric: 'Overall Satisfaction', value: 4.6, target: 4.5, unit: '/5', trend: 'improving', benchmark: 4.2 },
-        { category: 'Patient Experience', metric: 'Net Promoter Score', value: 72, target: 65, unit: '', trend: 'improving', benchmark: 58 },
-        { category: 'Operational', metric: 'Avg Wait Time (ED)', value: 18, target: 20, unit: 'min', trend: 'stable', benchmark: 25 },
-        { category: 'Operational', metric: 'Bed Occupancy Rate', value: 82, target: 85, unit: '%', trend: 'stable', benchmark: 80 },
-        { category: 'Staff', metric: 'Staff Satisfaction', value: 4.2, target: 4.0, unit: '/5', trend: 'improving', benchmark: 3.8 },
-        { category: 'Staff', metric: 'Physician Burnout Rate', value: 22, target: 25, unit: '%', trend: 'improving', benchmark: 35 },
-      ]);
+      setQualityMetrics(mRows);
 
       // Satisfaction trend
       const satRows = (Array.isArray(satData) ? satData : []).map((s: any) => ({
@@ -71,11 +60,7 @@ const QualityMetricsPage: React.FC = () => {
         score: s.score ?? s.value ?? 0,
         responses: s.responses ?? s.count ?? 0,
       }));
-      setSatisfactionTrend(satRows.length > 0 ? satRows : [
-        { month: 'Jul', score: 4.2, responses: 85 }, { month: 'Aug', score: 4.3, responses: 92 },
-        { month: 'Sep', score: 4.4, responses: 88 }, { month: 'Oct', score: 4.5, responses: 95 },
-        { month: 'Nov', score: 4.5, responses: 102 }, { month: 'Dec', score: 4.6, responses: 78 },
-      ]);
+      setSatisfactionTrend(satRows);
 
       // Radar data from benchmarks
       const rData = (Array.isArray(benchData) ? benchData : []).map((b: any) => ({
@@ -83,14 +68,7 @@ const QualityMetricsPage: React.FC = () => {
         current: b.current ?? b.score ?? 0,
         benchmark: b.benchmark ?? 0,
       }));
-      setRadarData(rData.length > 0 ? rData : [
-        { subject: 'Safety', current: 92, benchmark: 80 },
-        { subject: 'Outcomes', current: 88, benchmark: 75 },
-        { subject: 'Satisfaction', current: 90, benchmark: 82 },
-        { subject: 'Efficiency', current: 85, benchmark: 78 },
-        { subject: 'Staff', current: 86, benchmark: 76 },
-        { subject: 'Innovation', current: 82, benchmark: 70 },
-      ]);
+      setRadarData(rData);
 
       // Category scores from outcomes
       const colors = ['#4caf50', '#5e92f3', '#ae52d4', '#ff9800', '#e91e63'];
@@ -99,13 +77,7 @@ const QualityMetricsPage: React.FC = () => {
         score: o.score ?? o.value ?? 0,
         fill: o.fill ?? colors[i % colors.length],
       }));
-      setCategoryScores(cData.length > 0 ? cData : [
-        { name: 'Patient Safety', score: 92, fill: '#4caf50' },
-        { name: 'Clinical Outcomes', score: 88, fill: '#5e92f3' },
-        { name: 'Patient Experience', score: 90, fill: '#ae52d4' },
-        { name: 'Operational', score: 85, fill: '#ff9800' },
-        { name: 'Staff Wellness', score: 86, fill: '#e91e63' },
-      ]);
+      setCategoryScores(cData);
     } catch (err: any) {
       console.error('Failed to load quality data:', err);
       setError(err?.response?.data?.detail ?? err.message ?? 'Failed to load quality metrics');
@@ -146,10 +118,10 @@ const QualityMetricsPage: React.FC = () => {
             <StatCard icon={<CheckCircle />} label="Targets Met" value={`${meetingTarget.length}/${qualityMetrics.length}`} color="#5e92f3" subtitle="Key performance indicators" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Star />} label="User Satisfaction" value="4.6/5" change="+0.1" color="#ff9800" subtitle="This month" />
+            <StatCard icon={<Star />} label="User Satisfaction" value="Not available" color="#ff9800" subtitle="No survey score stored" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<ThumbUp />} label="NPS Score" value="72" change="+5" color="#ae52d4" subtitle="Net Promoter Score" />
+            <StatCard icon={<ThumbUp />} label="NPS Score" value="Not available" color="#ae52d4" subtitle="Not calculated" />
           </Grid>
         </Grid>
 

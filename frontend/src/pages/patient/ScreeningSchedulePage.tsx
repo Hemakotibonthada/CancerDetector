@@ -87,19 +87,19 @@ const ScreeningSchedulePage: React.FC = () => {
             <StatCard icon={<EventNote />} label="Total Screenings" value={screeningSchedule.length.toString()} color="#5e92f3" subtitle="Active schedule" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CheckCircle />} label="Completed" value="1" change="On Track" color="#4caf50" subtitle="This year" />
+            <StatCard icon={<CheckCircle />} label="Completed" value={screeningSchedule.filter((s: any) => s.status === 'completed').length.toString()} color="#4caf50" subtitle="Recorded" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<Warning />} label="Overdue" value={overdueCount.toString()} color="#f44336" subtitle="Action needed" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Schedule />} label="Next Screening" value="Jan 15" color="#ff9800" subtitle="Mammogram" />
+            <StatCard icon={<Schedule />} label="Next Screening" value={screeningSchedule.find((s: any) => s.status !== 'completed')?.test || '—'} color="#ff9800" subtitle={screeningSchedule.find((s: any) => s.status !== 'completed')?.recommended_date || 'None scheduled'} />
           </Grid>
         </Grid>
 
         {overdueCount > 0 && (
           <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }} action={<Button size="small" variant="outlined" color="error" onClick={() => setShowScheduleDialog(true)}>Schedule Now</Button>}>
-            <strong>You have {overdueCount} overdue screening(s).</strong> Pap Smear + HPV test was due on Dec 1, 2024. Please schedule as soon as possible.
+            <strong>You have {overdueCount} overdue screening(s).</strong> Open the schedule below for the recorded dates.
           </Alert>
         )}
 

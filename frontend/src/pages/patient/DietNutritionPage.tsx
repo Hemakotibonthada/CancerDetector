@@ -28,6 +28,7 @@ const DietNutritionPage: React.FC = () => {
   const [antiCancerFoods, setAntiCancerFoods] = useState<any[]>([]);
   const [mealPlan, setMealPlan] = useState<any[]>([]);
   const [hydrationData, setHydrationData] = useState<any[]>([]);
+  const [dietStats, setDietStats] = useState<any>({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -49,6 +50,7 @@ const DietNutritionPage: React.FC = () => {
         const logs = Array.isArray(logRes.data) ? logRes.data : (logRes.data.weekly ?? logRes.data.logs ?? []);
         setWeeklyNutrition(logs.map((l: any) => ({ day: l.day ?? l.date ?? '', calories: l.calories ?? 0, protein: l.protein ?? 0, carbs: l.carbs ?? 0, fat: l.fat ?? 0, antioxidants: l.antioxidants ?? 0 })));
         if (Array.isArray(logRes.data.hydration)) setHydrationData(logRes.data.hydration);
+        if (!Array.isArray(logRes.data)) setDietStats(logRes.data);
       }
       if (foodsRes?.data) {
         const foods = Array.isArray(foodsRes.data) ? foodsRes.data : (foodsRes.data.foods ?? []);
@@ -74,16 +76,16 @@ const DietNutritionPage: React.FC = () => {
         {/* Stats */}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Restaurant />} label="Today's Calories" value="1,580" change="-8%" color="#5e92f3" subtitle="Target: 2,000" />
+            <StatCard icon={<Restaurant />} label="Today's Calories" value={dietStats.today_calories ?? 0} color="#5e92f3" subtitle="From logged meals" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<EcoIcon />} label="Anti-Cancer Score" value="88/100" change="+5" color="#4caf50" subtitle="Excellent" />
+            <StatCard icon={<EcoIcon />} label="Anti-Cancer Score" value="Not available" color="#4caf50" subtitle="Not calculated" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<WaterDrop />} label="Hydration" value="2.25L" change="+12%" color="#0288d1" subtitle="Target: 3L" />
+            <StatCard icon={<WaterDrop />} label="Hydration" value={dietStats.today_water_ml == null ? '—' : `${dietStats.today_water_ml} ml`} color="#0288d1" subtitle="From hydration logs" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<FitnessCenter />} label="Diet Compliance" value="92%" change="+3%" color="#ae52d4" subtitle="7-day average" />
+            <StatCard icon={<FitnessCenter />} label="Diet Compliance" value="Not available" color="#ae52d4" subtitle="Not calculated" />
           </Grid>
         </Grid>
 
@@ -267,7 +269,7 @@ const DietNutritionPage: React.FC = () => {
                   <Typography variant="h2" fontWeight={800} color="#0288d1">75%</Typography>
                   <Typography variant="h6" color="text.secondary">2,250 / 3,000 ml</Typography>
                 </Box>
-                <LinearProgress variant="determinate" value={75} sx={{ height: 12, borderRadius: 6, bgcolor: '#e3f2fd', mb: 2, '& .MuiLinearProgress-bar': { bgcolor: '#0288d1', borderRadius: 6 } }} />
+                <LinearProgress variant="determinate" value={0} sx={{ height: 12, borderRadius: 6, bgcolor: '#e3f2fd', mb: 2, '& .MuiLinearProgress-bar': { bgcolor: '#0288d1', borderRadius: 6 } }} />
                 <Stack spacing={1}>
                   {['Improves drug metabolism', 'Flushes toxins', 'Reduces treatment side effects', 'Supports immune function'].map((tip, i) => (
                     <Stack key={i} direction="row" spacing={1} alignItems="center">
