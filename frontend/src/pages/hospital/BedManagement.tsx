@@ -22,6 +22,9 @@ const BedManagement: React.FC = () => {
   const [beds, setBeds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [transferBed, setTransferBed] = useState<any>(null);
+  const [transferForm, setTransferForm] = useState({ to_ward: '', reason: '' });
 
   const loadData = useCallback(async () => {
     try {
@@ -188,8 +191,14 @@ const BedManagement: React.FC = () => {
                   <Typography sx={{ fontSize: 12, color: 'text.secondary', mt: 0.5 }}>{t.transfer_reason || t.transfer_status}{t.doctor ? ` • ${t.doctor}` : ''}</Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
-                  <Button size="small" variant="contained">Approve</Button>
-                  <Button size="small" variant="outlined" color="error">Deny</Button>
+                  <Button size="small" variant="contained" onClick={async () => {
+                    await hospitalsAPI.updateBed(t.record_id, { transfer_status: 'approved' });
+                    await loadData();
+                  }}>Approve</Button>
+                  <Button size="small" variant="outlined" color="error" onClick={async () => {
+                    await hospitalsAPI.updateBed(t.record_id, { transfer_status: 'denied' });
+                    await loadData();
+                  }}>Deny</Button>
                 </Stack>
               </Stack>
             </Card>
@@ -222,7 +231,7 @@ const BedManagement: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setSelectedBed(null)}>Close</Button>
-              <Button variant="outlined" startIcon={<SwapHoriz />} onClick={() => { setShowTransfer(true); setSelectedBed(null); }}>Transfer</Button>
+              <Button variant="outlined" startIcon={<SwapHoriz />} onClick={() => { setTransferBed(selectedBed); setShowTransfer(true); setSelectedBed(null); }}>Transfer</Button>
               <Button variant="contained">Discharge</Button>
             </DialogActions>
           </>
@@ -234,15 +243,37 @@ const BedManagement: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Request Patient Transfer</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Patient" fullWidth size="small" />
-            <FormControl fullWidth size="small"><InputLabel>From Ward</InputLabel><Select label="From Ward">{wards.map(w => <MenuItem key={w.name} value={w.name}>{w.name}</MenuItem>)}</Select></FormControl>
-            <FormControl fullWidth size="small"><InputLabel>To Ward</InputLabel><Select label="To Ward">{wards.map(w => <MenuItem key={w.name} value={w.name}>{w.name} ({w.available} available)</MenuItem>)}</Select></FormControl>
-            <TextField label="Reason for Transfer" fullWidth multiline rows={2} size="small" />
+            <FormControl fullWidth size="small"><InputLabel>Bed</InputLabel><Select label="Bed" value={transferBed?.record_id || ''} onChange={(e) => setTransferBed(beds.find(b => b.record_id === e.target.value) || null)}>
+              {beds.filter(b => b.patient).map(b => <MenuItem key={b.record_id} value={b.record_id}>{b.id} — {b.patient} ({b.ward})</MenuItem>)}
+            </Select></FormControl>
+            <TextField label="From Ward" fullWidth size="small" value={transferBed?.ward || ''} InputProps={{ readOnly: true }} />
+            <FormControl fullWidth size="small"><InputLabel>To Ward</InputLabel><Select label="To Ward" value={transferForm.to_ward} onChange={(e) => setTransferForm({ ...transferForm, to_ward: e.target.value })}>{wards.map(w => <MenuItem key={w.name} value={w.name}>{w.name} ({w.available} available)</MenuItem>)}</Select></FormControl>
+            <TextField label="Reason for Transfer" fullWidth multiline rows={2} size="small" value={transferForm.reason} onChange={(e) => setTransferForm({ ...transferForm, reason: e.target.value })} />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowTransfer(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => setShowTransfer(false)}>Submit Transfer</Button>
+          <Button variant="contained" disabled={saving} onClick={async () => {
+            if (!transferBed?.record_id) {
+              setError('Select an occupied bed');
+              return;
+            }
+            try {
+              setSaving(true);
+              setError('');
+              await hospitalsAPI.updateBed(transferBed.record_id, {
+                transfer_to_ward: transferForm.to_ward,
+                transfer_reason: transferForm.reason,
+                transfer_status: 'requested',
+              });
+              setShowTransfer(false);
+              await loadData();
+            } catch (err: any) {
+              setError(err?.response?.data?.detail || err.message || 'Could not request the transfer');
+            } finally {
+              setSaving(false);
+            }
+          }}>Submit Transfer</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

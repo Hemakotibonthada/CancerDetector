@@ -17,8 +17,8 @@ import { StatCard, SectionHeader, StatusBadge, MetricGauge } from '../../compone
 import { adminNavItems } from './AdminDashboard';
 import { integrationAPI } from '../../services/api';
 
-const statusColors: Record<string, string> = { connected: '#4caf50', error: '#f44336', disconnected: '#9e9e9e' };
-const statusIcons: Record<string, React.ReactNode> = { connected: <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />, error: <Error sx={{ fontSize: 16, color: '#f44336' }} />, disconnected: <PowerSettingsNew sx={{ fontSize: 16, color: '#9e9e9e' }} /> };
+const statusColors: Record<string, string> = { connected: '#4caf50', configured: '#1565c0', error: '#f44336', disconnected: '#9e9e9e' };
+const statusIcons: Record<string, React.ReactNode> = { connected: <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />, configured: <Settings sx={{ fontSize: 16, color: '#1565c0' }} />, error: <Error sx={{ fontSize: 16, color: '#f44336' }} />, disconnected: <PowerSettingsNew sx={{ fontSize: 16, color: '#9e9e9e' }} /> };
 
 const IntegrationHubPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -28,6 +28,8 @@ const IntegrationHubPage: React.FC = () => {
   const [typeDistribution, setTypeDistribution] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ name: '', type: 'ehr', endpoint_url: '', api_key: '', sync_frequency: '15', enabled: true });
 
   const loadData = useCallback(async () => {
     try {
@@ -96,9 +98,8 @@ const IntegrationHubPage: React.FC = () => {
               {integrations.map((integ, idx) => (
                 <Grid item xs={12} md={6} key={idx}>
                   <Box sx={{
-                    p: 2.5, borderRadius: 3, border: `1px solid ${integ.status === 'error' ? '#ffcdd2' : integ.status === 'disconnected' ? '#e0e0e0' : '#c8e6c9'}`,
-                    bgcolor: integ.status === 'error' ? '#fff5f5' : integ.status === 'disconnected' ? '#fafafa' : '#f0fdf4',
-                    opacity: integ.status === 'disconnected' ? 0.7 : 1,
+                    p: 2.5, borderRadius: 3, border: `1px solid ${integ.status === 'error' ? '#ffcdd2' : integ.status === 'connected' ? '#c8e6c9' : '#e0e0e0'}`,
+                    bgcolor: integ.status === 'error' ? '#fff5f5' : integ.status === 'connected' ? '#f0fdf4' : '#fafafa',
                   }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
                       <Stack direction="row" spacing={1.5} alignItems="center">
@@ -124,7 +125,7 @@ const IntegrationHubPage: React.FC = () => {
                       </Grid>
                       <Grid item xs={4}>
                         <Typography variant="caption" color="text.secondary" fontSize={9}>Records</Typography>
-                        <Typography fontSize={11} fontWeight={600}>{integ.records.toLocaleString()}</Typography>
+                        <Typography fontSize={11} fontWeight={600}>{(integ.records ?? 0).toLocaleString()}</Typography>
                       </Grid>
                       <Grid item xs={4}>
                         <Typography variant="caption" color="text.secondary" fontSize={9}>Uptime</Typography>
@@ -230,8 +231,8 @@ const IntegrationHubPage: React.FC = () => {
           <DialogTitle>Add New Integration</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Integration Name" fullWidth />
-              <TextField select label="Type" fullWidth defaultValue="">
+              <TextField label="Integration Name" fullWidth value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <TextField select label="Type" fullWidth value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
                 <MenuItem value="ehr">EHR System</MenuItem>
                 <MenuItem value="imaging">Imaging (PACS/DICOM)</MenuItem>
                 <MenuItem value="lab">Laboratory</MenuItem>
@@ -240,21 +241,34 @@ const IntegrationHubPage: React.FC = () => {
                 <MenuItem value="payment">Payment Gateway</MenuItem>
                 <MenuItem value="crm">CRM</MenuItem>
               </TextField>
-              <TextField label="API Endpoint URL" fullWidth placeholder="https://api.example.com/v1" />
-              <TextField label="API Key" fullWidth />
-              <TextField select label="Sync Frequency" fullWidth defaultValue="15">
+              <TextField label="API Endpoint URL" fullWidth placeholder="https://api.example.com/v1" value={form.endpoint_url} onChange={(e) => setForm({ ...form, endpoint_url: e.target.value })} />
+              <TextField label="API Key" fullWidth value={form.api_key} onChange={(e) => setForm({ ...form, api_key: e.target.value })} />
+              <TextField select label="Sync Frequency" fullWidth value={form.sync_frequency} onChange={(e) => setForm({ ...form, sync_frequency: e.target.value })}>
                 <MenuItem value="realtime">Real-time</MenuItem>
                 <MenuItem value="5">Every 5 minutes</MenuItem>
                 <MenuItem value="15">Every 15 minutes</MenuItem>
                 <MenuItem value="30">Every 30 minutes</MenuItem>
                 <MenuItem value="60">Every hour</MenuItem>
               </TextField>
-              <FormControlLabel control={<Switch defaultChecked />} label="Enable immediately" />
+              <FormControlLabel control={<Switch checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />} label="Save as enabled" />
+              <Alert severity="info">The endpoint is stored and is not contacted. The API key is hashed and is not shown again. Status stays “configured” until a live check exists.</Alert>
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowAddDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowAddDialog(false)}>Connect</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await integrationAPI.createIntegration(form);
+                setShowAddDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not save the integration');
+              } finally {
+                setSaving(false);
+              }
+            }}>Save</Button>
           </DialogActions>
         </Dialog>
       </Box>

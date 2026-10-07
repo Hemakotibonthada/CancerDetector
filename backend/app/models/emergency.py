@@ -44,6 +44,7 @@ class TriageAssessment(Base):
     triage_level: Mapped[str] = mapped_column(String(20), default=TriageLevel.URGENT.value)
     triage_system: Mapped[str] = mapped_column(String(20), default="ESI")
     chief_complaint: Mapped[str] = mapped_column(String(500), nullable=False)
+    assigned_clinician: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     arrival_mode: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     vital_signs: Mapped[Optional[str]] = mapped_column(JSON, nullable=True)
     pain_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

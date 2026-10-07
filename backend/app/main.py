@@ -110,6 +110,9 @@ def create_application() -> FastAPI:
         education_router, social_determinants_router, wearable_enhanced_router,
         emergency_router, workforce_router, documents_router,
         lifestyle_router, surgery_router,
+        training_router, data_router, integrations_router, lab_router,
+        telemedicine_router, radiology_orders_router, emergency_cases_router,
+        trials_router, admissions_router, hospital_invoice_router,
     )
     
     api_prefix = settings.api_prefix
@@ -153,6 +156,16 @@ def create_application() -> FastAPI:
     app.include_router(documents_router, prefix=api_prefix)
     app.include_router(lifestyle_router, prefix=api_prefix)
     app.include_router(surgery_router, prefix=api_prefix)
+    app.include_router(training_router, prefix=api_prefix)
+    app.include_router(data_router, prefix=api_prefix)
+    app.include_router(integrations_router, prefix=api_prefix)
+    app.include_router(lab_router, prefix=api_prefix)
+    app.include_router(telemedicine_router, prefix=api_prefix)
+    app.include_router(radiology_orders_router, prefix=api_prefix)
+    app.include_router(emergency_cases_router, prefix=api_prefix)
+    app.include_router(trials_router, prefix=api_prefix)
+    app.include_router(admissions_router, prefix=api_prefix)
+    app.include_router(hospital_invoice_router, prefix=api_prefix)
     
     # ========================================================================
     # Root & Health Endpoints
@@ -198,34 +211,51 @@ def create_application() -> FastAPI:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     
-    # Serve frontend static files if build exists
-    frontend_build = PROJECT_DIR / "frontend" / "build"
-    if frontend_build.exists():
-        app.mount("/static", StaticFiles(directory=str(frontend_build / "static")), name="static")
-        
-        # SPA fallback must not claim /api requests. A GET catch-all otherwise
-        # partial-matches API POSTs and returns 405 before slash redirects run.
-        async def serve_spa(full_path: str):
-            requested = (frontend_build / full_path).resolve()
-            if requested.is_relative_to(frontend_build.resolve()) and requested.is_file():
-                return FileResponse(str(requested))
-            index_file = frontend_build / "index.html"
-            if index_file.exists():
-                return FileResponse(str(index_file))
-            return JSONResponse({"error": "Not found"}, status_code=404)
+    # Mount hashed bundles when the image already contains a frontend build.
+    # The SPA fallback is always registered and checks for index.html per request,
+    # so a build added before the process serves traffic is picked up.
+    static_dir = PROJECT_DIR / "frontend" / "build" / "static"
+    if static_dir.is_dir():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-        class SpaRoute(Route):
-            def matches(self, scope):
-                if scope.get("type") != "http" or scope.get("method") != "GET":
-                    return Match.NONE, {}
-                path = scope.get("path", "")
-                if path == "/api" or path.startswith("/api/"):
-                    return Match.NONE, {}
-                return super().matches(scope)
+    class SpaRoute(Route):
+        def matches(self, scope):
+            if scope.get("type") != "http" or scope.get("method") != "GET":
+                return Match.NONE, {}
+            path = scope.get("path", "")
+            if path == "/api" or path.startswith("/api/"):
+                return Match.NONE, {}
+            return super().matches(scope)
 
-        app.router.routes.append(SpaRoute("/{full_path:path}", endpoint=serve_spa, methods=["GET"]))
-    
+    # Route() calls the endpoint with the Request, not with path kwargs.
+    # A GET catch-all must also ignore /api so POSTs are not stolen as 405s.
+    app.router.routes.append(SpaRoute("/{full_path:path}", endpoint=serve_spa, methods=["GET"]))
+
     return app
+
+
+def serve_spa(request: Request):
+    """Serve a built file, or index.html for client-side routes.
+
+    Starlette's Route wrapper passes the Request. The path string is in
+    path_params. Reading it from the wrong argument makes `Path / Request`
+    raise TypeError and every non-root page returns 500.
+    """
+    full_path = str(request.path_params.get("full_path") or "")
+    frontend_build = PROJECT_DIR / "frontend" / "build"
+    index_file = frontend_build / "index.html"
+    if not index_file.is_file():
+        return JSONResponse({"error": "Not found"}, status_code=404)
+
+    # An absolute path segment would replace the build directory on join.
+    if full_path.startswith("/") or ".." in Path(full_path).parts:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+
+    requested = (frontend_build / full_path).resolve()
+    build_root = frontend_build.resolve()
+    if requested.is_relative_to(build_root) and requested.is_file():
+        return FileResponse(str(requested))
+    return FileResponse(str(index_file))
 
 
 # Create the app instance

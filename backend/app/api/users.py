@@ -3,13 +3,28 @@ Users API Endpoints
 """
 from __future__ import annotations
 import logging
+from datetime import datetime
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+import re
+
+from pydantic import BaseModel, EmailStr, Field
+
 from app.database import get_db_session
+from app.models.hospital import Doctor, Hospital
+from app.models.patient import Patient
 from app.models.user import User, UserStatus
 from app.schemas.user import UserResponse, UserUpdate, UserAdminUpdate, UserListResponse
-from app.security import get_current_user_id, get_current_user_token, require_any_admin
+from app.security import (
+    generate_health_id,
+    generate_record_number,
+    get_current_user_id,
+    get_current_user_token,
+    hash_password,
+    require_any_admin,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -69,6 +84,124 @@ async def list_users(
     ]
     
     return UserListResponse(users=user_responses, total=total, page=page, page_size=page_size)
+
+
+class AdminUserCreate(BaseModel):
+    email: EmailStr
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+    password: str = Field(..., min_length=8, max_length=128)
+    phone_number: Optional[str] = None
+    role: str = "patient"
+    must_change_password: bool = False
+
+
+_ROLE_MAP = {
+    "patient": "patient",
+    "doctor": "doctor",
+    "staff": "support_staff",
+    "admin": "hospital_admin",
+    "support_staff": "support_staff",
+    "hospital_admin": "hospital_admin",
+    "nurse": "nurse",
+    "pharmacist": "pharmacist",
+    "lab_technician": "lab_technician",
+    "receptionist": "receptionist",
+    "researcher": "researcher",
+    "data_analyst": "data_analyst",
+    "insurance_agent": "insurance_agent",
+    "system_admin": "system_admin",
+    "super_admin": "super_admin",
+}
+
+
+def _validate_password(password: str) -> None:
+    if not re.search(r"[A-Z]", password) or not re.search(r"[a-z]", password) or not re.search(r"\d", password):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters and include upper, lower, and a digit",
+        )
+
+
+@router.post("/", status_code=201)
+async def create_user(
+    payload: AdminUserCreate,
+    token_data=Depends(require_any_admin),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Create a user. Only a super admin can create system or super admins."""
+    role = _ROLE_MAP.get(payload.role)
+    if role is None:
+        raise HTTPException(status_code=400, detail="Unknown role")
+    caller_role = token_data.get("role")
+    if role in ("system_admin", "super_admin") and caller_role != "super_admin":
+        raise HTTPException(status_code=403, detail="Only a super admin can create this role")
+    _validate_password(payload.password)
+
+    existing = (await db.execute(select(User).where(User.email == payload.email))).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    base = re.sub(r"[^a-z0-9]", "", payload.email.split("@")[0].lower()) or "user"
+    username = base
+    suffix = 1
+    while (await db.execute(select(User).where(User.username == username))).scalar_one_or_none():
+        username = f"{base}{suffix}"
+        suffix += 1
+
+    health_id = generate_health_id() if role == "patient" else None
+    user = User(
+        email=str(payload.email),
+        username=username,
+        hashed_password=hash_password(payload.password),
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        phone_number=payload.phone_number,
+        role=role,
+        status=UserStatus.ACTIVE.value,
+        health_id=health_id,
+        must_change_password=payload.must_change_password,
+        two_factor_enabled=False,
+        password_changed_at=datetime.utcnow(),
+    )
+    db.add(user)
+    await db.flush()
+
+    if role == "patient":
+        db.add(Patient(
+            user_id=user.id,
+            health_id=health_id,
+            data_collection_consent=False,
+            ai_analysis_consent=False,
+        ))
+    elif role == "doctor":
+        hospital = (await db.execute(
+            select(Hospital).where(Hospital.is_deleted == False).order_by(Hospital.created_at.asc())
+        )).scalars().first()
+        if hospital is None:
+            raise HTTPException(status_code=400, detail="Record a hospital first")
+        db.add(Doctor(
+            user_id=user.id,
+            hospital_id=hospital.id,
+            medical_license_number=generate_record_number("LIC"),
+            specialization="general",
+        ))
+    await db.flush()
+    return {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "full_name": user.full_name,
+        "role": user.role,
+        "status": user.status,
+        "health_id": user.health_id,
+        "phone_number": user.phone_number,
+        "must_change_password": user.must_change_password,
+        "two_factor_enabled": False,
+        "welcome_email_sent": False,
+    }
 
 
 @router.get("/{user_id}", response_model=UserResponse)

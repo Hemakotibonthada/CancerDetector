@@ -267,8 +267,29 @@ async def init_db() -> None:
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+        await conn.run_sync(_add_missing_columns)
+
     logger.info("Database tables created successfully")
+
+
+# Columns added after a table already exists in production. create_all does not
+# ALTER. Each statement only adds a missing nullable column.
+_ADDITIVE_COLUMNS = (
+    ("medical_images", "order_priority", "VARCHAR(20)"),
+    ("triage_assessment", "assigned_clinician", "VARCHAR(200)"),
+)
+
+
+def _add_missing_columns(sync_conn) -> None:
+    inspector = inspect(sync_conn)
+    tables = set(inspector.get_table_names())
+    for table, column, column_type in _ADDITIVE_COLUMNS:
+        if table not in tables:
+            continue
+        present = {item["name"] for item in inspector.get_columns(table)}
+        if column in present:
+            continue
+        sync_conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{column}" {column_type}'))
 
 
 async def drop_db() -> None:

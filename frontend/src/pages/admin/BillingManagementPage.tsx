@@ -27,6 +27,8 @@ const BillingManagementPage: React.FC = () => {
   const [planDistribution, setPlanDistribution] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({ hospital_name: '', billing_period: '', amount: '', due_date: '', notes: '' });
 
   const loadData = useCallback(async () => {
     try {
@@ -72,7 +74,7 @@ const BillingManagementPage: React.FC = () => {
             <StatCard icon={<Business />} label="Active Subscriptions" value={subscriptions.filter(s => s.status === 'active').length.toString()} color="#5e92f3" subtitle="Hospital accounts" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Receipt />} label="Pending Invoices" value={pendingInvoices.length.toString()} color="#ff9800" subtitle={`$${pendingInvoices.reduce((s, i) => s + i.amount, 0).toLocaleString()}`} />
+            <StatCard icon={<Receipt />} label="Pending Invoices" value={pendingInvoices.length.toString()} color="#ff9800" subtitle={`$${pendingInvoices.reduce((s, i) => s + (Number(i.amount) || 0), 0).toLocaleString()}`} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard icon={<CreditCard />} label="Collection Rate" value={collectionLabel} color="#ae52d4" subtitle="Paid divided by billed" />
@@ -143,8 +145,8 @@ const BillingManagementPage: React.FC = () => {
                     <TableRow key={idx}>
                       <TableCell><Chip label={inv.id} size="small" variant="outlined" sx={{ fontFamily: 'monospace', fontSize: 10 }} /></TableCell>
                       <TableCell><Typography fontWeight={600} fontSize={13}>{inv.hospital}</Typography></TableCell>
-                      <TableCell><Chip label={inv.plan} size="small" sx={{ bgcolor: planColors[inv.plan] + '20', color: planColors[inv.plan], fontWeight: 600, fontSize: 10 }} /></TableCell>
-                      <TableCell><Typography fontWeight={700} fontSize={14}>${inv.amount.toLocaleString()}</Typography></TableCell>
+                      <TableCell><Chip label={inv.plan || '—'} size="small" sx={{ bgcolor: (planColors[inv.plan] || '#607d8b') + '20', color: planColors[inv.plan] || '#607d8b', fontWeight: 600, fontSize: 10 }} /></TableCell>
+                      <TableCell><Typography fontWeight={700} fontSize={14}>${(Number(inv.amount) || 0).toLocaleString()}</Typography></TableCell>
                       <TableCell><Typography fontSize={12}>{inv.date}</Typography></TableCell>
                       <TableCell><Typography fontSize={12}>{inv.dueDate}</Typography></TableCell>
                       <TableCell>
@@ -206,18 +208,34 @@ const BillingManagementPage: React.FC = () => {
           <DialogTitle>Generate Invoice</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Hospital" fullWidth defaultValue="">
-                {subscriptions.map(s => <MenuItem key={s.id} value={s.id}>{s.hospital}</MenuItem>)}
-              </TextField>
-              <TextField label="Billing Period" fullWidth placeholder="e.g., January 2025" />
-              <TextField label="Amount" type="number" fullWidth />
-              <TextField label="Due Date" type="date" fullWidth InputLabelProps={{ shrink: true }} />
-              <TextField label="Notes" multiline rows={2} fullWidth />
+              <TextField label="Hospital" fullWidth value={invoiceForm.hospital_name} onChange={(e) => setInvoiceForm({ ...invoiceForm, hospital_name: e.target.value })} />
+              <TextField label="Billing Period" fullWidth placeholder="e.g., January 2025" value={invoiceForm.billing_period} onChange={(e) => setInvoiceForm({ ...invoiceForm, billing_period: e.target.value })} />
+              <TextField label="Amount" type="number" fullWidth value={invoiceForm.amount} onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })} />
+              <TextField label="Due Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={invoiceForm.due_date} onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })} />
+              <TextField label="Notes" multiline rows={2} fullWidth value={invoiceForm.notes} onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowInvoiceDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowInvoiceDialog(false)}>Generate & Send</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await billingAPI.generateInvoice({
+                  hospital_name: invoiceForm.hospital_name,
+                  billing_period: invoiceForm.billing_period,
+                  amount: Number(invoiceForm.amount),
+                  due_date: invoiceForm.due_date || null,
+                  notes: invoiceForm.notes,
+                });
+                setShowInvoiceDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not save the invoice');
+              } finally {
+                setSaving(false);
+              }
+            }}>Save invoice</Button>
           </DialogActions>
         </Dialog>
       </Box>

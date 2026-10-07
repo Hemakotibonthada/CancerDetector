@@ -28,6 +28,8 @@ const PharmacyManagementPage: React.FC = () => {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [stockForm, setStockForm] = useState({ drug_name: '', generic_name: '', quantity: '', batch_number: '', expiry: '', unit_price: '' });
 
   const loadData = useCallback(async () => {
     try {
@@ -251,17 +253,36 @@ const PharmacyManagementPage: React.FC = () => {
           <DialogTitle>Add Stock / Reorder</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Drug" fullWidth defaultValue="">
-                {inventory.map(i => <MenuItem key={i.id} value={i.id}>{i.drug} ({i.generic})</MenuItem>)}
-              </TextField>
-              <TextField label="Quantity" type="number" fullWidth />
-              <TextField label="Batch Number" fullWidth />
-              <TextField label="Expiry Date" type="date" fullWidth InputLabelProps={{ shrink: true }} />
-              <Alert severity="info">Stock quantities are not recorded, so an order cannot be saved.</Alert>
+              <TextField label="Drug name" fullWidth value={stockForm.drug_name} onChange={(e) => setStockForm({ ...stockForm, drug_name: e.target.value })} />
+              <TextField label="Generic name" fullWidth value={stockForm.generic_name} onChange={(e) => setStockForm({ ...stockForm, generic_name: e.target.value })} />
+              <TextField label="Quantity received" type="number" fullWidth value={stockForm.quantity} onChange={(e) => setStockForm({ ...stockForm, quantity: e.target.value })} />
+              <TextField label="Unit price" type="number" fullWidth value={stockForm.unit_price} onChange={(e) => setStockForm({ ...stockForm, unit_price: e.target.value })} />
+              <TextField label="Batch Number" fullWidth value={stockForm.batch_number} onChange={(e) => setStockForm({ ...stockForm, batch_number: e.target.value })} />
+              <TextField label="Expiry Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={stockForm.expiry} onChange={(e) => setStockForm({ ...stockForm, expiry: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowOrderDialog(false)}>Close</Button>
+            <Button onClick={() => setShowOrderDialog(false)}>Cancel</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await pharmacyAPI.addStock({
+                  drug_name: stockForm.drug_name,
+                  generic_name: stockForm.generic_name || null,
+                  quantity: Number(stockForm.quantity),
+                  unit_price: stockForm.unit_price === '' ? null : Number(stockForm.unit_price),
+                  batch_number: stockForm.batch_number || null,
+                  expiry: stockForm.expiry || null,
+                });
+                setShowOrderDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not record stock');
+              } finally {
+                setSaving(false);
+              }
+            }}>Save stock</Button>
           </DialogActions>
         </Dialog>
       </Box>

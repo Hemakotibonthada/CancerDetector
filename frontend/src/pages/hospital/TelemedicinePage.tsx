@@ -27,6 +27,10 @@ const TelemedicinePage: React.FC = () => {
   const [sessionTypes, setSessionTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [sessionForm, setSessionForm] = useState({
+    health_id: '', doctor_id: '', session_type: 'followup', date: '', time: '', duration_minutes: '30', platform: 'video', notes: '',
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -127,7 +131,7 @@ const TelemedicinePage: React.FC = () => {
                           <Typography fontSize={11}>{s.platform}</Typography>
                         </Stack>
                       </TableCell>
-                      <TableCell><StatusBadge status={s.status.replace('_', ' ')} /></TableCell>
+                      <TableCell><StatusBadge status={String(s.status || 'scheduled').replace('_', ' ')} /></TableCell>
                       <TableCell>
                         {s.status === 'in_progress' && (
                           <Button size="small" variant="contained" startIcon={<Videocam />} sx={{ fontSize: 10 }} onClick={() => setShowSessionView(true)}>Join</Button>
@@ -227,31 +231,46 @@ const TelemedicinePage: React.FC = () => {
           <DialogTitle>Schedule Telemedicine Session</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Patient Name" fullWidth />
-              <TextField select label="Doctor" fullWidth defaultValue="">
+              <TextField label="Patient Health ID" fullWidth value={sessionForm.health_id} onChange={(e) => setSessionForm({ ...sessionForm, health_id: e.target.value })} />
+              <TextField select label="Doctor" fullWidth value={sessionForm.doctor_id} onChange={(e) => setSessionForm({ ...sessionForm, doctor_id: e.target.value })}>
                 <DoctorOptions />
               </TextField>
-              <TextField select label="Session Type" fullWidth defaultValue="">
+              <TextField select label="Session Type" fullWidth value={sessionForm.session_type} onChange={(e) => setSessionForm({ ...sessionForm, session_type: e.target.value })}>
                 <MenuItem value="followup">Follow-up</MenuItem>
                 <MenuItem value="consultation">New Consultation</MenuItem>
                 <MenuItem value="preop">Pre-Op Discussion</MenuItem>
                 <MenuItem value="review">Treatment Review</MenuItem>
               </TextField>
               <Grid container spacing={2}>
-                <Grid item xs={6}><TextField label="Date" type="date" fullWidth InputLabelProps={{ shrink: true }} /></Grid>
-                <Grid item xs={6}><TextField label="Time" type="time" fullWidth InputLabelProps={{ shrink: true }} /></Grid>
+                <Grid item xs={6}><TextField label="Date" type="date" fullWidth InputLabelProps={{ shrink: true }} value={sessionForm.date} onChange={(e) => setSessionForm({ ...sessionForm, date: e.target.value })} /></Grid>
+                <Grid item xs={6}><TextField label="Time" type="time" fullWidth InputLabelProps={{ shrink: true }} value={sessionForm.time} onChange={(e) => setSessionForm({ ...sessionForm, time: e.target.value })} /></Grid>
               </Grid>
-              <TextField label="Duration (minutes)" type="number" fullWidth defaultValue={30} />
-              <TextField select label="Platform" fullWidth defaultValue="video">
+              <TextField label="Duration (minutes)" type="number" fullWidth value={sessionForm.duration_minutes} onChange={(e) => setSessionForm({ ...sessionForm, duration_minutes: e.target.value })} />
+              <TextField select label="Platform" fullWidth value={sessionForm.platform} onChange={(e) => setSessionForm({ ...sessionForm, platform: e.target.value })}>
                 <MenuItem value="video">Video Call</MenuItem>
                 <MenuItem value="phone">Phone Call</MenuItem>
               </TextField>
-              <TextField label="Notes / Agenda" multiline rows={2} fullWidth />
+              <TextField label="Notes / Agenda" multiline rows={2} fullWidth value={sessionForm.notes} onChange={(e) => setSessionForm({ ...sessionForm, notes: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowScheduleDialog(false)}>Schedule</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await telemedicineAPI.createSession({
+                  ...sessionForm,
+                  duration_minutes: Number(sessionForm.duration_minutes) || 30,
+                });
+                setShowScheduleDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not schedule the session');
+              } finally {
+                setSaving(false);
+              }
+            }}>Schedule</Button>
           </DialogActions>
         </Dialog>
       </Box>

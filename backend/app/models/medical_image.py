@@ -60,6 +60,7 @@ class MedicalImage(Base, AuditMixin):
     ai_detected_regions: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     ordering_doctor_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    order_priority: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     hospital_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("hospital.id"), nullable=True)
     clinical_indication: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     contrast_used: Mapped[bool] = mapped_column(Boolean, default=False)

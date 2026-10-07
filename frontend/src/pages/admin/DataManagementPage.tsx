@@ -26,9 +26,7 @@ const DataManagementPage: React.FC = () => {
   const [retentionPolicies, setRetentionPolicies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const totalGB = 158;
-  const capacityGB = 250;
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -62,16 +60,16 @@ const DataManagementPage: React.FC = () => {
         {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
         <Grid container spacing={2.5} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<Storage />} label="Storage Used" value={`${totalGB} GB`} color="#5e92f3" subtitle={`of ${capacityGB} GB capacity`} />
+            <StatCard icon={<Storage />} label="Storage Used" value="—" color="#5e92f3" subtitle="Capacity is not measured" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<CloudDone />} label="Last Backup" value="Not available" color="#4caf50" subtitle="No backup record" />
+            <StatCard icon={<CloudDone />} label="Last Export" value={backups[0]?.completed ? 'Recorded' : 'None'} color="#4caf50" subtitle={backups[0]?.completed || 'No export yet'} />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<BackupTable />} label="Total Backups" value={backups.length.toString()} color="#ff9800" subtitle="This week" />
+            <StatCard icon={<BackupTable />} label="Exports" value={backups.length.toString()} color="#ff9800" subtitle="JSON downloads" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard icon={<DataUsage />} label="Storage Usage" value={`${Math.round((totalGB / capacityGB) * 100)}%`} color={totalGB / capacityGB > 0.8 ? '#f44336' : '#4caf50'} subtitle={totalGB / capacityGB > 0.8 ? 'Consider upgrading' : 'Healthy'} />
+            <StatCard icon={<DataUsage />} label="Storage Usage" value="—" color="#4caf50" subtitle="Not measured" />
           </Grid>
         </Grid>
 
@@ -86,7 +84,7 @@ const DataManagementPage: React.FC = () => {
         {activeTab === 0 && (
           <Card sx={{ p: 3 }}>
             <SectionHeader title="Backup History" icon={<CloudDone />}
-              action={<Button startIcon={<CloudUpload />} variant="contained" size="small" onClick={() => setShowBackupDialog(true)}>Run Backup</Button>}
+              action={<Button startIcon={<CloudUpload />} variant="contained" size="small" onClick={() => setShowBackupDialog(true)}>Download export</Button>}
             />
             <TableContainer>
               <Table>
@@ -179,15 +177,8 @@ const DataManagementPage: React.FC = () => {
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Storage Health" icon={<Speed />} />
                 <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
-                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography fontWeight={600}>Overall Storage Usage</Typography>
-                    <Typography fontWeight={700} color={totalGB / capacityGB > 0.8 ? '#f44336' : '#4caf50'}>{Math.round((totalGB / capacityGB) * 100)}%</Typography>
-                  </Stack>
-                  <LinearProgress variant="determinate" value={(totalGB / capacityGB) * 100} sx={{
-                    height: 16, borderRadius: 8, bgcolor: '#f0f0f0',
-                    '& .MuiLinearProgress-bar': { borderRadius: 8, bgcolor: totalGB / capacityGB > 0.8 ? '#f44336' : '#4caf50' },
-                  }} />
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>{totalGB} GB used of {capacityGB} GB • {capacityGB - totalGB} GB available</Typography>
+                  <Typography fontWeight={600}>Overall Storage Usage</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Database capacity is not measured inside the application.</Typography>
                 </Box>
               </Card>
             </Grid>
@@ -197,7 +188,7 @@ const DataManagementPage: React.FC = () => {
         {activeTab === 2 && (
           <Card sx={{ p: 3 }}>
             <SectionHeader title="Data Retention Policies" icon={<Archive />} />
-            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>Retention policies are configured per regulatory requirements. Auto-delete will archive data before permanent deletion.</Alert>
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>No retention policies are stored. Nothing is auto-deleted from this screen.</Alert>
             <TableContainer>
               <Table>
                 <TableHead>
@@ -232,33 +223,42 @@ const DataManagementPage: React.FC = () => {
 
         {/* Backup Dialog */}
         <Dialog open={showBackupDialog} onClose={() => setShowBackupDialog(false)} maxWidth="sm" fullWidth>
-          <DialogTitle>Run Manual Backup</DialogTitle>
+          <DialogTitle>Download database export</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Backup Type" fullWidth defaultValue="full">
-                <MenuItem value="full">Full Backup</MenuItem>
-                <MenuItem value="incremental">Incremental</MenuItem>
-                <MenuItem value="differential">Differential</MenuItem>
-              </TextField>
-              <TextField select label="Destination" fullWidth defaultValue="primary">
-                <MenuItem value="primary">Primary Cloud</MenuItem>
-                <MenuItem value="secondary">Secondary DR Site</MenuItem>
-                <MenuItem value="both">Both Locations</MenuItem>
-              </TextField>
-              <TextField select label="Retention" fullWidth defaultValue="90">
-                <MenuItem value="30">30 Days</MenuItem>
-                <MenuItem value="90">90 Days</MenuItem>
-                <MenuItem value="365">1 Year</MenuItem>
-                <MenuItem value="0">Permanent</MenuItem>
-              </TextField>
-              <FormControlLabel control={<Switch defaultChecked />} label="Encrypt Backup" />
-              <FormControlLabel control={<Switch defaultChecked />} label="Compress Data" />
-              <Alert severity="warning" sx={{ borderRadius: 2 }}>Full backups may take 1-2 hours and impact system performance.</Alert>
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                Super admins can download a JSON copy of database rows. Passwords, secrets, and API key hashes are left out. The file is not stored on the server, and this does not copy the database to a cloud destination.
+              </Alert>
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowBackupDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowBackupDialog(false)}>Start Backup</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                const res = await dataManagementAPI.createBackup();
+                const blob = new Blob([res.data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'cancerguard-export.json';
+                link.click();
+                URL.revokeObjectURL(url);
+                setShowBackupDialog(false);
+                await loadData();
+              } catch (err: any) {
+                let detail = err?.response?.data?.detail || err.message || 'Export failed';
+                const data = err?.response?.data;
+                if (data && typeof data.text === 'function') {
+                  const text = await data.text();
+                  try { detail = JSON.parse(text).detail || text; } catch { detail = text || detail; }
+                }
+                setError(typeof detail === 'string' ? detail : 'Export failed');
+              } finally {
+                setSaving(false);
+              }
+            }}>Download export</Button>
           </DialogActions>
         </Dialog>
       </Box>

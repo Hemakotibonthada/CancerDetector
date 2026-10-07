@@ -34,6 +34,10 @@ const SurgeryManagementPage: React.FC = () => {
   const [typeDistribution, setTypeDistribution] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [surgeryForm, setSurgeryForm] = useState({
+    health_id: '', procedure: '', doctor_id: '', operating_room: '', scheduled_date: '', duration_hours: '1', priority: 'elective', anesthesia: 'general',
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -135,9 +139,9 @@ const SurgeryManagementPage: React.FC = () => {
                       <TableCell><Typography fontSize={12}>{surgery.surgeon}</Typography></TableCell>
                       <TableCell>
                         <Typography fontSize={12} fontWeight={600}>{surgery.or}</Typography>
-                        <Typography variant="caption" color="text.secondary">{surgery.date.split(' ')[1]}</Typography>
+                        <Typography variant="caption" color="text.secondary">{String(surgery.date || '').split(' ')[1] || ''}</Typography>
                       </TableCell>
-                      <TableCell><Typography fontSize={12}>{surgery.duration}h</Typography></TableCell>
+                      <TableCell><Typography fontSize={12}>{surgery.duration ?? '—'} min</Typography></TableCell>
                       <TableCell>
                         <Chip label={surgery.priority} size="small" sx={{
                           bgcolor: surgery.priority === 'Emergency' ? '#ffebee' : surgery.priority === 'Urgent' ? '#fff3e0' : '#e8f5e9',
@@ -146,7 +150,7 @@ const SurgeryManagementPage: React.FC = () => {
                         }} />
                       </TableCell>
                       <TableCell>
-                        <Chip label={surgery.status.replace('_', ' ').toUpperCase()} size="small" sx={{ bgcolor: `${statusColors[surgery.status]}15`, color: statusColors[surgery.status], fontWeight: 700, fontSize: 10 }} />
+                        <Chip label={String(surgery.status || 'scheduled').replace('_', ' ').toUpperCase()} size="small" sx={{ bgcolor: `${statusColors[surgery.status] || '#5e92f3'}15`, color: statusColors[surgery.status] || '#5e92f3', fontWeight: 700, fontSize: 10 }} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -225,24 +229,24 @@ const SurgeryManagementPage: React.FC = () => {
           <DialogTitle>Schedule Surgery</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Patient Name" fullWidth />
-              <TextField label="Procedure" fullWidth />
-              <TextField select label="Surgeon" fullWidth defaultValue="">
+              <TextField label="Patient Health ID" fullWidth value={surgeryForm.health_id} onChange={(e) => setSurgeryForm({ ...surgeryForm, health_id: e.target.value })} />
+              <TextField label="Procedure" fullWidth value={surgeryForm.procedure} onChange={(e) => setSurgeryForm({ ...surgeryForm, procedure: e.target.value })} />
+              <TextField select label="Surgeon" fullWidth value={surgeryForm.doctor_id} onChange={(e) => setSurgeryForm({ ...surgeryForm, doctor_id: e.target.value })}>
                 <DoctorOptions />
               </TextField>
-              <TextField select label="Operating Room" fullWidth defaultValue="">
-                {orStatus.filter(or => or.status === 'Available').map(or => (
-                  <MenuItem key={or.room} value={or.room}>{or.room}</MenuItem>
+              <TextField select label="Operating Room" fullWidth value={surgeryForm.operating_room} onChange={(e) => setSurgeryForm({ ...surgeryForm, operating_room: e.target.value })}>
+                {orStatus.filter(or => String(or.status || '').toLowerCase() === 'available').map(or => (
+                  <MenuItem key={or.room || or.name} value={or.room || or.name}>{or.room || or.name}</MenuItem>
                 ))}
               </TextField>
-              <TextField label="Date & Time" type="datetime-local" fullWidth InputLabelProps={{ shrink: true }} />
-              <TextField label="Estimated Duration (hours)" type="number" fullWidth />
-              <TextField select label="Priority" fullWidth defaultValue="elective">
+              <TextField label="Date & Time" type="datetime-local" fullWidth InputLabelProps={{ shrink: true }} value={surgeryForm.scheduled_date} onChange={(e) => setSurgeryForm({ ...surgeryForm, scheduled_date: e.target.value })} />
+              <TextField label="Estimated Duration (hours)" type="number" fullWidth value={surgeryForm.duration_hours} onChange={(e) => setSurgeryForm({ ...surgeryForm, duration_hours: e.target.value })} />
+              <TextField select label="Priority" fullWidth value={surgeryForm.priority} onChange={(e) => setSurgeryForm({ ...surgeryForm, priority: e.target.value })}>
                 <MenuItem value="elective">Elective</MenuItem>
                 <MenuItem value="urgent">Urgent</MenuItem>
                 <MenuItem value="emergency">Emergency</MenuItem>
               </TextField>
-              <TextField select label="Anesthesia" fullWidth defaultValue="general">
+              <TextField select label="Anesthesia" fullWidth value={surgeryForm.anesthesia} onChange={(e) => setSurgeryForm({ ...surgeryForm, anesthesia: e.target.value })}>
                 <MenuItem value="general">General</MenuItem>
                 <MenuItem value="regional">Regional</MenuItem>
                 <MenuItem value="local">Local</MenuItem>
@@ -251,7 +255,28 @@ const SurgeryManagementPage: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowScheduleDialog(false)}>Schedule</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await surgeryAPI.create({
+                  health_id: surgeryForm.health_id,
+                  doctor_id: surgeryForm.doctor_id,
+                  procedure: surgeryForm.procedure,
+                  operating_room: surgeryForm.operating_room || null,
+                  scheduled_date: surgeryForm.scheduled_date,
+                  duration_hours: Number(surgeryForm.duration_hours) || 1,
+                  priority: surgeryForm.priority,
+                  anesthesia: surgeryForm.anesthesia,
+                });
+                setShowScheduleDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not schedule the surgery');
+              } finally {
+                setSaving(false);
+              }
+            }}>Schedule</Button>
           </DialogActions>
         </Dialog>
       </Box>

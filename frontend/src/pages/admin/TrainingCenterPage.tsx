@@ -26,6 +26,10 @@ const TrainingCenterPage: React.FC = () => {
   const [showCourseDialog, setShowCourseDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [courseForm, setCourseForm] = useState({
+    title: '', category: 'clinical', level: 'beginner', instructor: '', duration_hours: '1', module_count: '1', description: '',
+  });
 
   const [courses, setCourses] = useState<any[]>([]);
   const [certifications, setCertifications] = useState<any[]>([]);
@@ -104,20 +108,25 @@ const TrainingCenterPage: React.FC = () => {
               action={<Button startIcon={<School />} variant="contained" size="small" onClick={() => setShowCourseDialog(true)}>Create Course</Button>}
             />
             <Grid container spacing={2}>
-              {courses.map((course, idx) => (
-                <Grid item xs={12} md={6} key={idx}>
+              {courses.map((course, idx) => {
+                const enrolled = Number(course.enrolled) || 0;
+                const completed = Number(course.completed) || 0;
+                const progress = enrolled ? Math.round((completed / enrolled) * 100) : 0;
+                const levelColor = levelColors[course.level] || '#607d8b';
+                return (
+                <Grid item xs={12} md={6} key={course.id || idx}>
                   <Box sx={{ p: 2.5, border: '1px solid #f0f0f0', borderRadius: 3, '&:hover': { borderColor: '#5e92f3', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' } }}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 1 }}>
                       <Box>
                         <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
                           {course.mandatory && <Chip label="Required" size="small" sx={{ bgcolor: '#ffebee', color: '#c62828', fontWeight: 700, fontSize: 9, height: 18 }} />}
                           {course.certification && <Chip icon={<Verified sx={{ fontSize: '12px !important' }} />} label="Certification" size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontSize: 9, height: 18 }} />}
-                          <Chip label={course.level} size="small" sx={{ bgcolor: levelColors[course.level] + '20', color: levelColors[course.level], fontWeight: 600, fontSize: 9, height: 18 }} />
+                          <Chip label={course.level || '—'} size="small" sx={{ bgcolor: levelColor + '20', color: levelColor, fontWeight: 600, fontSize: 9, height: 18 }} />
                         </Stack>
                         <Typography fontWeight={700} fontSize={14}>{course.title}</Typography>
-                        <Typography variant="caption" color="text.secondary">{course.instructor} • {course.category}</Typography>
+                        <Typography variant="caption" color="text.secondary">{course.instructor || '—'} • {course.category}</Typography>
                       </Box>
-                      <MetricGauge value={Math.round((course.completed / course.enrolled) * 100)} size={55} color="#4caf50" />
+                      <MetricGauge value={progress} size={55} color="#4caf50" />
                     </Stack>
                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
@@ -129,23 +138,23 @@ const TrainingCenterPage: React.FC = () => {
                         <Typography variant="caption">{course.modules} modules</Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Rating value={course.rating} precision={0.1} size="small" readOnly sx={{ fontSize: 14 }} />
-                        <Typography variant="caption" fontWeight={600}>{course.rating}</Typography>
+                        <Rating value={Number(course.rating) || 0} precision={0.1} size="small" readOnly sx={{ fontSize: 14 }} />
+                        <Typography variant="caption" fontWeight={600}>{course.rating ?? '—'}</Typography>
                       </Stack>
                     </Stack>
                     <Box>
                       <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">Completed: {course.completed}/{course.enrolled}</Typography>
-                        <Typography variant="caption" fontWeight={600}>{Math.round((course.completed / course.enrolled) * 100)}%</Typography>
+                        <Typography variant="caption" color="text.secondary">Completed: {completed}/{enrolled}</Typography>
+                        <Typography variant="caption" fontWeight={600}>{progress}%</Typography>
                       </Stack>
-                      <LinearProgress variant="determinate" value={(course.completed / course.enrolled) * 100} sx={{
+                      <LinearProgress variant="determinate" value={progress} sx={{
                         height: 6, borderRadius: 3, bgcolor: '#f0f0f0',
                         '& .MuiLinearProgress-bar': { borderRadius: 3, bgcolor: '#4caf50' },
                       }} />
                     </Box>
                   </Box>
                 </Grid>
-              ))}
+              );})}
             </Grid>
           </Card>
         )}
@@ -220,32 +229,48 @@ const TrainingCenterPage: React.FC = () => {
           <DialogTitle>Create Training Course</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField label="Course Title" fullWidth />
-              <TextField select label="Category" fullWidth defaultValue="">
+              <TextField label="Course Title" fullWidth value={courseForm.title} onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })} />
+              <TextField select label="Category" fullWidth value={courseForm.category} onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}>
                 <MenuItem value="onboarding">Onboarding</MenuItem>
                 <MenuItem value="clinical">Clinical</MenuItem>
                 <MenuItem value="clinical_ai">Clinical AI</MenuItem>
                 <MenuItem value="compliance">Compliance</MenuItem>
                 <MenuItem value="security">Security</MenuItem>
               </TextField>
-              <TextField select label="Level" fullWidth defaultValue="">
+              <TextField select label="Level" fullWidth value={courseForm.level} onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value })}>
                 <MenuItem value="beginner">Beginner</MenuItem>
                 <MenuItem value="intermediate">Intermediate</MenuItem>
                 <MenuItem value="advanced">Advanced</MenuItem>
                 <MenuItem value="expert">Expert</MenuItem>
                 <MenuItem value="all">All Levels</MenuItem>
               </TextField>
-              <TextField label="Instructor" fullWidth />
+              <TextField label="Instructor" fullWidth value={courseForm.instructor} onChange={(e) => setCourseForm({ ...courseForm, instructor: e.target.value })} />
               <Grid container spacing={2}>
-                <Grid item xs={6}><TextField label="Duration (hours)" type="number" fullWidth /></Grid>
-                <Grid item xs={6}><TextField label="Number of Modules" type="number" fullWidth /></Grid>
+                <Grid item xs={6}><TextField label="Duration (hours)" type="number" fullWidth value={courseForm.duration_hours} onChange={(e) => setCourseForm({ ...courseForm, duration_hours: e.target.value })} /></Grid>
+                <Grid item xs={6}><TextField label="Number of Modules" type="number" fullWidth value={courseForm.module_count} onChange={(e) => setCourseForm({ ...courseForm, module_count: e.target.value })} /></Grid>
               </Grid>
-              <TextField label="Description" multiline rows={3} fullWidth />
+              <TextField label="Description" multiline rows={3} fullWidth value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowCourseDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowCourseDialog(false)}>Create Course</Button>
+            <Button variant="contained" disabled={saving} onClick={async () => {
+              try {
+                setSaving(true);
+                setError(null);
+                await trainingAPI.createCourse({
+                  ...courseForm,
+                  duration_hours: Number(courseForm.duration_hours) || 0,
+                  module_count: Number(courseForm.module_count) || 0,
+                });
+                setShowCourseDialog(false);
+                await loadData();
+              } catch (err: any) {
+                setError(err?.response?.data?.detail || err.message || 'Could not create the course');
+              } finally {
+                setSaving(false);
+              }
+            }}>Create Course</Button>
           </DialogActions>
         </Dialog>
       </Box>
