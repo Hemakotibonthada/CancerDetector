@@ -64,6 +64,7 @@ export const patientsAPI = {
   getByHealthId: (healthId: string) => api.get(`/patients/health-id/${healthId}`),
   getById: (id: string) => api.get(`/patients/${id}`),
   addAllergy: (data: any) => api.post('/patients/me/allergies', data),
+  addEmergencyContact: (data: any) => api.post('/patients/me/emergency-contacts', data),
   addFamilyHistory: (data: any) => api.post('/patients/me/family-history', data),
 };
 
@@ -176,6 +177,7 @@ export const dietAPI = {
 export const mentalHealthAPI = {
   getAssessments: () => api.get('/mental-health/assessments'),
   submitAssessment: (data: any) => api.post('/mental-health/assessments', data),
+  bookSession: (data: any) => api.post('/mental-health/sessions', data),
   getSessions: () => api.get('/mental-health/sessions'),
   getResources: () => api.get('/mental-health/resources'),
   getMoodHistory: () => api.get('/mental-health/mood-history'),
@@ -200,6 +202,7 @@ export const exerciseAPI = {
 // Screening API
 export const screeningAPI = {
   getSchedule: () => api.get('/screening/schedule'),
+  create: (data: any) => api.post('/screening/schedule', data),
   updateSchedule: (id: string, data: any) => api.put(`/screening/schedule/${id}`, data),
   getGuidelines: () => api.get('/screening/guidelines'),
   getHistory: () => api.get('/screening/history'),
@@ -215,9 +218,8 @@ export const familyHealthAPI = {
 
 // Second Opinion API
 export const secondOpinionAPI = {
-  getRequests: () => api.get('/second-opinion/requests'),
-  createRequest: (data: any) => api.post('/second-opinion/requests', data),
-  getAIAnalysis: (recordId: string) => api.get(`/second-opinion/ai-analysis/${recordId}`),
+  getRequests: () => api.get('/treatment/second-opinion'),
+  createRequest: (data: any) => api.post('/treatment/second-opinion', data),
 };
 
 // Surgery API
@@ -233,6 +235,7 @@ export const surgeryAPI = {
 export const pharmacyAPI = {
   getInventory: (params?: any) => api.get('/pharmacy/inventory', { params }),
   getPrescriptions: (params?: any) => api.get('/pharmacy/prescriptions', { params }),
+  reportMedication: (data: any) => api.post('/pharmacy/prescriptions', data),
   dispensePrescription: (id: string) => api.put(`/pharmacy/prescriptions/${id}/dispense`),
   addStock: (data: any) => api.post('/pharmacy/stock', data),
   getAlerts: () => api.get('/pharmacy/alerts'),

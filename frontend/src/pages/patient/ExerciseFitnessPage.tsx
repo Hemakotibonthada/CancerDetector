@@ -29,6 +29,8 @@ const ExerciseFitnessPage: React.FC = () => {
   const [aiRecommendations, setAiRecommendations] = useState<any[]>([]);
   const [monthlyProgress, setMonthlyProgress] = useState<any[]>([]);
   const [sessionStats, setSessionStats] = useState<any>({});
+  const [exerciseDraft, setExerciseDraft] = useState({ exercise_type: 'walking', duration_minutes: '', avg_heart_rate: '', notes: '' });
+  const [saving, setSaving] = useState(false);
 
   const iconMap: Record<string, any> = { Walking: <DirectionsRun />, Yoga: <SelfImprovement />, Swimming: <Pool />, Cycling: <DirectionsBike />, Stretching: <AccessibilityNew />, Resistance: <FitnessCenter /> };
 
@@ -65,6 +67,25 @@ const ExerciseFitnessPage: React.FC = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const saveExercise = async () => {
+    setSaving(true);
+    try {
+      await exerciseAPI.logSession({
+        exercise_type: exerciseDraft.exercise_type,
+        duration_minutes: Number(exerciseDraft.duration_minutes) || 0,
+        avg_heart_rate: exerciseDraft.avg_heart_rate ? Number(exerciseDraft.avg_heart_rate) : null,
+        notes: exerciseDraft.notes || null,
+      });
+      setShowLogDialog(false);
+      setExerciseDraft({ exercise_type: 'walking', duration_minutes: '', avg_heart_rate: '', notes: '' });
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the session');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <AppLayout title="Exercise & Fitness" navItems={patientNavItems} portalType="patient" subtitle="Cancer-safe fitness tracking & recommendations">
@@ -249,23 +270,7 @@ const ExerciseFitnessPage: React.FC = () => {
               </Card>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Achievements" icon={<EmojiEvents />} />
-                <Stack spacing={1.5}>
-                  {[
-                    { badge: '🏃', name: '10K Steps', desc: 'Reached 10,000 steps in a day', earned: true },
-                    { badge: '🏋️', name: 'Consistency King', desc: '5 active days this week', earned: true },
-                    { badge: '🏊', name: 'Aqua Champion', desc: 'Complete 10 swim sessions', earned: false },
-                    { badge: '🧘', name: 'Zen Master', desc: '30 yoga sessions completed', earned: false },
-                  ].map((ach, i) => (
-                    <Stack key={i} direction="row" spacing={1.5} alignItems="center" sx={{ p: 1, bgcolor: ach.earned ? '#f8fafc' : '#fafafa', borderRadius: 2, opacity: ach.earned ? 1 : 0.5 }}>
-                      <Typography fontSize={24}>{ach.badge}</Typography>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600} fontSize={12}>{ach.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{ach.desc}</Typography>
-                      </Box>
-                      {ach.earned && <CheckCircle sx={{ fontSize: 16, color: '#4caf50', ml: 'auto' }} />}
-                    </Stack>
-                  ))}
-                </Stack>
+                <Alert severity="info">No achievements are recorded. Badges are not awarded from estimated activity.</Alert>
               </Card>
             </Grid>
           </Grid>
@@ -276,7 +281,7 @@ const ExerciseFitnessPage: React.FC = () => {
           <DialogTitle>Log Exercise</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Exercise Type" fullWidth defaultValue="walking">
+              <TextField select label="Exercise Type" fullWidth value={exerciseDraft.exercise_type} onChange={(e) => setExerciseDraft({ ...exerciseDraft, exercise_type: e.target.value })}>
                 <MenuItem value="walking">Walking</MenuItem>
                 <MenuItem value="yoga">Yoga</MenuItem>
                 <MenuItem value="swimming">Swimming</MenuItem>
@@ -285,19 +290,14 @@ const ExerciseFitnessPage: React.FC = () => {
                 <MenuItem value="resistance">Resistance Training</MenuItem>
                 <MenuItem value="tai_chi">Tai Chi</MenuItem>
               </TextField>
-              <TextField label="Duration (minutes)" type="number" fullWidth />
-              <TextField select label="Intensity" fullWidth defaultValue="moderate">
-                <MenuItem value="light">Light</MenuItem>
-                <MenuItem value="moderate">Moderate</MenuItem>
-                <MenuItem value="vigorous">Vigorous</MenuItem>
-              </TextField>
-              <TextField label="Average Heart Rate" type="number" fullWidth />
-              <TextField label="Notes" multiline rows={2} fullWidth />
+              <TextField label="Duration (minutes)" type="number" fullWidth value={exerciseDraft.duration_minutes} onChange={(e) => setExerciseDraft({ ...exerciseDraft, duration_minutes: e.target.value })} />
+              <TextField label="Average Heart Rate" type="number" fullWidth value={exerciseDraft.avg_heart_rate} onChange={(e) => setExerciseDraft({ ...exerciseDraft, avg_heart_rate: e.target.value })} />
+              <TextField label="Notes" multiline rows={2} fullWidth value={exerciseDraft.notes} onChange={(e) => setExerciseDraft({ ...exerciseDraft, notes: e.target.value })} />
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowLogDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowLogDialog(false)}>Save</Button>
+            <Button variant="contained" disabled={saving} onClick={saveExercise}>Save</Button>
           </DialogActions>
         </Dialog>
       </Box>

@@ -30,6 +30,8 @@ const GeneticProfilePage: React.FC = () => {
   const [ancestry, setAncestry] = useState<any[]>([]);
   const [cancerRiskRadar, setCancerRiskRadar] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>({});
+  const [testDraft, setTestDraft] = useState({ panel_name: 'Comprehensive Cancer Panel', notes: '' });
+  const [saving, setSaving] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -64,6 +66,20 @@ const GeneticProfilePage: React.FC = () => {
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const saveTestRequest = async () => {
+    setSaving(true);
+    try {
+      await geneticsAPI.requestTest({ panel_name: testDraft.panel_name, notes: testDraft.notes || null });
+      setShowRequestDialog(false);
+      setTestDraft({ panel_name: 'Comprehensive Cancer Panel', notes: '' });
+      await loadData();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not save the test request');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <AppLayout title="Genetic Profile" navItems={patientNavItems} portalType="patient" subtitle="DNA analysis & hereditary cancer risk">
@@ -263,24 +279,7 @@ const GeneticProfilePage: React.FC = () => {
             <Grid item xs={12} md={6}>
               <Card sx={{ p: 3 }}>
                 <SectionHeader title="Ancestry-Based Risk Factors" icon={<Info />} />
-                <Stack spacing={2}>
-                  {[
-                    { ancestry: 'European', risk: 'Higher prevalence of BRCA1/2 mutations in Ashkenazi Jewish heritage', icon: '🧬' },
-                    { ancestry: 'South Asian', risk: 'Elevated risk for gallbladder and oral cancers', icon: '⚠️' },
-                    { ancestry: 'General', risk: 'Vitamin D metabolism variants may affect cancer prevention', icon: '☀️' },
-                    { ancestry: 'Pharmacogenomics', risk: 'CYP2D6 metabolism rates vary by ancestry, affecting drug efficacy', icon: '💊' },
-                  ].map((item, idx) => (
-                    <GlassCard key={idx} sx={{ p: 2 }}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Typography fontSize={28}>{item.icon}</Typography>
-                        <Box>
-                          <Typography variant="subtitle2" fontWeight={700}>{item.ancestry}</Typography>
-                          <Typography variant="body2" color="text.secondary" fontSize={12}>{item.risk}</Typography>
-                        </Box>
-                      </Stack>
-                    </GlassCard>
-                  ))}
-                </Stack>
+                <Alert severity="info">Ancestry risk factors are not available. No ancestry analysis is stored for this account.</Alert>
               </Card>
             </Grid>
           </Grid>
@@ -291,25 +290,20 @@ const GeneticProfilePage: React.FC = () => {
           <DialogTitle>Request Genetic Test</DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField select label="Test Type" fullWidth defaultValue="comprehensive">
-                <MenuItem value="comprehensive">Comprehensive Cancer Panel (100+ genes)</MenuItem>
-                <MenuItem value="brca">BRCA1/BRCA2 Analysis</MenuItem>
-                <MenuItem value="lynch">Lynch Syndrome Panel</MenuItem>
-                <MenuItem value="pharmacogenomics">Pharmacogenomics Panel</MenuItem>
-                <MenuItem value="whole_genome">Whole Genome Sequencing</MenuItem>
+              <TextField select label="Test Type" fullWidth value={testDraft.panel_name} onChange={(e) => setTestDraft({ ...testDraft, panel_name: e.target.value })}>
+                <MenuItem value="Comprehensive Cancer Panel">Comprehensive Cancer Panel</MenuItem>
+                <MenuItem value="BRCA1/BRCA2 Analysis">BRCA1/BRCA2 Analysis</MenuItem>
+                <MenuItem value="Lynch Syndrome Panel">Lynch Syndrome Panel</MenuItem>
+                <MenuItem value="Pharmacogenomics Panel">Pharmacogenomics Panel</MenuItem>
+                <MenuItem value="Whole Genome Sequencing">Whole Genome Sequencing</MenuItem>
               </TextField>
-              <TextField label="Reason for Testing" multiline rows={3} fullWidth placeholder="Describe your reason..." />
-              <TextField select label="Preferred Lab" fullWidth defaultValue="genomics_center">
-                <MenuItem value="genomics_center">National Genomics Center</MenuItem>
-                <MenuItem value="genetic_lab">Genetic Testing Lab</MenuItem>
-                <MenuItem value="university">University Hospital Lab</MenuItem>
-              </TextField>
-              <Alert severity="info" sx={{ borderRadius: 2 }}>Insurance coverage will be verified before testing. Estimated turnaround: 2-4 weeks.</Alert>
+              <TextField label="Reason for Testing" multiline rows={3} fullWidth placeholder="Describe your reason..." value={testDraft.notes} onChange={(e) => setTestDraft({ ...testDraft, notes: e.target.value })} />
+              <Alert severity="info" sx={{ borderRadius: 2 }}>This records a request. It does not place an order with a laboratory.</Alert>
             </Stack>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setShowRequestDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowRequestDialog(false)}>Submit Request</Button>
+            <Button variant="contained" disabled={saving} onClick={saveTestRequest}>Submit Request</Button>
           </DialogActions>
         </Dialog>
       </Box>

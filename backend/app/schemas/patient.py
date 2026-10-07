@@ -89,6 +89,7 @@ class PatientDetailResponse(PatientResponse):
     ai_analysis_consent: bool = False
     allergies: List[Any] = []
     family_histories: List[Any] = []
+    emergency_contacts: List[Any] = []
 
 class PatientHealthSummary(BaseModel):
     patient_id: str

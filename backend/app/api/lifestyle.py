@@ -206,22 +206,33 @@ async def log_meal(
     protein: float = Body(0),
     carbs: float = Body(0),
     fat: float = Body(0),
+    water_ml: float = Body(0),
     notes: str = Body(None),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_session),
 ):
     patient = await current_patient(user_id, db)
+    now = datetime.now(timezone.utc)
     row = FoodLog(
         patient_id=patient.id,
-        log_date=datetime.now(timezone.utc),
+        log_date=now,
         meal_type=meal_type,
         total_calories=calories,
         protein_g=protein,
         carbs_g=carbs,
         fat_g=fat,
+        water_ml=water_ml or 0,
         notes=notes,
     )
     db.add(row)
+    if water_ml:
+        db.add(HydrationLog(
+            patient_id=patient.id,
+            log_date=now,
+            total_intake_ml=water_ml,
+            goal_ml=0,
+            notes=notes,
+        ))
     await db.flush()
     return {"id": row.id}
 
@@ -499,6 +510,7 @@ async def add_family_member(
     is_cancer: bool = Body(False),
     cancer_type: str = Body(None),
     relative_living: bool = Body(None),
+    age_at_diagnosis: int = Body(None),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db_session),
 ):
@@ -511,6 +523,7 @@ async def add_family_member(
         is_cancer=is_cancer,
         cancer_type=cancer_type,
         relative_living=relative_living,
+        age_at_diagnosis=age_at_diagnosis,
     )
     db.add(row)
     await db.flush()
@@ -713,6 +726,43 @@ async def mental_sessions_alias(user_id: str = Depends(get_current_user_id), db:
     patient = await current_patient(user_id, db)
     rows = (await db.execute(select(CBTSession).where(CBTSession.patient_id == patient.id))).scalars().all()
     return [row.to_dict() for row in rows]
+
+
+@router.post("/mental-health/sessions", status_code=201)
+async def book_mental_session(
+    session_type: str = Body("individual"),
+    therapist_user_id: str = Body(...),
+    notes: str = Body(None),
+    preferred_date: Optional[str] = Body(None),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Record a therapy session request against a clinician who already exists."""
+    from app.models.mental_health_enhanced import CBTSession
+    from app.models.user import User
+
+    patient = await current_patient(user_id, db)
+    therapist = (await db.execute(select(User).where(User.id == therapist_user_id))).scalar_one_or_none()
+    if not therapist:
+        raise HTTPException(status_code=400, detail="Select a recorded clinician")
+    when = datetime.now(timezone.utc)
+    if preferred_date:
+        try:
+            when = datetime.fromisoformat(preferred_date)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="preferred_date must be an ISO date") from exc
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+    row = CBTSession(
+        patient_id=patient.id,
+        therapist_id=therapist.id,
+        module=session_type,
+        progress_notes=notes,
+        session_date=when,
+    )
+    db.add(row)
+    await db.flush()
+    return row.to_dict()
 
 
 @router.get("/mental-health/resources")

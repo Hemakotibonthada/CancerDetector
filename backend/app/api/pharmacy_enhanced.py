@@ -192,3 +192,133 @@ async def pharmacy_stats(db: AsyncSession = Depends(get_db_session)):
     reconciliations = await db.execute(select(func.count()).select_from(MedicationReconciliation).where(MedicationReconciliation.is_deleted == False))
     return {"formulary_items": formulary.scalar() or 0, "clinical_interventions": interventions.scalar() or 0,
             "cost_avoidance_total": cost_saved.scalar() or 0, "reconciliations": reconciliations.scalar() or 0}
+
+
+def _person_name(user) -> str:
+    return f"{user.first_name} {user.last_name}".strip()
+
+
+@router.get("/inventory")
+async def list_inventory():
+    """On-hand stock is not stored. The list stays empty until quantities are recorded."""
+    return []
+
+
+@router.get("/prescriptions")
+async def list_prescriptions(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Prescriptions on file, plus medications a patient recorded themselves."""
+    from app.models.health_record import HealthRecord
+    from app.models.hospital import Doctor
+    from app.models.medication import Prescription
+    from app.models.patient import Patient
+    from app.models.user import User
+
+    caller = (await db.execute(select(Patient).where(Patient.user_id == user_id))).scalar_one_or_none()
+    rx_query = (
+        select(Prescription, User)
+        .join(Patient, Patient.id == Prescription.patient_id)
+        .join(User, User.id == Patient.user_id)
+        .where(Prescription.is_deleted == False)
+        .order_by(Prescription.created_at.desc())
+        .limit(200)
+    )
+    record_query = (
+        select(HealthRecord, User)
+        .join(Patient, Patient.id == HealthRecord.patient_id)
+        .join(User, User.id == Patient.user_id)
+        .where(HealthRecord.record_type == "medication", HealthRecord.is_deleted == False)
+        .order_by(HealthRecord.encounter_date.desc())
+        .limit(200)
+    )
+    if caller:
+        rx_query = rx_query.where(Prescription.patient_id == caller.id)
+        record_query = record_query.where(HealthRecord.patient_id == caller.id)
+
+    items = []
+    for row, person in (await db.execute(rx_query)).all():
+        doctor_name = None
+        doctor = (await db.execute(
+            select(User).join(Doctor, Doctor.user_id == User.id).where(Doctor.id == row.doctor_id)
+        )).scalar_one_or_none()
+        if doctor:
+            doctor_name = f"Dr. {_person_name(doctor)}"
+        items.append({
+            "id": row.id,
+            "medication_name": row.medication_name,
+            "dosage": row.dosage,
+            "frequency": row.frequency,
+            "instructions": row.instructions or row.diagnosis,
+            "prescribed_by_name": doctor_name,
+            "patient": _person_name(person),
+            "patient_name": _person_name(person),
+            "doctor": doctor_name,
+            "date": row.start_date.isoformat() if row.start_date else None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "start_date": row.start_date.isoformat() if row.start_date else None,
+            "end_date": row.end_date.isoformat() if row.end_date else None,
+            "refills_remaining": row.refills_remaining,
+            "meds": 1,
+            "status": row.status,
+            "adherence": None,
+            "source": "prescription",
+        })
+    for row, person in (await db.execute(record_query)).all():
+        items.append({
+            "id": row.id,
+            "medication_name": row.chief_complaint,
+            "dosage": row.clinical_notes,
+            "frequency": row.nursing_notes,
+            "instructions": row.primary_diagnosis,
+            "prescribed_by_name": row.doctor_notes,
+            "patient": _person_name(person),
+            "patient_name": _person_name(person),
+            "doctor": row.doctor_notes,
+            "date": row.encounter_date.isoformat() if row.encounter_date else None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "start_date": row.encounter_date.isoformat() if row.encounter_date else None,
+            "end_date": None,
+            "refills_remaining": None,
+            "meds": 1,
+            "status": "patient_reported",
+            "adherence": None,
+            "source": "patient_reported",
+        })
+    return items
+
+
+@router.post("/prescriptions", status_code=201)
+async def report_medication(
+    medication_name: str = Body(...),
+    dosage: str = Body(""),
+    frequency: str = Body(""),
+    purpose: str = Body(None),
+    prescribed_by: str = Body(None),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Store a medication the patient reports. A prescriber is not invented."""
+    from app.models.health_record import HealthRecord
+    from app.models.patient import Patient
+    from app.security import generate_record_number
+
+    patient = (await db.execute(select(Patient).where(Patient.user_id == user_id))).scalar_one_or_none()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient profile not found")
+    row = HealthRecord(
+        patient_id=patient.id,
+        health_id=patient.health_id,
+        record_type="medication",
+        record_number=generate_record_number("MED"),
+        encounter_date=datetime.now(timezone.utc),
+        chief_complaint=medication_name,
+        clinical_notes=dosage or None,
+        nursing_notes=frequency or None,
+        primary_diagnosis=purpose or medication_name,
+        doctor_notes=prescribed_by,
+    )
+    db.add(row)
+    await db.flush()
+    return {"id": row.id, "medication_name": medication_name, "source": "patient_reported"}

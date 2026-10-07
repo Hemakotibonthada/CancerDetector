@@ -17,7 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import AppLayout from '../../components/common/AppLayout';
 import { patientNavItems } from './PatientDashboard';
 import { SectionHeader, StatusBadge, StatCard } from '../../components/common/SharedComponents';
-import { appointmentsAPI, hospitalsAPI } from '../../services/api';
+import { appointmentsAPI, hospitalsAPI, patientsAPI } from '../../services/api';
 
 const formatDate = (dateStr: string) => {
   try {
@@ -49,6 +49,10 @@ const AppointmentsPage: React.FC = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [pastAppointments, setPastAppointments] = useState<any[]>([]);
   const [availableDoctors, setAvailableDoctors] = useState<any[]>([]);
+  const [reason, setReason] = useState('');
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -97,6 +101,64 @@ const AppointmentsPage: React.FC = () => {
   }, []);
 
   useEffect(() => { loadAppointments(); }, [loadAppointments]);
+  useEffect(() => {
+    hospitalsAPI.listDoctors()
+      .then((res) => setAvailableDoctors(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setAvailableDoctors([]));
+  }, []);
+
+  const slotToIso = (date: string, time: string) => {
+    const [clock, meridiem] = time.split(' ');
+    let [hours, minutes] = clock.split(':').map(Number);
+    if (meridiem === 'PM' && hours !== 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+    const local = new Date(`${date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
+    return local.toISOString();
+  };
+
+  const confirmBooking = async () => {
+    if (!selectedDoctor || !selectedDate || !selectedTime) {
+      setError('Choose a doctor, date, and time.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const profile = await patientsAPI.getMyProfile();
+      await appointmentsAPI.create({
+        patient_id: profile.data.id,
+        doctor_id: selectedDoctor,
+        appointment_type: isTelemedicine ? 'telemedicine' : 'consultation',
+        scheduled_date: slotToIso(selectedDate, selectedTime),
+        duration_minutes: 30,
+        reason: reason || undefined,
+        is_telemedicine: isTelemedicine,
+      });
+      setShowBookDialog(false);
+      setBookingStep(0);
+      setReason('');
+      await loadAppointments();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not book the appointment');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelId) return;
+    setSaving(true);
+    try {
+      await appointmentsAPI.updateStatus(cancelId, { new_status: 'cancelled', cancellation_reason: cancelReason || undefined });
+      setShowCancelDialog(false);
+      setCancelId(null);
+      setCancelReason('');
+      await loadAppointments();
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Could not cancel the appointment');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -190,7 +252,7 @@ const AppointmentsPage: React.FC = () => {
                 <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                   {apt.telemedicine && <Button variant="contained" size="small" startIcon={<VideoCall />} color="secondary">Join Call</Button>}
                   <Button variant="outlined" size="small" startIcon={<Edit />}>Reschedule</Button>
-                  <Button variant="outlined" size="small" color="error" startIcon={<Cancel />} onClick={() => setShowCancelDialog(true)}>Cancel</Button>
+                  <Button variant="outlined" size="small" color="error" startIcon={<Cancel />} onClick={() => { setCancelId(apt.id); setShowCancelDialog(true); }}>Cancel</Button>
                 </Stack>
               </Card>
             </Grid>
@@ -279,6 +341,9 @@ const AppointmentsPage: React.FC = () => {
                 <InputLabel>Doctor</InputLabel>
                 <Select label="Doctor" value={selectedDoctor} onChange={(e) => setSelectedDoctor(e.target.value as string)}>
                   <MenuItem value="">Select a doctor</MenuItem>
+                  {availableDoctors.map((doctor) => (
+                    <MenuItem key={doctor.id} value={doctor.id}>{doctor.name}{doctor.specialization ? ` — ${doctor.specialization}` : ''}</MenuItem>
+                  ))}
                 </Select>
               </FormControl>
               <Alert severity="info" sx={{ fontSize: 12 }}>Visit the Hospitals page to browse available doctors</Alert>
@@ -306,7 +371,7 @@ const AppointmentsPage: React.FC = () => {
           )}
           {bookingStep === 2 && (
             <Stack spacing={2}>
-              <TextField label="Reason for Visit" multiline rows={2} fullWidth size="small" />
+              <TextField label="Reason for Visit" multiline rows={2} fullWidth size="small" value={reason} onChange={(e) => setReason(e.target.value)} />
               <TextField label="Additional Notes" multiline rows={2} fullWidth size="small" />
               <Alert severity="info">
                 You will receive a confirmation email and SMS once the appointment is confirmed.
@@ -327,7 +392,7 @@ const AppointmentsPage: React.FC = () => {
           {bookingStep < 2 ? (
             <Button variant="contained" onClick={() => setBookingStep(bookingStep + 1)} endIcon={<ArrowForward />}>Next</Button>
           ) : (
-            <Button variant="contained" color="success" onClick={() => { setShowBookDialog(false); setBookingStep(0); }}>Confirm Booking</Button>
+            <Button variant="contained" color="success" disabled={saving} onClick={confirmBooking}>Confirm Booking</Button>
           )}
         </DialogActions>
       </Dialog>
@@ -337,11 +402,11 @@ const AppointmentsPage: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 700 }}>Cancel Appointment?</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>This action cannot be undone. The doctor will be notified of the cancellation.</Alert>
-          <TextField label="Reason for cancellation" multiline rows={2} fullWidth size="small" />
+          <TextField label="Reason for cancellation" multiline rows={2} fullWidth size="small" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCancelDialog(false)}>Keep Appointment</Button>
-          <Button variant="contained" color="error" onClick={() => setShowCancelDialog(false)}>Cancel Appointment</Button>
+          <Button variant="contained" color="error" disabled={saving} onClick={confirmCancel}>Cancel Appointment</Button>
         </DialogActions>
       </Dialog>
     </AppLayout>

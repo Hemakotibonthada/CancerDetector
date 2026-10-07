@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.database import get_db_context
 from app.main import app
+from app.models.hospital import Doctor
 from app.models.patient import Patient
 from app.models.user import User
 from app.security import hash_password
@@ -211,3 +212,158 @@ def test_demo_seed_is_refused_without_the_flag_and_startup_did_not_insert_demo_u
     assert login.status_code == 200, login.text
     refused = client.post("/api/v1/admin/seed-data", headers=_auth(login.json()["access_token"]))
     assert refused.status_code == 403
+
+
+def test_patient_writes_round_trip(client):
+    created = _register(client, "writes.real@example.com", "writesreal")
+    headers = _auth(created["access_token"])
+
+    meal = client.post("/api/v1/diet/log", headers=headers, json={
+        "meal_type": "lunch", "calories": 420, "water_ml": 250, "notes": "salad",
+    })
+    assert meal.status_code == 201, meal.text
+    diet = client.get("/api/v1/diet/log", headers=headers)
+    assert diet.status_code == 200
+    assert diet.json()["today_calories"] == 420
+    assert diet.json()["today_water_ml"] == 250
+
+    exercise = client.post("/api/v1/exercise/sessions", headers=headers, json={
+        "exercise_type": "walking", "duration_minutes": 20, "steps": 1000,
+    })
+    assert exercise.status_code == 201, exercise.text
+    sessions = client.get("/api/v1/exercise/sessions", headers=headers)
+    assert sessions.json()["steps_today"] == 1000
+
+    screening = client.post("/api/v1/screening/schedule", headers=headers, json={
+        "cancer_type": "breast", "screening_method": "mammogram", "urgency": "routine",
+    })
+    assert screening.status_code == 201, screening.text
+    schedule = client.get("/api/v1/screening/schedule", headers=headers)
+    assert any(row["test"] == "mammogram" for row in schedule.json())
+
+    member = client.post("/api/v1/family-health/members", headers=headers, json={
+        "relationship_type": "mother",
+        "relative_name": "Ann",
+        "condition_name": "Breast cancer",
+        "is_cancer": True,
+        "cancer_type": "breast",
+    })
+    assert member.status_code == 201, member.text
+    tree = client.get("/api/v1/family-health/tree", headers=headers)
+    assert any(row["name"] == "Ann" for row in tree.json())
+
+    mood = client.post("/api/v1/mental-health/assessments", headers=headers, json={
+        "tool_name": "mood", "total_score": 6, "notes": "recorded",
+    })
+    assert mood.status_code == 201, mood.text
+    history = client.get("/api/v1/mental-health/mood-history", headers=headers)
+    assert any(row["total_score"] == 6 for row in history.json())
+
+    allergy = client.post("/api/v1/patients/me/allergies", headers=headers, json={
+        "allergy_type": "Drug", "allergen": "Penicillin", "severity": "Severe", "reaction": "rash",
+    })
+    assert allergy.status_code == 200, allergy.text
+    contact = client.post("/api/v1/patients/me/emergency-contacts", headers=headers, json={
+        "name": "Sam", "relationship": "spouse", "phone": "5550100",
+    })
+    assert contact.status_code == 201, contact.text
+    profile = client.get("/api/v1/patients/me", headers=headers)
+    body = profile.json()
+    assert any(row["allergen"] == "Penicillin" for row in body["allergies"])
+    assert any(row["name"] == "Sam" for row in body["emergency_contacts"])
+
+    medication = client.post("/api/v1/pharmacy/prescriptions", headers=headers, json={
+        "medication_name": "Tamoxifen", "dosage": "20mg", "frequency": "daily",
+    })
+    assert medication.status_code == 201, medication.text
+    listed = client.get("/api/v1/pharmacy/prescriptions", headers=headers)
+    assert listed.status_code == 200
+    assert any(row["medication_name"] == "Tamoxifen" and row["adherence"] is None for row in listed.json())
+    inventory = client.get("/api/v1/pharmacy/inventory", headers=headers)
+    assert inventory.status_code == 200
+    assert inventory.json() == []
+
+    opinion = client.post("/api/v1/treatment/second-opinion", headers=headers, json={
+        "original_diagnosis": "Stage II", "notes": "review margins",
+    })
+    assert opinion.status_code == 201, opinion.text
+    opinions = client.get("/api/v1/treatment/second-opinion", headers=headers)
+    assert any(row["original_diagnosis"] == "Stage II" for row in opinions.json())
+
+    requested = client.post("/api/v1/genetics/test-request", headers=headers, json={
+        "panel_name": "BRCA1/BRCA2 Analysis", "notes": "family history",
+    })
+    assert requested.status_code == 201, requested.text
+    assert requested.json()["status"] == "requested"
+
+
+def test_appointment_is_stored_and_cancelled(client):
+    created = _register(client, "appt.real@example.com", "apptreal")
+    patient_headers = _auth(created["access_token"])
+    patient_id = client.get("/api/v1/patients/me", headers=patient_headers).json()["id"]
+
+    async def _staff():
+        async with get_db_context() as db:
+            admin = User(
+                email="appt.admin@example.com",
+                username="apptadmin",
+                hashed_password=hash_password("Admin123a"),
+                first_name="Hosp",
+                last_name="Admin",
+                role="hospital_admin",
+                status="active",
+            )
+            doctor_user = User(
+                email="appt.doc@example.com",
+                username="apptdoc",
+                hashed_password=hash_password("Doctor1a"),
+                first_name="Dee",
+                last_name="Oc",
+                role="doctor",
+                status="active",
+            )
+            db.add_all([admin, doctor_user])
+            await db.flush()
+            return doctor_user.id
+
+    doctor_user_id = asyncio.run(_staff())
+    admin_login = client.post("/api/v1/auth/login", json={
+        "email": "appt.admin@example.com", "password": "Admin123a",
+    })
+    assert admin_login.status_code == 200, admin_login.text
+    hospital = client.post("/api/v1/hospitals", headers=_auth(admin_login.json()["access_token"]), json={
+        "name": "Appointment General", "code": "APPT1", "city": "Austin",
+    })
+    assert hospital.status_code == 201, hospital.text
+
+    async def _doctor():
+        async with get_db_context() as db:
+            row = Doctor(
+                user_id=doctor_user_id,
+                hospital_id=hospital.json()["id"],
+                medical_license_number="LIC-APPT-1",
+                specialization="oncologist",
+            )
+            db.add(row)
+            await db.flush()
+            return row.id
+
+    doctor_id = asyncio.run(_doctor())
+    booked = client.post("/api/v1/appointments", headers=patient_headers, params={
+        "patient_id": patient_id,
+        "doctor_id": doctor_id,
+        "appointment_type": "consultation",
+        "scheduled_date": "2026-11-01T15:00:00+00:00",
+        "reason": "Follow up",
+    })
+    assert booked.status_code == 201, booked.text
+    appointment_id = booked.json()["appointment_id"]
+    mine = client.get("/api/v1/appointments/my", headers=patient_headers)
+    assert any(row["id"] == appointment_id for row in mine.json())
+    cancelled = client.put(f"/api/v1/appointments/{appointment_id}/status", headers=patient_headers, params={
+        "new_status": "cancelled", "cancellation_reason": "schedule conflict",
+    })
+    assert cancelled.status_code == 200, cancelled.text
+    again = client.get("/api/v1/appointments/my", headers=patient_headers)
+    match = next(row for row in again.json() if row["id"] == appointment_id)
+    assert match["status"] == "cancelled"

@@ -3,7 +3,7 @@ import { MenuItem } from '@mui/material';
 import { hospitalsAPI } from '../../services/api';
 
 export function useDoctorOptions() {
-  const [doctors, setDoctors] = useState<{ id: string; name: string; specialization?: string }[]>([]);
+  const [doctors, setDoctors] = useState<{ id: string; user_id?: string; name: string; specialization?: string }[]>([]);
   useEffect(() => {
     hospitalsAPI.listDoctors()
       .then((res) => setDoctors(Array.isArray(res.data) ? res.data : []))

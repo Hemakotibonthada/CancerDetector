@@ -3,12 +3,13 @@ Patients API Endpoints
 """
 from __future__ import annotations
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy import func, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db_session
 from app.models.user import User
 from app.models.patient import Patient, PatientAllergy, PatientFamilyHistory
+from app.models.report import EmergencyContact
 from app.schemas.patient import (
     PatientCreate, PatientResponse, PatientUpdate, PatientDetailResponse,
     PatientHealthSummary, AllergyCreate, FamilyHistoryCreate
@@ -29,7 +30,17 @@ async def get_my_patient_profile(
     
     if not patient:
         raise HTTPException(status_code=404, detail="Patient profile not found")
-    
+
+    allergy_rows = (await db.execute(
+        select(PatientAllergy).where(PatientAllergy.patient_id == patient.id)
+    )).scalars().all()
+    contact_rows = (await db.execute(
+        select(EmergencyContact).where(EmergencyContact.patient_id == patient.id)
+    )).scalars().all()
+    history_rows = (await db.execute(
+        select(PatientFamilyHistory).where(PatientFamilyHistory.patient_id == patient.id)
+    )).scalars().all()
+
     return PatientDetailResponse(
         id=patient.id,
         user_id=patient.user_id,
@@ -63,6 +74,29 @@ async def get_my_patient_profile(
         risk_assessment_date=patient.risk_assessment_date,
         data_collection_consent=patient.data_collection_consent,
         ai_analysis_consent=patient.ai_analysis_consent,
+        allergies=[{
+            "id": row.id,
+            "allergen": row.allergen,
+            "type": row.allergy_type,
+            "severity": row.severity,
+            "reaction": row.reaction,
+            "diagnosed": row.onset_date.isoformat() if row.onset_date else None,
+        } for row in allergy_rows],
+        family_histories=[{
+            "id": row.id,
+            "relationship": row.relationship_type,
+            "condition": row.condition_name,
+            "cancer_type": row.cancer_type,
+            "is_cancer": row.is_cancer,
+        } for row in history_rows],
+        emergency_contacts=[{
+            "id": row.id,
+            "name": row.name,
+            "relationship": row.relationship,
+            "phone": row.phone,
+            "email": row.email,
+            "primary": row.is_primary,
+        } for row in contact_rows],
     )
 
 
@@ -189,7 +223,36 @@ async def add_allergy(
         onset_date=allergy_data.onset_date,
     )
     db.add(allergy)
-    return {"success": True, "message": "Allergy added"}
+    await db.flush()
+    return {"success": True, "id": allergy.id, "message": "Allergy added"}
+
+
+@router.post("/me/emergency-contacts", status_code=201)
+async def add_emergency_contact(
+    name: str = Body(...),
+    relationship: str = Body(...),
+    phone: str = Body(...),
+    email: str = Body(None),
+    is_primary: bool = Body(False),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Store an emergency contact on the current patient's profile."""
+    result = await db.execute(select(Patient).where(Patient.user_id == user_id))
+    patient = result.scalar_one_or_none()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    contact = EmergencyContact(
+        patient_id=patient.id,
+        name=name,
+        relationship=relationship,
+        phone=phone,
+        email=email,
+        is_primary=is_primary,
+    )
+    db.add(contact)
+    await db.flush()
+    return {"id": contact.id, "name": contact.name}
 
 
 @router.post("/me/family-history")

@@ -19,6 +19,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.routing import Match, Route
 
 from app.config import get_settings, BASE_DIR, PROJECT_DIR
 from app.database import init_db, close_db, check_db_health
@@ -202,11 +203,9 @@ def create_application() -> FastAPI:
     if frontend_build.exists():
         app.mount("/static", StaticFiles(directory=str(frontend_build / "static")), name="static")
         
-        # Catch-all for SPA routing
-        @app.get("/{full_path:path}")
+        # SPA fallback must not claim /api requests. A GET catch-all otherwise
+        # partial-matches API POSTs and returns 405 before slash redirects run.
         async def serve_spa(full_path: str):
-            if full_path.startswith("api/"):
-                return JSONResponse({"detail": "Not found"}, status_code=404)
             requested = (frontend_build / full_path).resolve()
             if requested.is_relative_to(frontend_build.resolve()) and requested.is_file():
                 return FileResponse(str(requested))
@@ -214,6 +213,17 @@ def create_application() -> FastAPI:
             if index_file.exists():
                 return FileResponse(str(index_file))
             return JSONResponse({"error": "Not found"}, status_code=404)
+
+        class SpaRoute(Route):
+            def matches(self, scope):
+                if scope.get("type") != "http" or scope.get("method") != "GET":
+                    return Match.NONE, {}
+                path = scope.get("path", "")
+                if path == "/api" or path.startswith("/api/"):
+                    return Match.NONE, {}
+                return super().matches(scope)
+
+        app.router.routes.append(SpaRoute("/{full_path:path}", endpoint=serve_spa, methods=["GET"]))
     
     return app
 

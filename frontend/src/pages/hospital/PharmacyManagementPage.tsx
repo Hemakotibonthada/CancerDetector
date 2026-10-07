@@ -257,17 +257,11 @@ const PharmacyManagementPage: React.FC = () => {
               <TextField label="Quantity" type="number" fullWidth />
               <TextField label="Batch Number" fullWidth />
               <TextField label="Expiry Date" type="date" fullWidth InputLabelProps={{ shrink: true }} />
-              <TextField select label="Supplier" fullWidth defaultValue="">
-                <MenuItem value="pharmaCorp">PharmaCorp</MenuItem>
-                <MenuItem value="medSupply">MedSupply</MenuItem>
-                <MenuItem value="bioPharm">BioPharm</MenuItem>
-                <MenuItem value="merck">Merck</MenuItem>
-              </TextField>
+              <Alert severity="info">Stock quantities are not recorded, so an order cannot be saved.</Alert>
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowOrderDialog(false)}>Cancel</Button>
-            <Button variant="contained" onClick={() => setShowOrderDialog(false)}>Submit Order</Button>
+            <Button onClick={() => setShowOrderDialog(false)}>Close</Button>
           </DialogActions>
         </Dialog>
       </Box>
