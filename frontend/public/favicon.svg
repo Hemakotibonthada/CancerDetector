@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="50%" stop-color="#7E22CE"/>
+      <stop offset="100%" stop-color="#4C1D95"/>
+    </linearGradient>
+    <linearGradient id="helix" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FCE7F3"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#2E1065" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="6" y="6" width="500" height="500" rx="110" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.2"/>
+  <g filter="url(#shadow)">
+    <!-- Targeting Crosshairs / Medical Scope -->
+    <circle cx="256" cy="256" r="130" stroke="#E879F9" stroke-width="10" stroke-dasharray="14 10" fill="none"/>
+    <circle cx="256" cy="256" r="80" stroke="#F43F5E" stroke-width="8" fill="none"/>
+    <line x1="256" y1="96" x2="256" y2="416" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+    <line x1="96" y1="256" x2="416" y2="256" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"/>
+    <!-- Core Diagnostic Pulse -->
+    <circle cx="256" cy="256" r="32" fill="#F43F5E"/>
+    <circle cx="256" cy="256" r="16" fill="#FFFFFF"/>
+  </g>
+</svg>
